@@ -1,6 +1,9 @@
 // lib/widgets/settings_drawer.dart
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
+import './appearance_popup.dart';
+import './profile_settings_popup.dart';
+import './general_settings_popup.dart';
 
 class SettingsDrawer extends StatelessWidget {
   const SettingsDrawer({super.key});
@@ -59,8 +62,28 @@ class SettingsDrawer extends StatelessWidget {
                     icon: Icons.person_outline,
                     title: "Profile Settings",
                     onTap: () {
-                      Navigator.pop(context);
-                      // Navigator.pushNamed(context, '/profile-settings');
+                      Navigator.pop(context); // close drawer
+
+                      showGeneralDialog(
+                        context: context,
+                        barrierDismissible: true,
+                        barrierLabel: "Profile Settings",
+                        barrierColor: Colors.black.withOpacity(0.5),
+                        transitionDuration: const Duration(milliseconds: 400),
+                        pageBuilder: (context, anim1, anim2) {
+                          return ProfileSettingsPopup();
+                        },
+                        transitionBuilder: (context, anim1, anim2, child) {
+                          return ScaleTransition(
+                            scale: CurvedAnimation(
+                              parent: anim1,
+                              curve: Curves
+                                  .easeOutBack, // scale from center with slight overshoot
+                            ),
+                            child: FadeTransition(opacity: anim1, child: child),
+                          );
+                        },
+                      );
                     },
                   ),
                   _buildItem(
@@ -68,8 +91,27 @@ class SettingsDrawer extends StatelessWidget {
                     icon: Icons.settings_outlined,
                     title: "General Settings",
                     onTap: () {
-                      Navigator.pop(context);
-                      // Navigator.pushNamed(context, '/general-settings');
+                      Navigator.pop(context); // close drawer
+
+                      showGeneralDialog(
+                        context: context,
+                        barrierDismissible: true,
+                        barrierLabel: "General Settings",
+                        barrierColor: Colors.black.withOpacity(0.5),
+                        transitionDuration: const Duration(milliseconds: 400),
+                        pageBuilder: (context, anim1, anim2) {
+                          return GeneralSettingsPopup();
+                        },
+                        transitionBuilder: (context, anim1, anim2, child) {
+                          return ScaleTransition(
+                            scale: CurvedAnimation(
+                              parent: anim1,
+                              curve: Curves.easeOutBack,
+                            ),
+                            child: FadeTransition(opacity: anim1, child: child),
+                          );
+                        },
+                      );
                     },
                   ),
                   _buildItem(
@@ -85,7 +127,28 @@ class SettingsDrawer extends StatelessWidget {
                     icon: Icons.palette_outlined,
                     title: "Appearance",
                     onTap: () {
-                      Navigator.pop(context);
+                      Navigator.pop(context); // close drawer
+
+                      showGeneralDialog(
+                        context: context,
+                        barrierDismissible: true,
+                        barrierLabel: "Appearance",
+                        barrierColor: Colors.black.withOpacity(0.5),
+                        transitionDuration: const Duration(milliseconds: 400),
+                        pageBuilder: (context, anim1, anim2) {
+                          return AppearancePopup();
+                        },
+                        transitionBuilder: (context, anim1, anim2, child) {
+                          return ScaleTransition(
+                            scale: CurvedAnimation(
+                              parent: anim1,
+                              curve: Curves
+                                  .easeOutBack, // nice overshoot animation
+                            ),
+                            child: FadeTransition(opacity: anim1, child: child),
+                          );
+                        },
+                      );
                     },
                   ),
                   _buildItem(
