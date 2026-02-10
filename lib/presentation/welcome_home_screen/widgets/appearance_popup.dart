@@ -1,126 +1,193 @@
 // lib/presentation/welcome_home_screen/widgets/appearance_popup.dart
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:sizer/sizer.dart';
+
+import '../../../providers/theme_provider.dart'; // from lib/providers/
+import '../../../providers/font_scale_provider.dart'; // from lib/providers/
 
 class AppearancePopup extends StatefulWidget {
   const AppearancePopup({super.key});
+
+  static Future<void> show(BuildContext context) {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => const AppearancePopup(),
+    );
+  }
 
   @override
   State<AppearancePopup> createState() => _AppearancePopupState();
 }
 
 class _AppearancePopupState extends State<AppearancePopup> {
-  String _themeMode =
-      'Light mode'; // Light mode, Dark mode, System Default, Custom
-  String _fontSize = 'Large'; // Large, Medium, Small
+  String _theme = "System Default";
+  String _fontSize = "Medium (Default)";
+
+  @override
+  void initState() {
+    super.initState();
+    final themeProv = Provider.of<ThemeProvider>(context, listen: false);
+    final fontProv = Provider.of<FontScaleProvider>(context, listen: false);
+
+    _theme = _themeModeToString(themeProv.themeMode);
+    _fontSize = fontProv.currentLabel;
+  }
+
+  String _themeModeToString(ThemeMode mode) {
+    return switch (mode) {
+      ThemeMode.light => "Light mode",
+      ThemeMode.dark => "Dark mode",
+      _ => "System Default",
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      elevation: 12,
-      backgroundColor: theme.scaffoldBackgroundColor,
-      insetPadding: EdgeInsets.symmetric(horizontal: 8.w),
+      backgroundColor: theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      insetPadding: EdgeInsets.symmetric(horizontal: 6.w),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(5.w, 2.h, 5.w, 4.h),
+        padding: EdgeInsets.fromLTRB(5.w, 2.5.h, 5.w, 4.h),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header with close button
+            // Header - matches your screenshot
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
-                    Icon(
-                      Icons.palette_outlined,
-                      size: 26,
-                      color: theme.colorScheme.primary,
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withOpacity(0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.palette_outlined,
+                        color: Color(0xFF2DD4BF),
+                        size: 24,
+                      ),
                     ),
-                    SizedBox(width: 2.w),
+                    SizedBox(width: 3.w),
                     Text(
                       "Appearance",
                       style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 20.sp,
                       ),
                     ),
                   ],
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, size: 28),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    size: 26,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
             ),
 
-            SizedBox(height: 1.5.h),
-            const Divider(height: 1),
-
             SizedBox(height: 2.5.h),
+            Divider(height: 1, color: theme.dividerColor),
 
-            // Theme section
+            SizedBox(height: 3.h),
+
+            // Theme
             Text(
               "Theme",
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
-            SizedBox(height: 1.2.h),
+            SizedBox(height: 1.5.h),
 
-            _buildRadio("Light mode", _themeMode == "Light mode", (v) {
-              if (v == true) setState(() => _themeMode = "Light mode");
+            _buildRadio("Light mode", _theme == "Light mode", (v) {
+              if (v == true) setState(() => _theme = "Light mode");
             }),
-            _buildRadio("Dark mode", _themeMode == "Dark mode", (v) {
-              if (v == true) setState(() => _themeMode = "Dark mode");
+            _buildRadio("Dark mode", _theme == "Dark mode", (v) {
+              if (v == true) setState(() => _theme = "Dark mode");
             }),
-            _buildRadio("System Default", _themeMode == "System Default", (v) {
-              if (v == true) setState(() => _themeMode = "System Default");
+            _buildRadio("System Default", _theme == "System Default", (v) {
+              if (v == true) setState(() => _theme = "System Default");
             }),
-            _buildRadio("Custom", _themeMode == "Custom", (v) {
-              if (v == true) setState(() => _themeMode = "Custom");
+            _buildRadio("Custom", _theme == "Custom", (v) {
+              if (v == true) setState(() => _theme = "Custom");
             }),
 
-            SizedBox(height: 3.h),
+            SizedBox(height: 4.h),
 
-            // Font Size section
+            // Font Size
             Text(
               "Font Size",
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
-            SizedBox(height: 1.2.h),
+            SizedBox(height: 1.5.h),
 
             _buildRadio("Large", _fontSize == "Large", (v) {
               if (v == true) setState(() => _fontSize = "Large");
             }),
-            _buildRadio("Medium (Default)", _fontSize == "Medium", (v) {
-              if (v == true) setState(() => _fontSize = "Medium");
+            _buildRadio("Medium (Default)", _fontSize == "Medium (Default)", (
+              v,
+            ) {
+              if (v == true) setState(() => _fontSize = "Medium (Default)");
             }),
             _buildRadio("Small", _fontSize == "Small", (v) {
               if (v == true) setState(() => _fontSize = "Small");
             }),
 
-            SizedBox(height: 4.h),
+            SizedBox(height: 5.h),
 
-            // Apply button
+            // Apply button - teal color from your palette
             SizedBox(
               width: double.infinity,
-              height: 6.h,
+              height: 6.5.h,
               child: ElevatedButton(
                 onPressed: () {
-                  // TODO: Save & apply theme/font changes (use Provider / ThemeMode / TextScaler)
+                  final themeProv = Provider.of<ThemeProvider>(
+                    context,
+                    listen: false,
+                  );
+                  final fontProv = Provider.of<FontScaleProvider>(
+                    context,
+                    listen: false,
+                  );
+
+                  // Apply theme
+                  final newMode = switch (_theme) {
+                    "Light mode" => ThemeMode.light,
+                    "Dark mode" => ThemeMode.dark,
+                    _ => ThemeMode.system,
+                  };
+                  themeProv.setThemeMode(newMode);
+
+                  // Apply font size
+                  fontProv.setScaleFromLabel(_fontSize);
+
                   Navigator.pop(context);
+
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Appearance updated")),
+                    SnackBar(
+                      content: const Text("Appearance updated"),
+                      backgroundColor: theme.colorScheme.primary,
+                    ),
                   );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: Colors.white,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -147,14 +214,17 @@ class _AppearancePopupState extends State<AppearancePopup> {
   ) {
     return RadioListTile<String>(
       value: label,
-      groupValue: label.contains("mode") ? _themeMode : _fontSize,
+      groupValue: label.contains("mode") || label == "Custom"
+          ? _theme
+          : _fontSize,
       onChanged: (value) {
         onChanged(value != null);
       },
-      title: Text(label, style: const TextStyle(fontSize: 15)),
+      title: Text(label),
       dense: true,
       contentPadding: EdgeInsets.zero,
       activeColor: Theme.of(context).colorScheme.primary,
+      controlAffinity: ListTileControlAffinity.trailing,
     );
   }
 }

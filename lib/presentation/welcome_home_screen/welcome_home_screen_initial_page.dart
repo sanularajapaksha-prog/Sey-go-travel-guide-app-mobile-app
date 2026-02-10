@@ -231,11 +231,11 @@ class _WelcomeHomeScreenInitialPageState
                                 Container(
                                   height: 6.2.h,
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: theme.colorScheme.surface,
                                     borderRadius: BorderRadius.circular(60),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.08),
+                                        color: theme.colorScheme.shadow,
                                         blurRadius: 12,
                                         offset: const Offset(0, 6),
                                       ),
@@ -264,6 +264,11 @@ class _WelcomeHomeScreenInitialPageState
                                             border: InputBorder.none,
                                             contentPadding: EdgeInsets.zero,
                                           ),
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                                color:
+                                                    theme.colorScheme.onSurface,
+                                              ),
                                         ),
                                       ),
                                       Icon(
@@ -277,7 +282,7 @@ class _WelcomeHomeScreenInitialPageState
                                 ),
 
                                 Positioned(
-                                  right: -1.w,
+                                  right: 1.w,
                                   child: GestureDetector(
                                     onTap: () {
                                       final query = _searchController.text
@@ -289,21 +294,22 @@ class _WelcomeHomeScreenInitialPageState
                                       width: 11.w,
                                       height: 11.w,
                                       decoration: BoxDecoration(
-                                        color: Colors.black,
+                                        color: theme.colorScheme.primary,
                                         shape: BoxShape.circle,
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withOpacity(
-                                              0.25,
-                                            ),
+                                            color: theme
+                                                .colorScheme
+                                                .shadow
+                                                .withOpacity(0.3),
                                             blurRadius: 8,
                                             offset: const Offset(0, 4),
                                           ),
                                         ],
                                       ),
-                                      child: const Icon(
+                                      child: Icon(
                                         Icons.search,
-                                        color: Colors.white,
+                                        color: theme.colorScheme.onPrimary,
                                         size: 26,
                                       ),
                                     ),

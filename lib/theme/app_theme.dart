@@ -418,7 +418,8 @@ class AppTheme {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.0)),
       elevation: 0,
-    ), dialogTheme: DialogThemeData(backgroundColor: dialogLight),
+    ),
+    dialogTheme: DialogThemeData(backgroundColor: dialogLight),
   );
 
   /// Dark theme - Contemporary Tropical Minimalism (Dark Mode)
@@ -714,7 +715,8 @@ class AppTheme {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.0)),
       elevation: 0,
-    ), dialogTheme: DialogThemeData(backgroundColor: dialogDark),
+    ),
+    dialogTheme: DialogThemeData(backgroundColor: dialogDark),
   );
 
   /// Helper method to build text theme based on brightness
@@ -831,6 +833,3 @@ class AppTheme {
     );
   }
 }
-
-
-

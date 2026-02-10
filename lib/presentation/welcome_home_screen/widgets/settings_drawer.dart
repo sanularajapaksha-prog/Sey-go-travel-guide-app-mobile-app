@@ -19,7 +19,7 @@ class SettingsDrawer extends StatelessWidget {
           bottomRight: Radius.circular(28),
         ),
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: theme.colorScheme.surface,
       elevation: 16,
       width: 80.w,
       child: SafeArea(

@@ -11,11 +11,11 @@ class NotificationsPanel extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: theme.colorScheme.shadow,
             blurRadius: 16,
             offset: Offset(0, -4),
           ),
@@ -37,7 +37,11 @@ class NotificationsPanel extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.close, size: 28),
+                  icon: Icon(
+                    Icons.close,
+                    size: 28,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -92,16 +96,16 @@ class NotificationsPanel extends StatelessWidget {
           Padding(
             padding: EdgeInsets.all(4.w),
             child: ElevatedButton(
-              onPressed: () {
-                // TODO: clear all logic
-                Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
-                foregroundColor: Colors.white,
-                minimumSize: Size(double.infinity, 6.h),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  onPressed: () {
+                    // TODO: clear all logic
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    minimumSize: Size(double.infinity, 6.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
                 ),
               ),
               child: Text(
@@ -136,7 +140,9 @@ class NotificationsPanel extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-                color: isSelected ? Colors.white : theme.colorScheme.onSurface,
+            color: isSelected
+                ? theme.colorScheme.onPrimary
+                : theme.colorScheme.onSurfaceVariant,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                 fontSize: 14.sp,
               ),
@@ -216,7 +222,11 @@ class NotificationsPanel extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: Icon(Icons.delete_outline, size: 20),
+            icon: Icon(
+              Icons.delete_outline,
+              size: 20,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
             onPressed: () {
               // TODO: delete single notification
             },
