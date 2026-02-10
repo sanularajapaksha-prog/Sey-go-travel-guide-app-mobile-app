@@ -16,6 +16,7 @@ dependencies:
   shared_preferences: ^2.3.0 # ← keep only one line (this one)
   provider: ^6.1.2 # ← make sure this is here too
   web: ^1.1.1
+  url_launcher: ^6.3.0
 
   # all your other packages...
   cached_network_image: ^3.3.1

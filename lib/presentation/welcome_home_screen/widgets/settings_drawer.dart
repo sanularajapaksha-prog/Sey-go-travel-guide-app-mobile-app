@@ -4,6 +4,8 @@ import 'package:sizer/sizer.dart';
 import './appearance_popup.dart';
 import './profile_settings_popup.dart';
 import './general_settings_popup.dart';
+import './privacy_popup.dart';
+import './help_support_popup.dart';
 
 class SettingsDrawer extends StatelessWidget {
   const SettingsDrawer({super.key});
@@ -119,7 +121,8 @@ class SettingsDrawer extends StatelessWidget {
                     icon: Icons.security_outlined,
                     title: "Privacy",
                     onTap: () {
-                      Navigator.pop(context);
+                      Navigator.pop(context); // close drawer
+                      PrivacyPopup.show(context); // open privacy popup
                     },
                   ),
                   _buildItem(
@@ -157,6 +160,7 @@ class SettingsDrawer extends StatelessWidget {
                     title: "Help & Support",
                     onTap: () {
                       Navigator.pop(context);
+                      HelpSupportPopup.show(context);
                     },
                   ),
                 ],
