@@ -20,6 +20,7 @@ class WelcomeHomeScreenInitialPage extends StatefulWidget {
 
 class _WelcomeHomeScreenInitialPageState
     extends State<WelcomeHomeScreenInitialPage> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _searchController = TextEditingController();
   String _selectedCategory = 'All';
 
@@ -129,6 +130,7 @@ class _WelcomeHomeScreenInitialPageState
     final theme = Theme.of(context);
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: theme.scaffoldBackgroundColor,
       drawer: SettingsDrawer(),
       body: RefreshIndicator(
@@ -165,7 +167,7 @@ class _WelcomeHomeScreenInitialPageState
                                 builder: (context) => IconButton(
                                   icon: const Icon(Icons.menu, size: 26),
                                   onPressed: () {
-                                    Scaffold.of(context).openDrawer();
+                                    _scaffoldKey.currentState?.openDrawer();
                                   },
                                 ),
                               ),
@@ -450,3 +452,4 @@ class _WelcomeHomeScreenInitialPageState
     );
   }
 }
+
