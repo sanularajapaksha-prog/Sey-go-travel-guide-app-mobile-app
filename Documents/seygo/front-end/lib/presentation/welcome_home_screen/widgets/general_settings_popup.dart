@@ -11,11 +11,11 @@ class GeneralSettingsPopup extends StatefulWidget {
 
 class _GeneralSettingsPopupState extends State<GeneralSettingsPopup> {
   // Current values (you can later load from shared_preferences / provider)
-  String _language = 'English (Sri Lanka)';
-  String _countryRegion = 'Sri Lanka';
-  String _timeZone = 'Asia/Colombo (GMT+05:30)';
+  final String _language = 'English (Sri Lanka)';
+  final String _countryRegion = 'Sri Lanka';
+  final String _timeZone = 'Asia/Colombo (GMT+05:30)';
   String _notificationPref = 'Unmute'; // Unmute or Mute
-  String _units = 'Kilometres / Metres';
+  final String _units = 'Kilometres / Metres';
 
   @override
   Widget build(BuildContext context) {

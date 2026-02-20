@@ -79,7 +79,7 @@ class _ProfileSettingsPopupState extends State<ProfileSettingsPopup> {
                     children: [
                       CircleAvatar(
                         radius: 20.w,
-                        backgroundColor: theme.colorScheme.surfaceVariant,
+                        backgroundColor: theme.colorScheme.surfaceContainerHighest,
                         child: Icon(
                           Icons.person,
                           size: 35.w,
@@ -164,7 +164,7 @@ class _ProfileSettingsPopupState extends State<ProfileSettingsPopup> {
                 SizedBox(height: 2.h),
 
                 DropdownButtonFormField<String>(
-                  value: _preferredTravelStyle,
+                  initialValue: _preferredTravelStyle,
                   decoration: InputDecoration(
                     labelText: "Preferred Travel Style",
                     border: OutlineInputBorder(
