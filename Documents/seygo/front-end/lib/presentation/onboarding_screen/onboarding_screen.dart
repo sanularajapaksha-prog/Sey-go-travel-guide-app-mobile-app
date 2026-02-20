@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:sizer/sizer.dart';
 
 import '../../routes/app_routes.dart';
 
@@ -9,9 +8,6 @@ class OnboardingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final pixelRatio = MediaQuery.of(context).devicePixelRatio;
-
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,
@@ -19,101 +15,76 @@ class OnboardingScreen extends StatelessWidget {
           Image.asset(
             'assets/images/beach_background.jpg',
             fit: BoxFit.cover,
-            filterQuality: FilterQuality.low,
-            cacheWidth: (screenWidth * pixelRatio).round(),
           ),
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0x33000000), Color(0xAA000000)],
+          Align(
+            alignment: Alignment.topCenter,
+            child: FractionallySizedBox(
+              widthFactor: 1,
+              heightFactor: 0.84,
+              child: ClipPath(
+                clipper: _TopWhiteClipper(),
+                child: Container(color: const Color(0xFFF9F9F9)),
               ),
             ),
-            child: SafeArea(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Explore Sri Lanka',
-                      style: GoogleFonts.roboto(
-                        fontSize: 24.sp,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+          ),
+          SafeArea(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Explore Sri Lanka',
+                    style: GoogleFonts.roboto(
+                      fontSize: 38,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF2A353C),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Beyond it's limit",
+                    style: GoogleFonts.roboto(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w400,
+                      color: const Color(0xFF111111),
+                    ),
+                  ),
+                  const SizedBox(height: 26),
+                  const _OnboardingDots(),
+                  const SizedBox(height: 28),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, AppRoutes.welcomeHomeScreen);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      elevation: 8,
+                      shadowColor: Colors.black.withValues(alpha: 0.35),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 34,
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28),
                       ),
                     ),
-                    SizedBox(height: 1.h),
-                    Text(
-                      "Beyond it's limit",
-                      style: GoogleFonts.roboto(
-                        fontSize: 16.sp,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 2.h),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '—',
-                          style: TextStyle(
-                            fontSize: 18.sp,
-                            color: Colors.white,
+                          'Next',
+                          style: GoogleFonts.roboto(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                        SizedBox(width: 1.w),
-                        Text(
-                          '•',
-                          style: TextStyle(
-                            fontSize: 18.sp,
-                            color: Colors.white,
-                          ),
-                        ),
-                        SizedBox(width: 1.w),
-                        Text(
-                          '•',
-                          style: TextStyle(
-                            fontSize: 18.sp,
-                            color: Colors.white,
-                          ),
-                        ),
-                        SizedBox(width: 1.w),
-                        Text(
-                          '•',
-                          style: TextStyle(
-                            fontSize: 18.sp,
-                            color: Colors.white,
-                          ),
-                        ),
+                        const SizedBox(width: 10),
+                        const Icon(Icons.arrow_forward, size: 20),
                       ],
                     ),
-                    SizedBox(height: 2.h),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushNamed(
-                          context,
-                          AppRoutes.welcomeHomeScreen,
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 8.w,
-                          vertical: 2.h,
-                        ),
-                      ),
-                      child: Text(
-                        'Next →',
-                        style: GoogleFonts.roboto(fontSize: 14.sp),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -121,4 +92,67 @@ class OnboardingScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+class _OnboardingDots extends StatelessWidget {
+  const _OnboardingDots();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 26,
+          height: 8,
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+        const SizedBox(width: 8),
+        _dot(),
+        const SizedBox(width: 8),
+        _dot(),
+      ],
+    );
+  }
+
+  Widget _dot() {
+    return Container(
+      width: 8,
+      height: 8,
+      decoration: const BoxDecoration(
+        color: Color(0xFFD8D8D8),
+        shape: BoxShape.circle,
+      ),
+    );
+  }
+}
+
+class _TopWhiteClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path()
+      ..lineTo(0, size.height * 0.80)
+      ..quadraticBezierTo(
+        size.width * 0.50,
+        size.height * 0.92,
+        size.width * 0.80,
+        size.height * 0.77,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.93,
+        size.height * 0.68,
+        size.width,
+        size.height * 0.73,
+      )
+      ..lineTo(size.width, 0)
+      ..close();
+
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
