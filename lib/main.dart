@@ -1,23 +1,40 @@
 import 'package:flutter/material.dart';
-import 'splash_screen.dart'; // Import your new screen
+import 'package:flutter_native_splash/flutter_native_splash.dart'; // ✅ Import
+import 'map_page.dart';
 
 void main() {
-  runApp(const SeygoApp());
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  // ✅ Keep the splash screen on screen while initializing
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  runApp(const SeyGoApp());
 }
 
-class SeygoApp extends StatelessWidget {
-  const SeygoApp({super.key});
+class SeyGoApp extends StatefulWidget {
+  const SeyGoApp({super.key});
+
+  @override
+  State<SeyGoApp> createState() => _SeyGoAppState();
+}
+
+class _SeyGoAppState extends State<SeyGoApp> {
+  @override
+  void initState() {
+    super.initState();
+    initialization();
+  }
+
+  void initialization() async {
+    // ✅ Simulate loading (e.g., getting location or API data)
+    await Future.delayed(const Duration(seconds: 2));
+    // ✅ Remove the splash screen once everything is ready
+    FlutterNativeSplash.remove();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Seygo Maps',
-      theme: ThemeData(
-        useMaterial3: true,
-        primarySwatch: Colors.blue,
-      ),
-      home: const SplashScreen(), // ✅ App starts here!
+      home: const MapPage(),
     );
   }
 }

@@ -18,7 +18,15 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_native_splash: ^2.4.1 # ✅ Add this
+
+flutter_native_splash:
+  color: "#ffffff" # Background color
+  image: assets/images/logo.png # Path to your SeyGo logo
+  android_12:
+    image: assets/images/logo.png
+    color: "#ffffff"
+  fullscreen: true
 
 flutter:
   uses-material-design: true
