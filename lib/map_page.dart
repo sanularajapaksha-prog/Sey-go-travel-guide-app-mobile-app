@@ -12,58 +12,113 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> {
-  // Initial center: Nuwara Eliya
-  static const LatLng _nuwaraEliya = LatLng(6.9639, 80.7718);
+  static const LatLng _initialPos = LatLng(6.9639, 80.7718); // Nuwara Eliya
   GoogleMapController? _mapController;
   final TextEditingController _searchController = TextEditingController();
 
-  // ✅ YOUR WORKING API KEY
+  // Set to store the markers displayed on the map
+  Set<Marker> _markers = {};
+
   final String _apiKey = "AIzaSyB6dQ9lJq0CQBaGzkJet_-Ua33hX4i_6_s";
 
-  // Moves camera to a specific lat/lng
-  void _animateCamera(double lat, double lng) {
+  // Function to move camera and add a marker
+  void _handleLocationSelection(double lat, double lng, String address) {
+    LatLng target = LatLng(lat, lng);
+
+    // 1. Update the Marker
+    setState(() {
+      _markers = {
+        Marker(
+          markerId: const MarkerId("searched_place"),
+          position: target,
+          infoWindow: InfoWindow(title: address),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        )
+      };
+    });
+
+    // 2. Move the Camera
     _mapController?.animateCamera(
       CameraUpdate.newCameraPosition(
-        CameraPosition(target: LatLng(lat, lng), zoom: 15),
+        CameraPosition(target: target, zoom: 15),
       ),
     );
+
+    // 3. Show Location Details Panel
+    _showLocationDetails(address, lat, lng);
   }
 
-  // Gets user's current GPS position
-  Future<void> _goToCurrentLocation() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return;
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) return;
-    }
-
-    Position position = await Geolocator.getCurrentPosition();
-    _animateCamera(position.latitude, position.longitude);
+  // UI for the location details at the bottom
+  void _showLocationDetails(String name, double lat, double lng) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40, height: 5,
+                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.location_on, color: Colors.redAccent, size: 18),
+                  const SizedBox(width: 5),
+                  Text("Coordinates: ${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)}",
+                      style: TextStyle(color: Colors.grey[600])),
+                ],
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                  ),
+                  child: const Text("Set as Destination", style: TextStyle(color: Colors.white)),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Important to keep the map full screen when keyboard opens
       resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
-          // 1. THE MAP
           GoogleMap(
             onMapCreated: (controller) => _mapController = controller,
-            initialCameraPosition: const CameraPosition(target: _nuwaraEliya, zoom: 13),
+            initialCameraPosition: const CameraPosition(target: _initialPos, zoom: 13),
             myLocationEnabled: true,
             myLocationButtonEnabled: false,
+            markers: _markers, // Link the markers to the map
           ),
 
-          // 2. THE SEARCH BAR
+          // Search Bar
           Positioned(
-            top: 50,
-            left: 15,
-            right: 15,
+            top: 50, left: 15, right: 15,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 5),
               decoration: BoxDecoration(
@@ -75,20 +130,20 @@ class _MapPageState extends State<MapPage> {
                 textEditingController: _searchController,
                 googleAPIKey: _apiKey,
                 inputDecoration: const InputDecoration(
-                  hintText: "Search location in Sri Lanka",
+                  hintText: "Search location...",
                   border: InputBorder.none,
-                  prefixIcon: Icon(Icons.search, color: Colors.blueAccent),
+                  prefixIcon: Icon(Icons.search),
                   contentPadding: EdgeInsets.symmetric(vertical: 15),
                 ),
-                debounceTime: 800,
-                countries: ["lk"], // Restricts results to Sri Lanka
+                debounceTime: 600,
+                countries: ["lk"],
                 isLatLngRequired: true,
+                // ✅ FULL getPlaceDetailWithLatLng FUNCTION
                 getPlaceDetailWithLatLng: (Prediction prediction) {
-                  // ✅ When user selects a result, fly to those coordinates
                   if (prediction.lat != null && prediction.lng != null) {
                     double lat = double.parse(prediction.lat!);
                     double lng = double.parse(prediction.lng!);
-                    _animateCamera(lat, lng);
+                    _handleLocationSelection(lat, lng, prediction.description ?? "");
                   }
                 },
                 itemClick: (Prediction prediction) {
@@ -98,18 +153,6 @@ class _MapPageState extends State<MapPage> {
                   );
                 },
               ),
-            ),
-          ),
-
-          // 3. ACTION BUTTON (Current Location)
-          Positioned(
-            right: 15,
-            top: 130,
-            child: FloatingActionButton(
-              onPressed: _goToCurrentLocation,
-              mini: true,
-              backgroundColor: Colors.black,
-              child: const Icon(Icons.my_location, color: Colors.white),
             ),
           ),
         ],
