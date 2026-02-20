@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../presentation/onboarding_screen/onboarding_screen.dart';
 import '../presentation/splash_screen/splash_screen.dart';
 import '../presentation/welcome_home_screen/welcome_home_screen.dart';
 import '../presentation/profile_screen/profile_screen.dart';
@@ -9,9 +10,11 @@ import '../presentation/route_planner_screen/route_planner_screen.dart';
 
 class AppRoutes {
   // TODO: Add your routes here
-  static const String initial = '/';
+  static const String initial = onboardingScreen;
+  static const String onboardingScreen = '/onboarding_screen';
   static const String splash = '/splash-screen';
   static const String welcomeHome = '/welcome-home-screen';
+  static const String welcomeHomeScreen = welcomeHome;
   static const String profile = '/profile-screen';
   static const String playlists = '/playlists-screen';
   static const String mapView = '/map-view-screen';
@@ -19,7 +22,7 @@ class AppRoutes {
   static const String routePlanner = '/route-planner-screen';
 
   static Map<String, WidgetBuilder> routes = {
-    initial: (context) => const WelcomeHomeScreen(),
+    onboardingScreen: (context) => const OnboardingScreen(),
     splash: (context) => const SplashScreen(),
     welcomeHome: (context) => const WelcomeHomeScreen(),
     profile: (context) => const ProfileScreen(),

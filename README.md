@@ -1,1 +1,1 @@
-"# Seygo-travel-guide-app" 
+"# Seygo-travel-guide-app"
