@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:saygotest/map_page.dart';
+import 'splash_screen.dart'; // Import your new screen
 
 void main() {
-  runApp(const MyApp());
+  runApp(const SeygoApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class SeygoApp extends StatelessWidget {
+  const SeygoApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      debugShowCheckedModeBanner: false,
+      title: 'Seygo Maps',
       theme: ThemeData(
+        useMaterial3: true,
         primarySwatch: Colors.blue,
       ),
-      home: const MapPage(),
-      debugShowCheckedModeBanner: false,
+      home: const SplashScreen(), // ✅ App starts here!
     );
   }
 }

@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import 'package:geolocator/geolocator.dart';
 import 'package:google_places_flutter/google_places_flutter.dart';
 import 'package:google_places_flutter/model/prediction.dart';
+import 'package:lottie/lottie.dart';
+
+// Ensure this model is defined as before
+class SavedLocation {
+  final String name;
+  final gmaps.LatLng position;
+  final String? imagePath; // Optional: for the list thumbnails
+
+  SavedLocation({required this.name, required this.position, this.imagePath});
+}
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -12,151 +22,170 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> {
-  static const LatLng _initialPos = LatLng(6.9639, 80.7718); // Nuwara Eliya
-  GoogleMapController? _mapController;
+  static const gmaps.LatLng _initialPos = gmaps.LatLng(6.9639, 80.7718);
+  gmaps.GoogleMapController? _mapController;
   final TextEditingController _searchController = TextEditingController();
 
-  // Set to store the markers displayed on the map
-  Set<Marker> _markers = {};
+  List<SavedLocation> _playlist = [];
+  Set<gmaps.Marker> _markers = {};
+  bool _isLoading = true;
+
+  // Tracking active search for the FAB
+  gmaps.LatLng? _currentSelectedPos;
+  String? _currentSelectedName;
+  bool _isPlaceSelected = false;
 
   final String _apiKey = "AIzaSyB6dQ9lJq0CQBaGzkJet_-Ua33hX4i_6_s";
 
-  // Function to move camera and add a marker
-  void _handleLocationSelection(double lat, double lng, String address) {
-    LatLng target = LatLng(lat, lng);
-
-    // 1. Update the Marker
-    setState(() {
-      _markers = {
-        Marker(
-          markerId: const MarkerId("searched_place"),
-          position: target,
-          infoWindow: InfoWindow(title: address),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        )
-      };
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (mounted) setState(() => _isLoading = false);
     });
-
-    // 2. Move the Camera
-    _mapController?.animateCamera(
-      CameraUpdate.newCameraPosition(
-        CameraPosition(target: target, zoom: 15),
-      ),
-    );
-
-    // 3. Show Location Details Panel
-    _showLocationDetails(address, lat, lng);
   }
 
-  // UI for the location details at the bottom
-  void _showLocationDetails(String name, double lat, double lng) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40, height: 5,
-                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.location_on, color: Colors.redAccent, size: 18),
-                  const SizedBox(width: 5),
-                  Text("Coordinates: ${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)}",
-                      style: TextStyle(color: Colors.grey[600])),
-                ],
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                  ),
-                  child: const Text("Set as Destination", style: TextStyle(color: Colors.white)),
-                ),
-              ),
-              const SizedBox(height: 10),
-            ],
+  void _onPlaceSelected(double lat, double lng, String name) {
+    gmaps.LatLng destination = gmaps.LatLng(lat, lng);
+    setState(() {
+      _currentSelectedPos = destination;
+      _currentSelectedName = name;
+      _isPlaceSelected = true;
+    });
+    _mapController?.animateCamera(gmaps.CameraUpdate.newLatLngZoom(destination, 15));
+  }
+
+  void _addToPlaylist() {
+    if (_currentSelectedName != null && _currentSelectedPos != null) {
+      setState(() {
+        _playlist.add(SavedLocation(name: _currentSelectedName!, position: _currentSelectedPos!));
+        _markers.add(
+          gmaps.Marker(
+            markerId: gmaps.MarkerId(_currentSelectedName!),
+            position: _currentSelectedPos!,
+            icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(gmaps.BitmapDescriptor.hueAzure),
           ),
         );
-      },
-    );
+        _isPlaceSelected = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
-          GoogleMap(
+          // 1. Background Map
+          gmaps.GoogleMap(
             onMapCreated: (controller) => _mapController = controller,
-            initialCameraPosition: const CameraPosition(target: _initialPos, zoom: 13),
+            initialCameraPosition: const gmaps.CameraPosition(target: _initialPos, zoom: 13),
             myLocationEnabled: true,
-            myLocationButtonEnabled: false,
-            markers: _markers, // Link the markers to the map
+            markers: _markers,
+            onTap: (_) => setState(() => _isPlaceSelected = false),
           ),
 
-          // Search Bar
-          Positioned(
-            top: 50, left: 15, right: 15,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)],
-              ),
-              child: GooglePlaceAutoCompleteTextField(
-                textEditingController: _searchController,
-                googleAPIKey: _apiKey,
-                inputDecoration: const InputDecoration(
-                  hintText: "Search location...",
-                  border: InputBorder.none,
-                  prefixIcon: Icon(Icons.search),
-                  contentPadding: EdgeInsets.symmetric(vertical: 15),
-                ),
-                debounceTime: 600,
-                countries: ["lk"],
-                isLatLngRequired: true,
-                // ✅ FULL getPlaceDetailWithLatLng FUNCTION
-                getPlaceDetailWithLatLng: (Prediction prediction) {
-                  if (prediction.lat != null && prediction.lng != null) {
-                    double lat = double.parse(prediction.lat!);
-                    double lng = double.parse(prediction.lng!);
-                    _handleLocationSelection(lat, lng, prediction.description ?? "");
-                  }
-                },
-                itemClick: (Prediction prediction) {
-                  _searchController.text = prediction.description ?? "";
-                  _searchController.selection = TextSelection.fromPosition(
-                    TextPosition(offset: _searchController.text.length),
-                  );
-                },
+          // 2. Search Bar at Top
+          Positioned(top: 50, left: 15, right: 15, child: _buildSearchBox()),
+
+          // 3. Floating "Add to Playlist" Button
+          if (_isPlaceSelected)
+            Positioned(
+              bottom: 140, // Height adjusted for the collapsed sheet
+              right: 20,
+              child: FloatingActionButton.extended(
+                onPressed: _addToPlaylist,
+                backgroundColor: const Color(0xFF0077B6),
+                icon: const Icon(Icons.playlist_add, color: Colors.white),
+                label: const Text("ADD TO PLAYLIST", style: TextStyle(color: Colors.white)),
               ),
             ),
-          ),
+
+          // 4. ✅ DRAGGABLE SCROLLABLE PLAYLIST (Like your screenshot)
+          if (_playlist.isNotEmpty)
+            DraggableScrollableSheet(
+              initialChildSize: 0.15, // Partially visible
+              minChildSize: 0.15,
+              maxChildSize: 0.8,    // Full screen when pulled up
+              builder: (context, scrollController) {
+                return Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+                    boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
+                  ),
+                  child: ListView.builder(
+                    controller: scrollController,
+                    itemCount: _playlist.length + 1,
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        return _buildSheetHeader(); // The handle at the top
+                      }
+                      return _buildPlaylistTile(index - 1);
+                    },
+                  ),
+                );
+              },
+            ),
+
+          if (_isLoading) _buildLoadingOverlay(),
         ],
       ),
     );
+  }
+
+  Widget _buildSheetHeader() {
+    return Column(
+      children: [
+        const SizedBox(height: 12),
+        Container(width: 40, height: 5, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
+        const Padding(
+          padding: EdgeInsets.all(15.0),
+          child: Text("Your Seygo Playlist", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPlaylistTile(int index) {
+    final item = _playlist[index];
+    return ListTile(
+      leading: Container(
+        width: 60, height: 60,
+        decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(10)),
+        child: const Icon(Icons.image, color: Colors.grey), // Placeholder for image
+      ),
+      title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+      subtitle: const Text("Tap to view on map"),
+      trailing: IconButton(
+        icon: const Icon(Icons.close, color: Colors.redAccent),
+        onPressed: () => setState(() {
+          _markers.removeWhere((m) => m.markerId.value == item.name);
+          _playlist.removeAt(index);
+        }),
+      ),
+      onTap: () {
+        _mapController?.animateCamera(gmaps.CameraUpdate.newLatLng(item.position));
+      },
+    );
+  }
+
+  Widget _buildSearchBox() {
+    return Container(
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(30), boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)]),
+      child: GooglePlaceAutoCompleteTextField(
+        textEditingController: _searchController,
+        googleAPIKey: _apiKey,
+        inputDecoration: const InputDecoration(hintText: "Search gems...", border: InputBorder.none, prefixIcon: Icon(Icons.search)),
+        countries: ["lk"],
+        isLatLngRequired: true,
+        getPlaceDetailWithLatLng: (p) => _onPlaceSelected(double.parse(p.lat!), double.parse(p.lng!), p.description!),
+        itemClick: (p) => _searchController.text = p.description!,
+      ),
+    );
+  }
+
+  Widget _buildLoadingOverlay() {
+    return Container(color: Colors.white, child: Center(child: Lottie.asset('assets/animations/map_loading.json', width: 200)));
   }
 }
