@@ -33,6 +33,7 @@ dependencies:
   geolocator: ^14.0.2
   image_picker: ^1.0.4
   smooth_page_indicator: ^2.0.1
+  flutter_secure_storage: ^9.2.2
 dev_dependencies:
   flutter_test: # CRITICAL: Required for Flutter project testing - DO NOT REMOVE
     sdk: flutter # CRITICAL: Required for Flutter project testing - DO NOT REMOVE
