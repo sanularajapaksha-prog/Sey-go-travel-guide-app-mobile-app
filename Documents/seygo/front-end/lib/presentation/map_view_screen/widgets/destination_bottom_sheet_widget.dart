@@ -22,15 +22,21 @@ class DestinationBottomSheetWidget extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: theme.cardColor,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(24.0),
-          topRight: Radius.circular(24.0),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(28.0),
+          topRight: Radius.circular(28.0),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.shadow,
+            blurRadius: 16,
+            offset: const Offset(0, -6),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle bar
           Container(
             margin: EdgeInsets.only(top: 2.h),
             width: 12.w,
@@ -40,12 +46,9 @@ class DestinationBottomSheetWidget extends StatelessWidget {
               borderRadius: BorderRadius.circular(2.0),
             ),
           ),
-
           SizedBox(height: 2.h),
-
-          // Destination image
           ClipRRect(
-            borderRadius: BorderRadius.circular(12.0),
+            borderRadius: BorderRadius.circular(20.0),
             child: CustomImageWidget(
               imageUrl: destination['image'] as String,
               width: 90.w,
@@ -54,10 +57,7 @@ class DestinationBottomSheetWidget extends StatelessWidget {
               semanticLabel: destination['semanticLabel'] as String,
             ),
           ),
-
           SizedBox(height: 2.h),
-
-          // Destination details
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 5.w),
             child: Column(
@@ -80,14 +80,14 @@ class DestinationBottomSheetWidget extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8.0),
+                        borderRadius: BorderRadius.circular(12.0),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           CustomIconWidget(
                             iconName: 'star',
-                            color: Color(0xFFF59E0B),
+                            color: const Color(0xFFF59E0B),
                             size: 16,
                           ),
                           SizedBox(width: 1.w),
@@ -102,9 +102,7 @@ class DestinationBottomSheetWidget extends StatelessWidget {
                     ),
                   ],
                 ),
-
                 SizedBox(height: 1.h),
-
                 Row(
                   children: [
                     CustomIconWidget(
@@ -136,19 +134,14 @@ class DestinationBottomSheetWidget extends StatelessWidget {
                     ),
                   ],
                 ),
-
                 SizedBox(height: 2.h),
-
                 Text(
                   destination['description'] as String,
                   style: theme.textTheme.bodyMedium,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
-
                 SizedBox(height: 3.h),
-
-                // Action buttons
                 Row(
                   children: [
                     Expanded(
@@ -159,7 +152,7 @@ class DestinationBottomSheetWidget extends StatelessWidget {
                           color: theme.colorScheme.primary,
                           size: 20,
                         ),
-                        label: Text('Add to Cart'),
+                        label: const Text('Add to Cart'),
                         style: OutlinedButton.styleFrom(
                           padding: EdgeInsets.symmetric(vertical: 1.5.h),
                         ),
@@ -174,7 +167,7 @@ class DestinationBottomSheetWidget extends StatelessWidget {
                           color: theme.colorScheme.onPrimary,
                           size: 20,
                         ),
-                        label: Text('View Details'),
+                        label: const Text('View Details'),
                         style: ElevatedButton.styleFrom(
                           padding: EdgeInsets.symmetric(vertical: 1.5.h),
                         ),
@@ -182,7 +175,6 @@ class DestinationBottomSheetWidget extends StatelessWidget {
                     ),
                   ],
                 ),
-
                 SizedBox(height: 3.h),
               ],
             ),
