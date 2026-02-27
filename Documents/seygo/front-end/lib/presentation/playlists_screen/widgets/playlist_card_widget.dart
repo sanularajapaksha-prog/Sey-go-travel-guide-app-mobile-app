@@ -32,16 +32,16 @@ class PlaylistCardWidget extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           onLongPress: () => _showContextMenu(context),
-          borderRadius: BorderRadius.circular(12.0),
+          borderRadius: BorderRadius.circular(20.0),
           child: Container(
             decoration: BoxDecoration(
               color: theme.cardColor,
-              borderRadius: BorderRadius.circular(12.0),
+              borderRadius: BorderRadius.circular(20.0),
               boxShadow: [
                 BoxShadow(
                   color: theme.colorScheme.shadow,
-                  blurRadius: 4.0,
-                  offset: const Offset(0, 2),
+                  blurRadius: 12.0,
+                  offset: const Offset(0, 6),
                 ),
               ],
             ),
@@ -65,7 +65,7 @@ class PlaylistCardWidget extends StatelessWidget {
       height: 20.h,
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(12.0)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20.0)),
       ),
       child: images.isEmpty
           ? Center(
@@ -79,7 +79,7 @@ class PlaylistCardWidget extends StatelessWidget {
       )
           : ClipRRect(
         borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(12.0),
+          top: Radius.circular(20.0),
         ),
         child: images.length == 1
             ? CustomImageWidget(
@@ -113,7 +113,7 @@ class PlaylistCardWidget extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: EdgeInsets.all(3.w),
+      padding: EdgeInsets.all(4.w),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -147,7 +147,7 @@ class PlaylistCardWidget extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 0.5.h),
+          SizedBox(height: 0.8.h),
           Text(
             '$count ${count == 1 ? 'destination' : 'destinations'}',
             style: theme.textTheme.bodyMedium?.copyWith(

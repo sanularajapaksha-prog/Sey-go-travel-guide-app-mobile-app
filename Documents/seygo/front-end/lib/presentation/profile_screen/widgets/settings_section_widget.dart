@@ -23,12 +23,12 @@ class SettingsSectionWidget extends StatelessWidget {
       margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
       decoration: BoxDecoration(
         color: theme.cardColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: theme.colorScheme.shadow,
-            blurRadius: 4,
-            offset: Offset(0, 2),
+            blurRadius: 12,
+            offset: Offset(0, 6),
           ),
         ],
       ),
@@ -36,7 +36,7 @@ class SettingsSectionWidget extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: EdgeInsets.fromLTRB(4.w, 2.h, 4.w, 1.h),
+            padding: EdgeInsets.fromLTRB(4.w, 2.2.h, 4.w, 1.2.h),
             child: Text(
               title,
               style: theme.textTheme.titleMedium?.copyWith(
@@ -66,7 +66,7 @@ class SettingsSectionWidget extends StatelessWidget {
     return InkWell(
       onTap: item.onTap,
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
+        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.8.h),
         child: Row(
           children: [
             Container(
@@ -74,7 +74,7 @@ class SettingsSectionWidget extends StatelessWidget {
               height: 10.w,
               decoration: BoxDecoration(
                 color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
                 child: CustomIconWidget(
