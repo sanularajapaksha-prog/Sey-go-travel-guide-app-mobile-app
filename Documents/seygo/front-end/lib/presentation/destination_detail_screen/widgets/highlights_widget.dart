@@ -29,11 +29,18 @@ class HighlightsWidget extends StatelessWidget {
             children: highlights.map((highlight) {
               return Container(
                 width: 42.w,
-                padding: EdgeInsets.all(3.w),
+                padding: EdgeInsets.all(3.5.w),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surface,
-                  borderRadius: BorderRadius.circular(3.w),
+                  borderRadius: BorderRadius.circular(4.w),
                   border: Border.all(color: theme.dividerColor, width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.shadow,
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,7 +52,7 @@ class HighlightsWidget extends StatelessWidget {
                         color: theme.colorScheme.secondary.withValues(
                           alpha: 0.1,
                         ),
-                        borderRadius: BorderRadius.circular(2.w),
+                        borderRadius: BorderRadius.circular(3.w),
                       ),
                       child: Center(
                         child: CustomIconWidget(

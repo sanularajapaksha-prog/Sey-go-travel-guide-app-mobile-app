@@ -47,8 +47,15 @@ class RelatedDestinationsWidget extends StatelessWidget {
                     width: 45.w,
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surface,
-                      borderRadius: BorderRadius.circular(3.w),
+                      borderRadius: BorderRadius.circular(4.w),
                       border: Border.all(color: theme.dividerColor, width: 1),
+                      boxShadow: [
+                        BoxShadow(
+                          color: theme.colorScheme.shadow,
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -56,8 +63,8 @@ class RelatedDestinationsWidget extends StatelessWidget {
                         // Destination image
                         ClipRRect(
                           borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(3.w),
-                            topRight: Radius.circular(3.w),
+                            topLeft: Radius.circular(4.w),
+                            topRight: Radius.circular(4.w),
                           ),
                           child: CustomImageWidget(
                             imageUrl: destination["image"] as String,
