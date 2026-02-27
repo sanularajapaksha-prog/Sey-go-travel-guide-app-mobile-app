@@ -22,7 +22,7 @@ class DestinationInfoWidget extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Container(
-      padding: EdgeInsets.all(4.w),
+      padding: EdgeInsets.fromLTRB(4.w, 3.h, 4.w, 2.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -54,7 +54,7 @@ class DestinationInfoWidget extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 3.h),
+          SizedBox(height: 2.4.h),
 
           // Description
           Text(

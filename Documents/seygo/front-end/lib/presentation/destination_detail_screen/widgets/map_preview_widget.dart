@@ -35,11 +35,18 @@ class MapPreviewWidget extends StatelessWidget {
             height: 25.h,
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(3.w),
+              borderRadius: BorderRadius.circular(4.w),
               border: Border.all(color: theme.dividerColor, width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.colorScheme.shadow,
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(3.w),
+              borderRadius: BorderRadius.circular(4.w),
               child: Stack(
                 children: [
                   // Static map preview image
@@ -69,7 +76,7 @@ class MapPreviewWidget extends StatelessWidget {
                         foregroundColor: theme.colorScheme.onPrimary,
                         padding: EdgeInsets.symmetric(
                           horizontal: 4.w,
-                          vertical: 1.5.h,
+                          vertical: 1.6.h,
                         ),
                       ),
                     ),
