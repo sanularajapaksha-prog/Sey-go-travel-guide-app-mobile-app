@@ -26,17 +26,17 @@ class DestinationCardWidget extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12.0),
+          borderRadius: BorderRadius.circular(20.0),
           boxShadow: [
             BoxShadow(
               color: theme.colorScheme.shadow,
-              blurRadius: 6.0,
-              offset: const Offset(0, 2),
+              blurRadius: 14.0,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(12.0),
+          borderRadius: BorderRadius.circular(20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -50,7 +50,7 @@ class DestinationCardWidget extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.5.h),
+                padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.8.h),
                 color: theme.colorScheme.surface,
                 child: Text(
                   name,

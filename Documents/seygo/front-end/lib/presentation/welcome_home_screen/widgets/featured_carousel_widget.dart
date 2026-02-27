@@ -60,17 +60,17 @@ class _FeaturedCarouselWidgetState extends State<FeaturedCarouselWidget> {
                 child: Container(
                   margin: EdgeInsets.symmetric(horizontal: 2.w),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16.0),
+                    borderRadius: BorderRadius.circular(22.0),
                     boxShadow: [
                       BoxShadow(
                         color: theme.colorScheme.shadow,
-                        blurRadius: 8.0,
-                        offset: const Offset(0, 2),
+                        blurRadius: 16.0,
+                        offset: const Offset(0, 6),
                       ),
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16.0),
+                    borderRadius: BorderRadius.circular(22.0),
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
@@ -132,13 +132,13 @@ class _FeaturedCarouselWidgetState extends State<FeaturedCarouselWidget> {
             widget.destinations.length,
                 (index) => Container(
               margin: EdgeInsets.symmetric(horizontal: 1.w),
-              width: _currentPage == index ? 3.w : 2.w,
-              height: 1.h,
+              width: _currentPage == index ? 3.4.w : 2.2.w,
+              height: 0.9.h,
               decoration: BoxDecoration(
                 color: _currentPage == index
                     ? theme.colorScheme.secondary
                     : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(4.0),
+                borderRadius: BorderRadius.circular(6.0),
               ),
             ),
           ),

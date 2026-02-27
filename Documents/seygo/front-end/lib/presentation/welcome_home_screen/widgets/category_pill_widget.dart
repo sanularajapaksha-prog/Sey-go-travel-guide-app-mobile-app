@@ -25,16 +25,25 @@ class CategoryPillWidget extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+        padding: EdgeInsets.symmetric(horizontal: 4.5.w, vertical: 1.1.h),
         decoration: BoxDecoration(
           color: isSelected
               ? theme.colorScheme.primary
               : theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(24.0),
+          borderRadius: BorderRadius.circular(28.0),
           border: Border.all(
             color: isSelected ? theme.colorScheme.primary : theme.dividerColor,
             width: 1.0,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: theme.colorScheme.shadow,
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
