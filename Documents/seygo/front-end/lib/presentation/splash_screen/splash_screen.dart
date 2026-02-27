@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
-import '../../widgets/custom_icon_widget.dart';
 
 /// Splash Screen - Branded app launch experience with initialization
 /// Displays SeyGo logo with subtle animation during 2-3 second initialization
@@ -104,15 +103,8 @@ class _SplashScreenState extends State<SplashScreen>
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              theme.colorScheme.surface,
-              theme.colorScheme.primary.withValues(alpha: 0.1),
-            ],
-          ),
+        decoration: const BoxDecoration(
+          color: Color(0xFFFFFFFF),
         ),
         child: SafeArea(
           child: Column(
@@ -121,7 +113,14 @@ class _SplashScreenState extends State<SplashScreen>
               const Spacer(),
 
               // Animated Logo
-              ScaleTransition(scale: _scaleAnimation, child: _buildLogo(theme)),
+              ScaleTransition(
+                scale: _scaleAnimation,
+                child: Image.asset(
+                  'assets/images/seygo_logo.png',
+                  width: 55.w,
+                  fit: BoxFit.contain,
+                ),
+              ),
 
               SizedBox(height: 4.h),
 
@@ -141,45 +140,6 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 
-  /// Build SeyGo logo
-  Widget _buildLogo(ThemeData theme) {
-    return Container(
-      width: 40.w,
-      height: 40.w,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary,
-        borderRadius: BorderRadius.circular(20.w),
-        boxShadow: [
-          BoxShadow(
-            color: theme.colorScheme.primary.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CustomIconWidget(
-              iconName: 'explore',
-              color: theme.colorScheme.tertiary,
-              size: 15.w,
-            ),
-            SizedBox(height: 1.h),
-            Text(
-              'SeyGo',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                color: theme.colorScheme.tertiary,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   /// Build loading indicator
   Widget _buildLoadingIndicator(ThemeData theme) {
