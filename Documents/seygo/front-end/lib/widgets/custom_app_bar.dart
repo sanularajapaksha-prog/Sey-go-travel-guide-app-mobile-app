@@ -158,10 +158,10 @@ class CustomSearchAppBar extends StatelessWidget
       elevation: 0,
       leading: leading,
       title: Container(
-        height: 44,
+        height: 50,
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(12.0),
+          borderRadius: BorderRadius.circular(18.0),
           border: Border.all(color: theme.dividerColor, width: 1.0),
         ),
         child: TextField(
@@ -193,8 +193,8 @@ class CustomSearchAppBar extends StatelessWidget
                 : null,
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
+              horizontal: 18,
+              vertical: 14,
             ),
           ),
         ),
