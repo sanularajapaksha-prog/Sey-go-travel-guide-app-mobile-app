@@ -168,7 +168,7 @@ class AppTheme {
       elevation: 0,
       centerTitle: false,
       titleTextStyle: GoogleFonts.inter(
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: FontWeight.w600,
         color: tertiaryLight,
         letterSpacing: 0.15,
@@ -179,10 +179,10 @@ class AppTheme {
     // Card theme - subtle elevation without heavy shadows
     cardTheme: CardThemeData(
       color: cardLight,
-      elevation: 1.0,
+      elevation: 6.0,
       shadowColor: shadowLight,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-      margin: const EdgeInsets.all(8.0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+      margin: const EdgeInsets.all(12.0),
     ),
 
     // Bottom navigation - spatial design with generous touch targets
@@ -191,13 +191,13 @@ class AppTheme {
       selectedItemColor: secondaryLight,
       unselectedItemColor: neutralLight,
       type: BottomNavigationBarType.fixed,
-      elevation: 4.0,
+      elevation: 8.0,
       selectedLabelStyle: GoogleFonts.inter(
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: FontWeight.w500,
       ),
       unselectedLabelStyle: GoogleFonts.inter(
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: FontWeight.w400,
       ),
     ),
@@ -206,8 +206,8 @@ class AppTheme {
     floatingActionButtonTheme: FloatingActionButtonThemeData(
       backgroundColor: secondaryLight,
       foregroundColor: primaryLight,
-      elevation: 2.0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+      elevation: 6.0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18.0)),
     ),
 
     // Button themes - 200-300ms transitions
@@ -216,9 +216,10 @@ class AppTheme {
         foregroundColor: primaryLight,
         backgroundColor: secondaryLight,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        elevation: 2.0,
+        minimumSize: const Size(0, 56),
+        elevation: 6.0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.0),
+          borderRadius: BorderRadius.circular(28.0),
         ),
         textStyle: GoogleFonts.inter(
           fontSize: 16,
@@ -234,7 +235,7 @@ class AppTheme {
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         side: BorderSide(color: secondaryLight, width: 1.0),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.0),
+          borderRadius: BorderRadius.circular(24.0),
         ),
         textStyle: GoogleFonts.inter(
           fontSize: 16,
@@ -248,7 +249,7 @@ class AppTheme {
       style: TextButton.styleFrom(
         foregroundColor: secondaryLight,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18.0)),
         textStyle: GoogleFonts.inter(
           fontSize: 16,
           fontWeight: FontWeight.w500,
@@ -264,25 +265,25 @@ class AppTheme {
     inputDecorationTheme: InputDecorationThemeData(
       fillColor: surfaceLight,
       filled: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(18.0),
         borderSide: BorderSide(color: lightGray, width: 1.0),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(18.0),
         borderSide: BorderSide(color: lightGray, width: 1.0),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(18.0),
         borderSide: BorderSide(color: secondaryLight, width: 2.0),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(18.0),
         borderSide: BorderSide(color: errorLight, width: 1.0),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(18.0),
         borderSide: BorderSide(color: errorLight, width: 2.0),
       ),
       labelStyle: GoogleFonts.inter(
@@ -351,7 +352,7 @@ class AppTheme {
       thumbColor: secondaryLight,
       overlayColor: secondaryLight.withValues(alpha: 0.2),
       inactiveTrackColor: lightGray,
-      trackHeight: 4.0,
+      trackHeight: 5.0,
     ),
 
     // Tab bar theme
@@ -396,8 +397,8 @@ class AppTheme {
       ),
       actionTextColor: secondaryLight,
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-      elevation: 2.0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18.0)),
+      elevation: 6.0,
     ),
 
     // Chip theme - for category pills
@@ -415,8 +416,8 @@ class AppTheme {
         fontWeight: FontWeight.w500,
         color: primaryLight,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.0)),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
       elevation: 0,
     ),
     dialogTheme: DialogThemeData(backgroundColor: dialogLight),
@@ -465,7 +466,7 @@ class AppTheme {
       elevation: 0,
       centerTitle: false,
       titleTextStyle: GoogleFonts.inter(
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: FontWeight.w600,
         color: tertiaryDark,
         letterSpacing: 0.15,
@@ -476,10 +477,10 @@ class AppTheme {
     // Card theme
     cardTheme: CardThemeData(
       color: cardDark,
-      elevation: 1.0,
+      elevation: 6.0,
       shadowColor: shadowDark,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-      margin: const EdgeInsets.all(8.0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+      margin: const EdgeInsets.all(12.0),
     ),
 
     // Bottom navigation
@@ -488,13 +489,13 @@ class AppTheme {
       selectedItemColor: secondaryDark,
       unselectedItemColor: neutralDark,
       type: BottomNavigationBarType.fixed,
-      elevation: 4.0,
+      elevation: 8.0,
       selectedLabelStyle: GoogleFonts.inter(
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: FontWeight.w500,
       ),
       unselectedLabelStyle: GoogleFonts.inter(
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: FontWeight.w400,
       ),
     ),
@@ -503,8 +504,8 @@ class AppTheme {
     floatingActionButtonTheme: FloatingActionButtonThemeData(
       backgroundColor: secondaryDark,
       foregroundColor: primaryDark,
-      elevation: 2.0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
+      elevation: 6.0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18.0)),
     ),
 
     // Button themes
@@ -513,9 +514,10 @@ class AppTheme {
         foregroundColor: primaryDark,
         backgroundColor: secondaryDark,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        elevation: 2.0,
+        minimumSize: const Size(0, 56),
+        elevation: 6.0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.0),
+          borderRadius: BorderRadius.circular(28.0),
         ),
         textStyle: GoogleFonts.inter(
           fontSize: 16,
@@ -531,7 +533,7 @@ class AppTheme {
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         side: BorderSide(color: secondaryDark, width: 1.0),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.0),
+          borderRadius: BorderRadius.circular(24.0),
         ),
         textStyle: GoogleFonts.inter(
           fontSize: 16,
@@ -545,7 +547,7 @@ class AppTheme {
       style: TextButton.styleFrom(
         foregroundColor: secondaryDark,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18.0)),
         textStyle: GoogleFonts.inter(
           fontSize: 16,
           fontWeight: FontWeight.w500,
@@ -561,25 +563,25 @@ class AppTheme {
     inputDecorationTheme: InputDecorationThemeData(
       fillColor: surfaceDark,
       filled: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(18.0),
         borderSide: BorderSide(color: lightGrayDark, width: 1.0),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(18.0),
         borderSide: BorderSide(color: lightGrayDark, width: 1.0),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(18.0),
         borderSide: BorderSide(color: secondaryDark, width: 2.0),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(18.0),
         borderSide: BorderSide(color: errorDark, width: 1.0),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(18.0),
         borderSide: BorderSide(color: errorDark, width: 2.0),
       ),
       labelStyle: GoogleFonts.inter(
@@ -648,7 +650,7 @@ class AppTheme {
       thumbColor: secondaryDark,
       overlayColor: secondaryDark.withValues(alpha: 0.2),
       inactiveTrackColor: lightGrayDark,
-      trackHeight: 4.0,
+      trackHeight: 5.0,
     ),
 
     // Tab bar theme
@@ -693,8 +695,8 @@ class AppTheme {
       ),
       actionTextColor: secondaryDark,
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-      elevation: 2.0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18.0)),
+      elevation: 6.0,
     ),
 
     // Chip theme
@@ -712,8 +714,8 @@ class AppTheme {
         fontWeight: FontWeight.w500,
         color: primaryDark,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.0)),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
       elevation: 0,
     ),
     dialogTheme: DialogThemeData(backgroundColor: dialogDark),
@@ -754,38 +756,38 @@ class AppTheme {
       // Headline styles - section headings
       headlineLarge: GoogleFonts.inter(
         fontSize: 32,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w700,
         color: textHighEmphasis,
         letterSpacing: 0,
       ),
       headlineMedium: GoogleFonts.inter(
         fontSize: 28,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w700,
         color: textHighEmphasis,
         letterSpacing: 0,
       ),
       headlineSmall: GoogleFonts.inter(
         fontSize: 24,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w700,
         color: textHighEmphasis,
         letterSpacing: 0,
       ),
 
       // Title styles - card titles and list items
       titleLarge: GoogleFonts.inter(
-        fontSize: 22,
+        fontSize: 20,
         fontWeight: FontWeight.w700,
         color: textHighEmphasis,
         letterSpacing: 0,
       ),
       titleMedium: GoogleFonts.inter(
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: FontWeight.w600,
         color: textHighEmphasis,
         letterSpacing: 0.15,
       ),
       titleSmall: GoogleFonts.inter(
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: FontWeight.w600,
         color: textHighEmphasis,
         letterSpacing: 0.1,
@@ -793,7 +795,7 @@ class AppTheme {
 
       // Body styles - main content text
       bodyLarge: GoogleFonts.inter(
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: FontWeight.w400,
         color: textHighEmphasis,
         letterSpacing: 0.5,
