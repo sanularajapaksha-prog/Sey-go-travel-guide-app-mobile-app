@@ -15,6 +15,17 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   String? _emailError;
 
+  String? _validateEmail(String value) {
+    final normalized = value.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return null;
+    }
+    if (!normalized.endsWith('@gmail.com')) {
+      return 'Email must end with @gmail.com';
+    }
+    return null;
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -69,15 +80,8 @@ class _LoginPageState extends State<LoginPage> {
                 controller: _emailController,
                 errorText: _emailError,
                 onChanged: (value) {
-                  final trimmed = value.trim();
                   setState(() {
-                    if (trimmed.isEmpty) {
-                      _emailError = null;
-                    } else if (!trimmed.endsWith('@gmail.com')) {
-                      _emailError = 'Email must end with @gmail.com';
-                    } else {
-                      _emailError = null;
-                    }
+                    _emailError = _validateEmail(value);
                   });
                 },
               ),
