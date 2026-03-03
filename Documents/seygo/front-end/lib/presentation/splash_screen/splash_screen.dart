@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
-import '../../core/app_export.dart';
 
 /// Splash Screen - Branded app launch experience with initialization
 /// Displays SeyGo logo with subtle animation during 2-3 second initialization

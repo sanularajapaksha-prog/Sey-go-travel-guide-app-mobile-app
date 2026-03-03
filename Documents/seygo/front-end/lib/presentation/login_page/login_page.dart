@@ -216,6 +216,14 @@ class _SocialPill extends StatelessWidget {
       height: 46,
       child: ElevatedButton(
         onPressed: () {},
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          elevation: 2,
+          shadowColor: const Color(0x22000000),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -234,14 +242,6 @@ class _SocialPill extends StatelessWidget {
               ),
             ),
           ],
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          elevation: 2,
-          shadowColor: const Color(0x22000000),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
         ),
       ),
     );
