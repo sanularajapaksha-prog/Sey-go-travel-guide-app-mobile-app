@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../routes/app_routes.dart';
@@ -152,6 +153,7 @@ class _OtpBox extends StatelessWidget {
         focusNode: focusNode,
         onChanged: onChanged,
         keyboardType: TextInputType.number,
+        inputFormatters: const [FilteringTextInputFormatter.digitsOnly],
         textAlign: TextAlign.center,
         maxLength: 1,
         decoration: InputDecoration(
