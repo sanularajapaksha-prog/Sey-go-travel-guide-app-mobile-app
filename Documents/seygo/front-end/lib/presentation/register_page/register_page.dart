@@ -48,7 +48,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    const brandBlue = Color(0xFF2B84B4);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FB),
@@ -86,7 +86,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       style: GoogleFonts.poppins(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
-                        color: colorScheme.primary,
+                        color: brandBlue,
                       ),
                     ),
                   ),
@@ -160,8 +160,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     AppRoutes.otpPage,
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: colorScheme.primary,
-                    foregroundColor: colorScheme.onPrimary,
+                    backgroundColor: brandBlue,
+                    foregroundColor: Colors.white,
                     elevation: 4,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(28),
@@ -332,13 +332,13 @@ class _SegmentButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    const brandBlue = Color(0xFF2B84B4);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         height: 40,
         decoration: BoxDecoration(
-          color: active ? colorScheme.primary : Colors.transparent,
+          color: active ? brandBlue : Colors.transparent,
           borderRadius: BorderRadius.circular(26),
         ),
         child: Center(
@@ -347,7 +347,7 @@ class _SegmentButton extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: active ? colorScheme.onPrimary : const Color(0xFF6C7685),
+              color: active ? Colors.white : const Color(0xFF6C7685),
             ),
           ),
         ),
