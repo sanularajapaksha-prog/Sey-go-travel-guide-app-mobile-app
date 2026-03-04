@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../routes/app_routes.dart';
+import '../onboarding_widgets/onboarding_widgets.dart';
 
 class FeatureIntroPage extends StatelessWidget {
   const FeatureIntroPage({super.key});
@@ -56,64 +57,14 @@ class FeatureIntroPage extends StatelessWidget {
                   _Dot(isActive: false),
                   SizedBox(width: 8),
                   _Dot(isActive: true),
-                ],
+              ],
               ),
               const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: () =>
-                      Navigator.pushNamed(context, AppRoutes.signupPage),
-                  style: ElevatedButton.styleFrom(
-                    elevation: 6,
-                    shadowColor: const Color(0x33000000),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                    backgroundColor: const Color(0xFF2B84B4),
-                  ),
-                  child: Text(
-                    'Get Started',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
+              NextButton(
+                onPressed: () =>
+                    Navigator.pushNamed(context, AppRoutes.signupPage),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DotRing extends StatelessWidget {
-  const _DotRing({required this.isActive});
-
-  final bool isActive;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color ringColor =
-        isActive ? const Color(0xFF2B84B4) : const Color(0xFFBFC7D1);
-    return Container(
-      width: isActive ? 28 : 24,
-      height: isActive ? 28 : 24,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: ringColor, width: 2),
-      ),
-      child: Center(
-        child: Container(
-          width: isActive ? 8 : 5,
-          height: isActive ? 8 : 5,
-          decoration: BoxDecoration(
-            color: isActive ? const Color(0xFF2B84B4) : Colors.transparent,
-            shape: BoxShape.circle,
           ),
         ),
       ),

@@ -48,7 +48,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    const accentBlue = Color(0xFF2B84B4);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FB),
@@ -86,7 +86,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       style: GoogleFonts.poppins(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
-                        color: accentBlue,
+                        color: colorScheme.primary,
                       ),
                     ),
                   ),
@@ -160,8 +160,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     AppRoutes.otpPage,
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: accentBlue,
-                    foregroundColor: Colors.white,
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
                     elevation: 4,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(28),
@@ -211,7 +211,12 @@ class _RegisterPageState extends State<RegisterPage> {
                   Expanded(
                     child: _SocialPill(
                       label: 'Apple',
-                      leading: const Icon(Icons.apple, size: 18),
+                      leading: Image.asset(
+                        'assets/images/apple_logo.png',
+                        width: 18,
+                        height: 18,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                 ],
@@ -233,13 +238,14 @@ class _SocialPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 46,
+      height: 50,
       child: ElevatedButton(
         onPressed: () {},
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
           elevation: 2,
           shadowColor: const Color(0x22000000),
+          side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
@@ -326,13 +332,13 @@ class _SegmentButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accentBlue = Color(0xFF2B84B4);
+    final colorScheme = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         height: 40,
         decoration: BoxDecoration(
-          color: active ? accentBlue : Colors.transparent,
+          color: active ? colorScheme.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(26),
         ),
         child: Center(
@@ -341,7 +347,7 @@ class _SegmentButton extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: active ? Colors.white : const Color(0xFF6C7685),
+              color: active ? colorScheme.onPrimary : const Color(0xFF6C7685),
             ),
           ),
         ),

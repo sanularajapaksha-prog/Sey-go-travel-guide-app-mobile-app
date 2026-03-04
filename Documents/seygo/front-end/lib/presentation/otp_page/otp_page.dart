@@ -30,7 +30,7 @@ class _OtpPageState extends State<OtpPage> {
 
   @override
   Widget build(BuildContext context) {
-    const accentBlue = Color(0xFF2B84B4);
+    final colorScheme = Theme.of(context).colorScheme;
     final double height = MediaQuery.of(context).size.height;
 
     return Scaffold(
@@ -92,7 +92,7 @@ class _OtpPageState extends State<OtpPage> {
                   'Request again',
                   style: GoogleFonts.poppins(
                     fontSize: 12.5,
-                    color: accentBlue,
+                    color: colorScheme.primary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -107,8 +107,8 @@ class _OtpPageState extends State<OtpPage> {
                     AppRoutes.welcomeHomeScreen,
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: accentBlue,
-                    foregroundColor: Colors.white,
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
                     elevation: 4,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(28),
@@ -145,6 +145,7 @@ class _OtpBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return SizedBox(
       width: 52,
       height: 52,
@@ -171,7 +172,7 @@ class _OtpBox extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF2B84B4), width: 1.5),
+            borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
           ),
         ),
         style: GoogleFonts.poppins(
