@@ -17,11 +17,11 @@ class AppTheme {
 
   // Secondary colors
   static const Color secondaryLight = Color(
-    0xFF2DD4BF,
-  ); // Teal accent for interactive elements
+    0xFF2B84B4,
+  ); // Blue accent for interactive elements
   static const Color secondaryDark = Color(
-    0xFF2DD4BF,
-  ); // Consistent teal across themes
+    0xFF2B84B4,
+  ); // Consistent blue across themes
 
   // Tertiary colors
   static const Color tertiaryLight = Color(
@@ -73,10 +73,10 @@ class AppTheme {
 
   // Success and warning colors
   static const Color successLight = Color(
-    0xFF10B981,
-  ); // Green for confirmation states
+    0xFF2B84B4,
+  ); // Blue confirmation state to match app palette
   static const Color successDark = Color(
-    0xFF10B981,
+    0xFF2B84B4,
   ); // Consistent success color
 
   static const Color warningLight = Color(
