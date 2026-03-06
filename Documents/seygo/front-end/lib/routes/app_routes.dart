@@ -38,7 +38,7 @@ class AppRoutes {
   static const String destinationDetail = '/destination-detail-screen';
   static const String routePlanner = '/route-planner-screen';
 
-  static Map<String, WidgetBuilder> routes = {
+  static final Map<String, WidgetBuilder> routes = {
     introLogo: (context) => const LogoIntroPage(),
     introWelcome: (context) => const WelcomeIntroPage(),
     introPlanner: (context) => const PlannerIntroPage(),

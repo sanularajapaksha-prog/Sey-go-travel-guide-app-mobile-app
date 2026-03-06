@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../routes/app_routes.dart';
@@ -29,7 +30,7 @@ class _OtpPageState extends State<OtpPage> {
 
   @override
   Widget build(BuildContext context) {
-    const accentBlue = Color(0xFF2B84B4);
+    const brandBlue = Color(0xFF2B84B4);
     final double height = MediaQuery.of(context).size.height;
 
     return Scaffold(
@@ -91,7 +92,7 @@ class _OtpPageState extends State<OtpPage> {
                   'Request again',
                   style: GoogleFonts.poppins(
                     fontSize: 12.5,
-                    color: accentBlue,
+                    color: brandBlue,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -106,7 +107,7 @@ class _OtpPageState extends State<OtpPage> {
                     AppRoutes.welcomeHomeScreen,
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: accentBlue,
+                    backgroundColor: brandBlue,
                     foregroundColor: Colors.white,
                     elevation: 4,
                     shape: RoundedRectangleBorder(
@@ -144,6 +145,7 @@ class _OtpBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const brandBlue = Color(0xFF2B84B4);
     return SizedBox(
       width: 52,
       height: 52,
@@ -152,6 +154,7 @@ class _OtpBox extends StatelessWidget {
         focusNode: focusNode,
         onChanged: onChanged,
         keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         textAlign: TextAlign.center,
         maxLength: 1,
         decoration: InputDecoration(
@@ -169,7 +172,7 @@ class _OtpBox extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF2B84B4), width: 1.5),
+            borderSide: const BorderSide(color: brandBlue, width: 1.5),
           ),
         ),
         style: GoogleFonts.poppins(

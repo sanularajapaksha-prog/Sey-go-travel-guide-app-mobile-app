@@ -15,6 +15,17 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   String? _emailError;
 
+  String? _validateEmail(String value) {
+    final normalized = value.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return null;
+    }
+    if (!normalized.endsWith('@gmail.com')) {
+      return 'Email must end with @gmail.com';
+    }
+    return null;
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -23,7 +34,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    const accentBlue = Color(0xFF2B84B4);
+    const brandBlue = Color(0xFF2B84B4);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FB),
@@ -69,15 +80,8 @@ class _LoginPageState extends State<LoginPage> {
                 controller: _emailController,
                 errorText: _emailError,
                 onChanged: (value) {
-                  final trimmed = value.trim();
                   setState(() {
-                    if (trimmed.isEmpty) {
-                      _emailError = null;
-                    } else if (!trimmed.endsWith('@gmail.com')) {
-                      _emailError = 'Email must end with @gmail.com';
-                    } else {
-                      _emailError = null;
-                    }
+                    _emailError = _validateEmail(value);
                   });
                 },
               ),
@@ -95,7 +99,7 @@ class _LoginPageState extends State<LoginPage> {
                   'Forgot Password?',
                   style: GoogleFonts.poppins(
                     fontSize: 12.5,
-                    color: accentBlue,
+                    color: brandBlue,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -110,7 +114,7 @@ class _LoginPageState extends State<LoginPage> {
                     AppRoutes.welcomeHomeScreen,
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: accentBlue,
+                    backgroundColor: brandBlue,
                     foregroundColor: Colors.white,
                     elevation: 4,
                     shape: RoundedRectangleBorder(
@@ -161,7 +165,12 @@ class _LoginPageState extends State<LoginPage> {
                   Expanded(
                     child: _SocialPill(
                       label: 'Apple',
-                      leading: const Icon(Icons.apple, size: 18),
+                      leading: Image.asset(
+                        'assets/images/apple_logo.png',
+                        width: 18,
+                        height: 18,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                 ],
@@ -186,7 +195,7 @@ class _LoginPageState extends State<LoginPage> {
                             'Sign Up',
                             style: GoogleFonts.poppins(
                               fontSize: 12.5,
-                              color: accentBlue,
+                              color: brandBlue,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -213,9 +222,18 @@ class _SocialPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 46,
+      height: 50,
       child: ElevatedButton(
         onPressed: () {},
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          elevation: 2,
+          shadowColor: const Color(0x22000000),
+          side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -234,14 +252,6 @@ class _SocialPill extends StatelessWidget {
               ),
             ),
           ],
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          elevation: 2,
-          shadowColor: const Color(0x22000000),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
         ),
       ),
     );
@@ -265,7 +275,6 @@ class _SegmentedAuth extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accentBlue = Color(0xFF2B84B4);
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -307,13 +316,13 @@ class _SegmentButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accentBlue = Color(0xFF2B84B4);
+    const brandBlue = Color(0xFF2B84B4);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         height: 40,
         decoration: BoxDecoration(
-          color: active ? accentBlue : Colors.transparent,
+          color: active ? brandBlue : Colors.transparent,
           borderRadius: BorderRadius.circular(26),
         ),
         child: Center(
