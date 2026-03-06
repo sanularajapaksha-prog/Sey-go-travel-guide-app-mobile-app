@@ -10,60 +10,101 @@ class WelcomeIntroPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F4F4),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 6, 18, 18),
-          child: Column(
-            children: [
-              const SizedBox(height: 8),
-              SizedBox(
-                height: MediaQuery.of(context).size.height * 0.60,
-                width: double.infinity,
-                child: Image.asset(
-                  'assets/images/onboard_2.png',
-                  fit: BoxFit.cover,
+        child: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/images/onboard_2.png'),
+              fit: BoxFit.cover,
+              filterQuality: FilterQuality.high,
+              isAntiAlias: true,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 6, 18, 18),
+            child: Column(
+              children: [
+                const Spacer(),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(22),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x33000000),
+                        blurRadius: 14,
+                        offset: Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Best Travel app for you',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF111111),
+                          height: 1.02,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Explore top Destinations, Create\npersonalized itineraries, and enjoy a hassle-\nfree journey with our smart travel tool.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          color: const Color(0xFF1F2937),
+                          fontWeight: FontWeight.w600,
+                          height: 1.35,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 18,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF111111),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Color(0x5C000000),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Color(0x5C000000),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      NextButton(
+                        onPressed: () =>
+                            Navigator.pushNamed(context, AppRoutes.introPlanner),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Best Travel app for you',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF111111),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Explore top Destinations, Create\npersonalized itineraries, and enjoy a hassle-\nfree journey with our smart travel tool.',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  color: const Color(0xFF6B7280),
-                  fontWeight: FontWeight.w500,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 18),
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IndicatorDot(active: true),
-                  SizedBox(width: 8),
-                  IndicatorDot(active: false),
-                  SizedBox(width: 8),
-                  IndicatorDot(active: false),
-                ],
-              ),
-              const SizedBox(height: 18),
-              NextButton(
-                onPressed: () =>
-                    Navigator.pushNamed(context, AppRoutes.introPlanner),
-              ),
-              const SizedBox(height: 16),
-            ],
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         ),
       ),
