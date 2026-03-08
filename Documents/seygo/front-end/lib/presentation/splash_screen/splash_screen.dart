@@ -18,7 +18,6 @@ class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
-  bool _isInitialized = false;
 
   @override
   void initState() {
@@ -52,25 +51,23 @@ class _SplashScreenState extends State<SplashScreen>
         Future.delayed(const Duration(milliseconds: 2500)),
       ]);
 
-      setState(() => _isInitialized = true);
-
       // Navigate to Welcome/Home screen
-      if (mounted) {
-        await Future.delayed(const Duration(milliseconds: 500));
-        Navigator.of(
-          context,
-          rootNavigator: true,
-        ).pushReplacementNamed('/welcome-home-screen');
-      }
+      if (!mounted) return;
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+      Navigator.of(
+        context,
+        rootNavigator: true,
+      ).pushReplacementNamed('/welcome-home-screen');
     } catch (e) {
       // Handle initialization errors gracefully
-      if (mounted) {
-        await Future.delayed(const Duration(seconds: 3));
-        Navigator.of(
-          context,
-          rootNavigator: true,
-        ).pushReplacementNamed('/welcome-home-screen');
-      }
+      if (!mounted) return;
+      await Future.delayed(const Duration(seconds: 3));
+      if (!mounted) return;
+      Navigator.of(
+        context,
+        rootNavigator: true,
+      ).pushReplacementNamed('/welcome-home-screen');
     }
   }
 
@@ -103,8 +100,15 @@ class _SplashScreenState extends State<SplashScreen>
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          color: Color(0xFFFFFFFF),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              theme.colorScheme.surface,
+              theme.colorScheme.primary.withValues(alpha: 0.1),
+            ],
+          ),
         ),
         child: SafeArea(
           child: Column(
@@ -113,14 +117,7 @@ class _SplashScreenState extends State<SplashScreen>
               const Spacer(),
 
               // Animated Logo
-              ScaleTransition(
-                scale: _scaleAnimation,
-                child: Image.asset(
-                  'assets/images/seygo_logo.png',
-                  width: 55.w,
-                  fit: BoxFit.contain,
-                ),
-              ),
+              ScaleTransition(scale: _scaleAnimation, child: _buildLogo(theme)),
 
               SizedBox(height: 4.h),
 
@@ -140,6 +137,41 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 
+  /// Build SeyGo logo
+  Widget _buildLogo(ThemeData theme) {
+    return Container(
+      width: 40.w,
+      height: 40.w,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20.w),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.primary.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(4.w),
+        child: Image.asset(
+          'assets/images/img_app_logo.png',
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) {
+            return Text(
+              'SeyGo',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.0,
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
 
   /// Build loading indicator
   Widget _buildLoadingIndicator(ThemeData theme) {

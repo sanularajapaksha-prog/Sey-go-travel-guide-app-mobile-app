@@ -33,6 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _locationSharing = true;
   bool _profileVisibility = false;
   bool _darkMode = false;
+  String _distanceUnit = 'km';
 
   final ImagePicker _imagePicker = ImagePicker();
 
@@ -446,28 +447,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showDistanceUnits(BuildContext context) {
-    final theme = Theme.of(context);
-
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Distance Units'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RadioListTile<String>(
-              title: Text('Kilometers'),
-              value: 'km',
-              groupValue: 'km',
-              onChanged: (value) => Navigator.pop(context),
-            ),
-            RadioListTile<String>(
-              title: Text('Miles'),
-              value: 'mi',
-              groupValue: 'km',
-              onChanged: (value) => Navigator.pop(context),
-            ),
-          ],
+        content: RadioGroup<String>(
+          groupValue: _distanceUnit,
+          onChanged: (value) {
+            if (value == null) return;
+            setState(() => _distanceUnit = value);
+            Navigator.pop(context);
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<String>(title: Text('Kilometers'), value: 'km'),
+              RadioListTile<String>(title: Text('Miles'), value: 'mi'),
+            ],
+          ),
         ),
       ),
     );

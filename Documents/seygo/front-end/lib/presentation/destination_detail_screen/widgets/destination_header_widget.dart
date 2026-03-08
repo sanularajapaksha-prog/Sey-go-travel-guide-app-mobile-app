@@ -46,7 +46,7 @@ class _DestinationHeaderWidgetState extends State<DestinationHeaderWidget> {
     final theme = Theme.of(context);
 
     return SizedBox(
-      height: 52.h,
+      height: 50.h,
       child: Stack(
         children: [
           // Image carousel
@@ -97,7 +97,7 @@ class _DestinationHeaderWidgetState extends State<DestinationHeaderWidget> {
 
           // Top action buttons
           Positioned(
-            top: 5.5.h,
+            top: 6.h,
             left: 4.w,
             right: 4.w,
             child: Row(
@@ -112,13 +112,6 @@ class _DestinationHeaderWidgetState extends State<DestinationHeaderWidget> {
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.3),
                       shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.25),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
                     ),
                     child: Center(
                       child: CustomIconWidget(
@@ -141,13 +134,6 @@ class _DestinationHeaderWidgetState extends State<DestinationHeaderWidget> {
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.3),
                           shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.25),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
                         ),
                         child: Center(
                           child: CustomIconWidget(
@@ -167,13 +153,6 @@ class _DestinationHeaderWidgetState extends State<DestinationHeaderWidget> {
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.3),
                           shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.25),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
                         ),
                         child: Center(
                           child: CustomIconWidget(
@@ -204,9 +183,9 @@ class _DestinationHeaderWidgetState extends State<DestinationHeaderWidget> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(
                   widget.images.length,
-                  (index) => Container(
-                    width: _currentPage == index ? 7.w : 2.2.w,
-                    height: 0.9.h,
+                      (index) => Container(
+                    width: _currentPage == index ? 8.w : 2.w,
+                    height: 1.h,
                     margin: EdgeInsets.symmetric(horizontal: 1.w),
                     decoration: BoxDecoration(
                       color: _currentPage == index

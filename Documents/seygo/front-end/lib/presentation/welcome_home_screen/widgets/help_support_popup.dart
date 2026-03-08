@@ -18,7 +18,6 @@ class HelpSupportPopup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Container(
       decoration: BoxDecoration(
@@ -39,7 +38,7 @@ class HelpSupportPopup extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.1),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -146,7 +145,7 @@ class HelpSupportPopup extends StatelessWidget {
             title: "Community Guidelines",
             onTap: () {
               // TODO: Navigate to guidelines screen or open URL
-              print("Open Community Guidelines");
+              debugPrint("Open Community Guidelines");
             },
           ),
           _buildTile(
@@ -155,7 +154,7 @@ class HelpSupportPopup extends StatelessWidget {
             title: "Terms of Service",
             onTap: () {
               // TODO: Navigate or open URL
-              print("Open Terms of Service");
+              debugPrint("Open Terms of Service");
             },
           ),
           _buildTile(
@@ -164,7 +163,7 @@ class HelpSupportPopup extends StatelessWidget {
             title: "Privacy Policy",
             onTap: () {
               // TODO: Navigate or open URL
-              print("Open Privacy Policy");
+              debugPrint("Open Privacy Policy");
             },
           ),
         ],

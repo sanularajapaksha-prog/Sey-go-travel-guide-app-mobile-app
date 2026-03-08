@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+
+import '../../data/services/api_service.dart';
 
 class RoutePlannerScreen extends StatefulWidget {
   const RoutePlannerScreen({super.key});
@@ -22,6 +25,8 @@ class _RoutePlannerScreenState extends State<RoutePlannerScreen> {
   Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
   double _routeDistanceKm = 0.0;
+  double _routeDurationMin = 0.0;
+  bool _isOptimizingRoute = false;
 
   @override
   void didChangeDependencies() {
@@ -47,11 +52,11 @@ class _RoutePlannerScreenState extends State<RoutePlannerScreen> {
     }
 
     _cartDestinations = rawDestinations;
-    _rebuildOptimizedRoute();
+    unawaited(_rebuildOptimizedRoute());
     _didLoadArguments = true;
   }
 
-  void _rebuildOptimizedRoute() {
+  Future<void> _rebuildOptimizedRoute() async {
     if (_cartDestinations.isEmpty) {
       setState(() {
         _optimizedStops = [];
@@ -67,21 +72,114 @@ class _RoutePlannerScreenState extends State<RoutePlannerScreen> {
         };
         _polylines = {};
         _routeDistanceKm = 0.0;
+        _routeDurationMin = 0.0;
+        _isOptimizingRoute = false;
       });
       return;
     }
 
-    final optimized = _nearestNeighborOrder(_origin, _cartDestinations);
-    final points = <LatLng>[_origin];
-    for (final stop in optimized) {
-      points.add(
-        LatLng(
-          (stop['latitude'] as num).toDouble(),
-          (stop['longitude'] as num).toDouble(),
+    setState(() {
+      _isOptimizingRoute = true;
+    });
+
+    try {
+      final response = await ApiService.optimizeRoute(
+        origin: {
+          'latitude': _origin.latitude,
+          'longitude': _origin.longitude,
+        },
+        destinations: _cartDestinations
+            .where(
+              (d) => d['latitude'] is num && d['longitude'] is num,
+            )
+            .map((d) => {
+                  ...d,
+                  'latitude': (d['latitude'] as num).toDouble(),
+                  'longitude': (d['longitude'] as num).toDouble(),
+                })
+            .toList(),
+      );
+
+      final optimized = (response['optimized_stops'] as List?)
+              ?.whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList() ??
+          <Map<String, dynamic>>[];
+
+      final polylineRaw = (response['polyline_points'] as List?)
+              ?.whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList() ??
+          <Map<String, dynamic>>[];
+
+      final points = <LatLng>[];
+      for (final p in polylineRaw) {
+        final lat = p['latitude'];
+        final lng = p['longitude'];
+        if (lat is num && lng is num) {
+          points.add(LatLng(lat.toDouble(), lng.toDouble()));
+        }
+      }
+
+      if (points.isEmpty) {
+        points.add(_origin);
+        for (final stop in optimized) {
+          points.add(
+            LatLng(
+              (stop['latitude'] as num).toDouble(),
+              (stop['longitude'] as num).toDouble(),
+            ),
+          );
+        }
+      }
+      if (!mounted) return;
+
+      _applyOptimizedRoute(
+        optimized: optimized,
+        routePoints: points,
+        totalDistanceKm: (response['total_distance_km'] as num?)?.toDouble(),
+        totalDurationMin:
+            (response['total_duration_min'] as num?)?.toDouble() ?? 0.0,
+      );
+      return;
+    } catch (e) {
+      if (!mounted) return;
+      final message = e.toString();
+      final shortMessage = message.length > 220
+          ? '${message.substring(0, 220)}...'
+          : message;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Road routing unavailable: $shortMessage'),
+          duration: const Duration(seconds: 4),
         ),
       );
+      // Fallback to straight-line local optimization if backend routing fails.
+      final optimized = _nearestNeighborOrder(_origin, _cartDestinations);
+      final points = <LatLng>[_origin];
+      for (final stop in optimized) {
+        points.add(
+          LatLng(
+            (stop['latitude'] as num).toDouble(),
+            (stop['longitude'] as num).toDouble(),
+          ),
+        );
+      }
+      _applyOptimizedRoute(
+        optimized: optimized,
+        routePoints: points,
+        totalDistanceKm: _calculateRouteDistanceKm(points),
+        totalDurationMin: 0.0,
+      );
     }
+  }
 
+  void _applyOptimizedRoute({
+    required List<Map<String, dynamic>> optimized,
+    required List<LatLng> routePoints,
+    double? totalDistanceKm,
+    double totalDurationMin = 0.0,
+  }) {
     final markers = <Marker>{
       Marker(
         markerId: const MarkerId('origin'),
@@ -110,7 +208,7 @@ class _RoutePlannerScreenState extends State<RoutePlannerScreen> {
     final polylines = <Polyline>{
       Polyline(
         polylineId: const PolylineId('optimized_route'),
-        points: points,
+        points: routePoints,
         color: Theme.of(context).colorScheme.primary,
         width: 5,
       ),
@@ -120,10 +218,13 @@ class _RoutePlannerScreenState extends State<RoutePlannerScreen> {
       _optimizedStops = optimized;
       _markers = markers;
       _polylines = polylines;
-      _routeDistanceKm = _calculateRouteDistanceKm(points);
+      _routeDistanceKm =
+          totalDistanceKm ?? _calculateRouteDistanceKm(routePoints);
+      _routeDurationMin = totalDurationMin;
+      _isOptimizingRoute = false;
     });
 
-    _fitMapToPoints(points);
+    _fitMapToPoints(routePoints);
   }
 
   List<Map<String, dynamic>> _nearestNeighborOrder(
@@ -212,12 +313,12 @@ class _RoutePlannerScreenState extends State<RoutePlannerScreen> {
 
   void _removeFromCart(Map<String, dynamic> destination) {
     _cartDestinations.removeWhere((d) => d['id'] == destination['id']);
-    _rebuildOptimizedRoute();
+    unawaited(_rebuildOptimizedRoute());
   }
 
   void _optimizeRouteManually() {
     if (_cartDestinations.isEmpty) return;
-    _rebuildOptimizedRoute();
+    unawaited(_rebuildOptimizedRoute());
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Route optimized'),
@@ -258,16 +359,20 @@ class _RoutePlannerScreenState extends State<RoutePlannerScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    '${_optimizedStops.length} place(s) | Approx ${_routeDistanceKm.toStringAsFixed(1)} km',
+                    '${_optimizedStops.length} place(s) | ${_routeDistanceKm.toStringAsFixed(1)} km${_routeDurationMin > 0 ? ' | ${_routeDurationMin.toStringAsFixed(0)} min' : ''}',
                     style: theme.textTheme.titleSmall,
                   ),
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton.icon(
                   onPressed:
-                      _cartDestinations.isEmpty ? null : _optimizeRouteManually,
+                      _cartDestinations.isEmpty || _isOptimizingRoute
+                          ? null
+                          : _optimizeRouteManually,
                   icon: const Icon(Icons.alt_route, size: 18),
-                  label: const Text('Optimize Route'),
+                  label: Text(
+                    _isOptimizingRoute ? 'Optimizing...' : 'Optimize Route',
+                  ),
                 ),
               ],
             ),

@@ -133,26 +133,28 @@ class _GeneralSettingsPopupState extends State<GeneralSettingsPopup> {
 
               SizedBox(height: 1.5.h),
 
-              RadioListTile<String>(
-                value: 'Unmute',
+              RadioGroup<String>(
                 groupValue: _notificationPref,
-                title: const Text("Unmute (Receive all notifications)"),
                 onChanged: (value) {
-                  if (value != null) setState(() => _notificationPref = value);
+                  if (value == null) return;
+                  setState(() => _notificationPref = value);
                 },
-                dense: true,
-                activeColor: theme.colorScheme.primary,
-              ),
-
-              RadioListTile<String>(
-                value: 'Mute',
-                groupValue: _notificationPref,
-                title: const Text("Mute (Turn off all notifications)"),
-                onChanged: (value) {
-                  if (value != null) setState(() => _notificationPref = value);
-                },
-                dense: true,
-                activeColor: theme.colorScheme.primary,
+                child: Column(
+                  children: [
+                    RadioListTile<String>(
+                      value: 'Unmute',
+                      title: const Text("Unmute (Receive all notifications)"),
+                      dense: true,
+                      activeColor: theme.colorScheme.primary,
+                    ),
+                    RadioListTile<String>(
+                      value: 'Mute',
+                      title: const Text("Mute (Turn off all notifications)"),
+                      dense: true,
+                      activeColor: theme.colorScheme.primary,
+                    ),
+                  ],
+                ),
               ),
 
               SizedBox(height: 2.5.h),

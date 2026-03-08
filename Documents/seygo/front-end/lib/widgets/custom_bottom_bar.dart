@@ -23,41 +23,38 @@ class CustomBottomBar extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: theme.bottomNavigationBarTheme.backgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         boxShadow: [
           BoxShadow(
             color: theme.colorScheme.shadow,
-            blurRadius: 16.0,
-            offset: const Offset(0, -6),
+            blurRadius: 8.0,
+            offset: const Offset(0, -2),
           ),
         ],
       ),
       child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          child: BottomNavigationBar(
-            currentIndex: currentIndex,
-            onTap: onTap,
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            selectedItemColor: theme.bottomNavigationBarTheme.selectedItemColor,
-            unselectedItemColor:
-                theme.bottomNavigationBarTheme.unselectedItemColor,
-            selectedLabelStyle: theme.bottomNavigationBarTheme.selectedLabelStyle,
-            unselectedLabelStyle:
-                theme.bottomNavigationBarTheme.unselectedLabelStyle,
-            selectedFontSize: 11,
-            unselectedFontSize: 11,
-            items: [
+        child: BottomNavigationBar(
+          currentIndex: currentIndex,
+          onTap: onTap,
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          selectedItemColor: theme.bottomNavigationBarTheme.selectedItemColor,
+          unselectedItemColor:
+          theme.bottomNavigationBarTheme.unselectedItemColor,
+          selectedLabelStyle: theme.bottomNavigationBarTheme.selectedLabelStyle,
+          unselectedLabelStyle:
+          theme.bottomNavigationBarTheme.unselectedLabelStyle,
+          selectedFontSize: 12,
+          unselectedFontSize: 12,
+          items: [
             // Home/Discover - Central discovery hub
             BottomNavigationBarItem(
               icon: Padding(
-                padding: const EdgeInsets.only(bottom: 6.0),
+                padding: const EdgeInsets.only(bottom: 4.0),
                 child: Icon(Icons.explore_outlined, size: 24),
               ),
               activeIcon: Padding(
-                padding: const EdgeInsets.only(bottom: 6.0),
+                padding: const EdgeInsets.only(bottom: 4.0),
                 child: Icon(Icons.explore, size: 24),
               ),
               label: 'Discover',
@@ -67,11 +64,11 @@ class CustomBottomBar extends StatelessWidget {
             // Map - Geographic visualization
             BottomNavigationBarItem(
               icon: Padding(
-                padding: const EdgeInsets.only(bottom: 6.0),
+                padding: const EdgeInsets.only(bottom: 4.0),
                 child: Icon(Icons.map_outlined, size: 24),
               ),
               activeIcon: Padding(
-                padding: const EdgeInsets.only(bottom: 6.0),
+                padding: const EdgeInsets.only(bottom: 4.0),
                 child: Icon(Icons.map, size: 24),
               ),
               label: 'Map',
@@ -81,11 +78,11 @@ class CustomBottomBar extends StatelessWidget {
             // Playlists - Content curation
             BottomNavigationBarItem(
               icon: Padding(
-                padding: const EdgeInsets.only(bottom: 6.0),
+                padding: const EdgeInsets.only(bottom: 4.0),
                 child: Icon(Icons.playlist_play_outlined, size: 24),
               ),
               activeIcon: Padding(
-                padding: const EdgeInsets.only(bottom: 6.0),
+                padding: const EdgeInsets.only(bottom: 4.0),
                 child: Icon(Icons.playlist_play, size: 24),
               ),
               label: 'Playlists',
@@ -95,11 +92,11 @@ class CustomBottomBar extends StatelessWidget {
             // Favorites - Quick access to liked destinations
             BottomNavigationBarItem(
               icon: Padding(
-                padding: const EdgeInsets.only(bottom: 6.0),
+                padding: const EdgeInsets.only(bottom: 4.0),
                 child: Icon(Icons.favorite_outline, size: 24),
               ),
               activeIcon: Padding(
-                padding: const EdgeInsets.only(bottom: 6.0),
+                padding: const EdgeInsets.only(bottom: 4.0),
                 child: Icon(Icons.favorite, size: 24),
               ),
               label: 'Favorites',
@@ -109,18 +106,17 @@ class CustomBottomBar extends StatelessWidget {
             // Profile - Account management
             BottomNavigationBarItem(
               icon: Padding(
-                padding: const EdgeInsets.only(bottom: 6.0),
+                padding: const EdgeInsets.only(bottom: 4.0),
                 child: Icon(Icons.person_outline, size: 24),
               ),
               activeIcon: Padding(
-                padding: const EdgeInsets.only(bottom: 6.0),
+                padding: const EdgeInsets.only(bottom: 4.0),
                 child: Icon(Icons.person, size: 24),
               ),
               label: 'Profile',
               tooltip: 'Your profile',
             ),
           ],
-          ),
         ),
       ),
     );

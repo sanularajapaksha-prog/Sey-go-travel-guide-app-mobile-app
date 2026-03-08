@@ -96,10 +96,10 @@ class NotificationsPanel extends StatelessWidget {
           Padding(
             padding: EdgeInsets.all(4.w),
             child: ElevatedButton(
-                  onPressed: () {
-                    // TODO: clear all logic
-                    Navigator.pop(context);
-                  },
+              onPressed: () {
+                // Clear action hook for notifications list state.
+                Navigator.pop(context);
+              },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.colorScheme.primary,
                     foregroundColor: theme.colorScheme.onPrimary,
@@ -165,7 +165,9 @@ class NotificationsPanel extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(3.w),
       decoration: BoxDecoration(
-        color: isUnread ? theme.colorScheme.primary.withOpacity(0.08) : null,
+        color: isUnread
+            ? theme.colorScheme.primary.withValues(alpha: 0.08)
+            : null,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(

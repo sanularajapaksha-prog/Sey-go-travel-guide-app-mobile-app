@@ -25,7 +25,6 @@ class _PrivacyPopupState extends State<PrivacyPopup> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Container(
       decoration: BoxDecoration(
@@ -46,7 +45,7 @@ class _PrivacyPopupState extends State<PrivacyPopup> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.1),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -89,23 +88,30 @@ class _PrivacyPopupState extends State<PrivacyPopup> {
           ),
           SizedBox(height: 1.5.h),
 
-          RadioListTile<String>(
-            value: 'public',
+          RadioGroup<String>(
             groupValue: profileVisibility,
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            title: const Text("Public - Anyone can see"),
-            activeColor: theme.colorScheme.primary,
-            onChanged: (v) => setState(() => profileVisibility = v!),
-          ),
-          RadioListTile<String>(
-            value: 'private',
-            groupValue: profileVisibility,
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            title: const Text("Private - Only me"),
-            activeColor: theme.colorScheme.primary,
-            onChanged: (v) => setState(() => profileVisibility = v!),
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() => profileVisibility = value);
+            },
+            child: Column(
+              children: [
+                RadioListTile<String>(
+                  value: 'public',
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text("Public - Anyone can see"),
+                  activeColor: theme.colorScheme.primary,
+                ),
+                RadioListTile<String>(
+                  value: 'private',
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text("Private - Only me"),
+                  activeColor: theme.colorScheme.primary,
+                ),
+              ],
+            ),
           ),
 
           SizedBox(height: 4.h),
@@ -119,23 +125,30 @@ class _PrivacyPopupState extends State<PrivacyPopup> {
           ),
           SizedBox(height: 1.5.h),
 
-          RadioListTile<String>(
-            value: 'public',
+          RadioGroup<String>(
             groupValue: reviewsVisibility,
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            title: const Text("Public - Anyone can see"),
-            activeColor: theme.colorScheme.primary,
-            onChanged: (v) => setState(() => reviewsVisibility = v!),
-          ),
-          RadioListTile<String>(
-            value: 'private',
-            groupValue: reviewsVisibility,
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            title: const Text("Private - Only me"),
-            activeColor: theme.colorScheme.primary,
-            onChanged: (v) => setState(() => reviewsVisibility = v!),
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() => reviewsVisibility = value);
+            },
+            child: Column(
+              children: [
+                RadioListTile<String>(
+                  value: 'public',
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text("Public - Anyone can see"),
+                  activeColor: theme.colorScheme.primary,
+                ),
+                RadioListTile<String>(
+                  value: 'private',
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text("Private - Only me"),
+                  activeColor: theme.colorScheme.primary,
+                ),
+              ],
+            ),
           ),
 
           SizedBox(height: 5.h),
@@ -147,7 +160,7 @@ class _PrivacyPopupState extends State<PrivacyPopup> {
             child: ElevatedButton(
               onPressed: () {
                 // TODO: Save to backend / local storage / provider
-                print(
+                debugPrint(
                   "Privacy saved → Profile: $profileVisibility, Reviews: $reviewsVisibility",
                 );
 
