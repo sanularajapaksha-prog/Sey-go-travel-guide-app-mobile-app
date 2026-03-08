@@ -11,11 +11,11 @@ class GeneralSettingsPopup extends StatefulWidget {
 
 class _GeneralSettingsPopupState extends State<GeneralSettingsPopup> {
   // Current values (you can later load from shared_preferences / provider)
-  String _language = 'English (Sri Lanka)';
-  String _countryRegion = 'Sri Lanka';
-  String _timeZone = 'Asia/Colombo (GMT+05:30)';
+  final String _language = 'English (Sri Lanka)';
+  final String _countryRegion = 'Sri Lanka';
+  final String _timeZone = 'Asia/Colombo (GMT+05:30)';
   String _notificationPref = 'Unmute'; // Unmute or Mute
-  String _units = 'Kilometres / Metres';
+  final String _units = 'Kilometres / Metres';
 
   @override
   Widget build(BuildContext context) {
@@ -133,28 +133,26 @@ class _GeneralSettingsPopupState extends State<GeneralSettingsPopup> {
 
               SizedBox(height: 1.5.h),
 
-              RadioGroup<String>(
+              RadioListTile<String>(
+                value: 'Unmute',
                 groupValue: _notificationPref,
+                title: const Text("Unmute (Receive all notifications)"),
                 onChanged: (value) {
-                  if (value == null) return;
-                  setState(() => _notificationPref = value);
+                  if (value != null) setState(() => _notificationPref = value);
                 },
-                child: Column(
-                  children: [
-                    RadioListTile<String>(
-                      value: 'Unmute',
-                      title: const Text("Unmute (Receive all notifications)"),
-                      dense: true,
-                      activeColor: theme.colorScheme.primary,
-                    ),
-                    RadioListTile<String>(
-                      value: 'Mute',
-                      title: const Text("Mute (Turn off all notifications)"),
-                      dense: true,
-                      activeColor: theme.colorScheme.primary,
-                    ),
-                  ],
-                ),
+                dense: true,
+                activeColor: theme.colorScheme.primary,
+              ),
+
+              RadioListTile<String>(
+                value: 'Mute',
+                groupValue: _notificationPref,
+                title: const Text("Mute (Turn off all notifications)"),
+                onChanged: (value) {
+                  if (value != null) setState(() => _notificationPref = value);
+                },
+                dense: true,
+                activeColor: theme.colorScheme.primary,
               ),
 
               SizedBox(height: 2.5.h),

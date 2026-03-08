@@ -33,7 +33,7 @@ class CustomImageWidget extends StatelessWidget {
     this.radius,
     this.margin,
     this.border,
-    this.placeHolder = 'assets/images/img_app_logo.png',
+    this.placeHolder = 'assets/images/no-image.jpg',
     this.errorWidget,
     this.semanticLabel,
   });
@@ -83,7 +83,7 @@ class CustomImageWidget extends StatelessWidget {
   }
 
   ///build the image with border radius
-  _buildCircleImage() {
+  dynamic _buildCircleImage() {
     if (radius != null) {
       return ClipRRect(
         borderRadius: radius ?? BorderRadius.zero,
@@ -95,7 +95,7 @@ class CustomImageWidget extends StatelessWidget {
   }
 
   ///build the image with border and border radius style
-  _buildImageWithBorder() {
+  Widget _buildImageWithBorder() {
     if (border != null) {
       return Container(
         decoration: BoxDecoration(border: border, borderRadius: radius),
@@ -152,7 +152,14 @@ class CustomImageWidget extends StatelessWidget {
               ),
             ),
             errorWidget: (context, url, error) =>
-                errorWidget ?? _safeFallback(),
+            errorWidget ??
+                Image.asset(
+                  placeHolder,
+                  height: height,
+                  width: width,
+                  fit: fit ?? BoxFit.cover,
+                  semanticLabel: semanticLabel,
+                ),
           );
         case ImageType.png:
         default:
@@ -163,24 +170,9 @@ class CustomImageWidget extends StatelessWidget {
             fit: fit ?? BoxFit.cover,
             color: color,
             semanticLabel: semanticLabel,
-            errorBuilder: (context, error, stackTrace) => _safeFallback(),
           );
       }
     }
-    return _safeFallback();
-  }
-
-  Widget _safeFallback() {
-    return Container(
-      height: height,
-      width: width,
-      color: Colors.grey.shade200,
-      alignment: Alignment.center,
-      child: Icon(
-        Icons.image_not_supported_outlined,
-        color: Colors.grey.shade600,
-        size: 24,
-      ),
-    );
+    return SizedBox();
   }
 }
