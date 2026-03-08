@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../data/services/api_service.dart';
 import '../../routes/app_routes.dart';
 import '../onboarding_widgets/onboarding_widgets.dart';
 
@@ -17,6 +18,11 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmController = TextEditingController();
   String? _emailError;
+  String? _passwordError;
+  String? _confirmError;
+  bool _isSubmitting = false;
+  bool _isPasswordVisible = false;
+  bool _isConfirmVisible = false;
   final FocusNode _nameFocus = FocusNode();
   final FocusNode _emailFocus = FocusNode();
   final FocusNode _passwordFocus = FocusNode();
@@ -77,10 +83,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () => Navigator.pushNamed(
-                      context,
-                      AppRoutes.loginPage,
-                    ),
+                    onTap: () =>
+                        Navigator.pushNamed(context, AppRoutes.loginPage),
                     child: Text(
                       'Log in',
                       style: GoogleFonts.poppins(
@@ -97,10 +101,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 leftLabel: 'Login',
                 rightLabel: 'Register',
                 leftActive: false,
-                onLeft: () => Navigator.pushNamed(
-                  context,
-                  AppRoutes.loginPage,
-                ),
+                onLeft: () => Navigator.pushNamed(context, AppRoutes.loginPage),
                 onRight: () {},
               ),
               const SizedBox(height: 18),
@@ -132,33 +133,56 @@ class _RegisterPageState extends State<RegisterPage> {
               LabeledAuthField(
                 label: 'Password',
                 hintText: '********',
-                obscure: true,
-                suffixIcon: Icon(Icons.visibility_off_outlined, size: 18),
+                obscure: !_isPasswordVisible,
+                suffixIcon: IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _isPasswordVisible = !_isPasswordVisible;
+                    });
+                  },
+                  icon: Icon(
+                    _isPasswordVisible
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    size: 18,
+                  ),
+                ),
                 controller: _passwordController,
                 focusNode: _passwordFocus,
                 textInputAction: TextInputAction.next,
                 onTap: () => _passwordFocus.requestFocus(),
+                errorText: _passwordError,
               ),
               const SizedBox(height: 14),
               LabeledAuthField(
                 label: 'Confirm Password',
                 hintText: '********',
-                obscure: true,
-                suffixIcon: Icon(Icons.visibility_off_outlined, size: 18),
+                obscure: !_isConfirmVisible,
+                suffixIcon: IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _isConfirmVisible = !_isConfirmVisible;
+                    });
+                  },
+                  icon: Icon(
+                    _isConfirmVisible
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    size: 18,
+                  ),
+                ),
                 controller: _confirmController,
                 focusNode: _confirmFocus,
                 textInputAction: TextInputAction.done,
                 onTap: () => _confirmFocus.requestFocus(),
+                errorText: _confirmError,
               ),
               const SizedBox(height: 18),
               SizedBox(
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.pushNamed(
-                    context,
-                    AppRoutes.otpPage,
-                  ),
+                  onPressed: _isSubmitting ? null : _submitRegister,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: brandBlue,
                     foregroundColor: Colors.white,
@@ -167,15 +191,37 @@ class _RegisterPageState extends State<RegisterPage> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          'Create account',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
+                        ),
+                ),
+              ),
+              if (_emailError != null ||
+                  _passwordError != null ||
+                  _confirmError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
                   child: Text(
-                    'Create account',
+                    _emailError ?? _passwordError ?? _confirmError ?? '',
                     style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
+                      fontSize: 12,
+                      color: Colors.red.shade600,
                     ),
                   ),
                 ),
-              ),
               const SizedBox(height: 18),
               Row(
                 children: [
@@ -227,6 +273,71 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
     );
   }
+
+  Future<void> _submitRegister() async {
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final confirm = _confirmController.text;
+
+    setState(() {
+      _emailError = _validateEmail(email);
+      _passwordError = password.length < 6
+          ? 'Password must be at least 6 characters'
+          : null;
+      _confirmError = confirm != password ? 'Passwords do not match' : null;
+    });
+
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter your name')));
+      return;
+    }
+
+    if (_emailError != null ||
+        _passwordError != null ||
+        _confirmError != null) {
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final result = await ApiService.register(
+        fullName: name,
+        email: email,
+        password: password,
+      );
+      if (!mounted) return;
+      final verificationSent =
+          result['verification_email_sent'] == true ||
+          result['requires_email_confirmation'] == true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            verificationSent
+                ? 'Account created. Verification code sent to your email.'
+                : 'Account created successfully.',
+          ),
+        ),
+      );
+      Navigator.pushNamed(context, AppRoutes.otpPage, arguments: email);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
 }
 
 class _SocialPill extends StatelessWidget {
@@ -253,11 +364,7 @@ class _SocialPill extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: Center(child: leading),
-            ),
+            SizedBox(width: 20, height: 20, child: Center(child: leading)),
             const SizedBox(width: 8),
             Text(
               label,

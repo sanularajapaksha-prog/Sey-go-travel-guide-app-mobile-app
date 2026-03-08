@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../data/services/api_service.dart';
 import '../../routes/app_routes.dart';
 
 class OtpPage extends StatefulWidget {
@@ -12,10 +13,13 @@ class OtpPage extends StatefulWidget {
 }
 
 class _OtpPageState extends State<OtpPage> {
-  final List<TextEditingController> _controllers =
-      List.generate(6, (_) => TextEditingController());
-  final List<FocusNode> _focusNodes =
-      List.generate(6, (_) => FocusNode());
+  final List<TextEditingController> _controllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
+  final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
+  bool _isResending = false;
+  bool _isVerifying = false;
 
   @override
   void dispose() {
@@ -32,6 +36,8 @@ class _OtpPageState extends State<OtpPage> {
   Widget build(BuildContext context) {
     const brandBlue = Color(0xFF2B84B4);
     final double height = MediaQuery.of(context).size.height;
+    final emailArg = ModalRoute.of(context)?.settings.arguments;
+    final email = emailArg is String ? emailArg : '';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FB),
@@ -88,12 +94,17 @@ class _OtpPageState extends State<OtpPage> {
               const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerRight,
-                child: Text(
-                  'Request again',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12.5,
-                    color: brandBlue,
-                    fontWeight: FontWeight.w600,
+                child: GestureDetector(
+                  onTap: _isResending
+                      ? null
+                      : () => _resendVerificationCode(email),
+                  child: Text(
+                    _isResending ? 'Sending...' : 'Request again',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12.5,
+                      color: brandBlue,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -102,10 +113,7 @@ class _OtpPageState extends State<OtpPage> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.pushNamed(
-                    context,
-                    AppRoutes.welcomeHomeScreen,
-                  ),
+                  onPressed: _isVerifying ? null : () => _verifyOtp(email),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: brandBlue,
                     foregroundColor: Colors.white,
@@ -114,13 +122,22 @@ class _OtpPageState extends State<OtpPage> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: Text(
-                    'Confirm',
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                    ),
-                  ),
+                  child: _isVerifying
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          'Confirm',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(height: 6),
@@ -129,6 +146,87 @@ class _OtpPageState extends State<OtpPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _resendVerificationCode(String email) async {
+    if (email.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Email not found. Go back and register again.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isResending = true;
+    });
+
+    try {
+      await ApiService.resendVerificationCode(email: email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Verification code sent again.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isResending = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _verifyOtp(String email) async {
+    if (email.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Email not found. Go back and register again.'),
+        ),
+      );
+      return;
+    }
+
+    final code = _controllers.map((c) => c.text.trim()).join();
+    if (code.length != 6 || code.contains(RegExp(r'[^0-9]'))) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter the 6-digit code.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isVerifying = true;
+    });
+
+    try {
+      await ApiService.verifyOtp(email: email, code: code);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Email verified successfully.')),
+      );
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.welcomeHomeScreen,
+        (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isVerifying = false;
+        });
+      }
+    }
   }
 }
 
