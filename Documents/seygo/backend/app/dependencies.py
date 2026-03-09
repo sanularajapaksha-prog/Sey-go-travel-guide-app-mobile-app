@@ -46,3 +46,6 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f'Authentication failed: {exc}',
         ) from exc
+        
+def get_authenticated_user(user: dict = Depends(get_current_user)) -> dict:
+    return user
