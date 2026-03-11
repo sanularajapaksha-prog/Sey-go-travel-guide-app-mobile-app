@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import places, routing
+from .routers import places
 
 app = FastAPI(title='SeyGo Backend')
 
@@ -14,7 +14,6 @@ app.add_middleware(
 )
 
 app.include_router(places.router)
-app.include_router(routing.router)
 
 
 @app.get('/health')

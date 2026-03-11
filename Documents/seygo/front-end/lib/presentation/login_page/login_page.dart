@@ -216,6 +216,14 @@ class _SocialPill extends StatelessWidget {
       height: 46,
       child: ElevatedButton(
         onPressed: () {},
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          elevation: 2,
+          shadowColor: const Color(0x22000000),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -234,14 +242,6 @@ class _SocialPill extends StatelessWidget {
               ),
             ),
           ],
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          elevation: 2,
-          shadowColor: const Color(0x22000000),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
         ),
       ),
     );
@@ -265,7 +265,6 @@ class _SegmentedAuth extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accentBlue = Color(0xFF2B84B4);
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(

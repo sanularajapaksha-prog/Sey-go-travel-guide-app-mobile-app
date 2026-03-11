@@ -1,0 +1,126 @@
+INFO:     127.0.0.1:7114 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:8498 - "GET /places/?limit=100&offset=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2343 - "GET /places/?limit=100&offset=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:12663 - "GET /places/?limit=100&offset=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2189 - "GET /places/?limit=100&offset=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:14633 - "GET /places/?limit=100&offset=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:11331 - "GET /places/?limit=100&offset=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:3953 - "GET /places/?limit=100&offset=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6084 - "GET /places/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6122 - "GET /places/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:11597 - "GET /places/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:12099 - "GET /places/?limit=100&offset=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:5806 - "GET /places/?limit=100&offset=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1996 - "GET /places/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:13216 - "GET /places/?limit=100&offset=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:14597 - "GET /places/?limit=100&offset=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:13335 - "GET /places/?limit=100&offset=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:3482 - "GET /places/?limit=100&offset=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2614 - "GET /places/?limit=100&offset=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2729 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D6264440502393042279 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:3813 - "GET /places/?limit=100&offset=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7553 - "GET /places/?limit=100&offset=0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7577 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D16507105915758526206 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7578 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14210808866933114134 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7579 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14095065704284774807 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7580 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D7380805449198346130 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7581 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D9074579715639503710 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7582 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D17988263847535957564 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7583 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14820710472205611758 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7584 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D1990558642959993370 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7590 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D4194317377705274678 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7591 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D15639356900216775821 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7592 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D2561450086681946212 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7593 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D10413121849404218778 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7594 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D8127914873893432002 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7595 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14246187174326895068 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7596 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D6389469421591901177 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7597 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D8259610273091962707 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7598 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D12050979589317346012 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7599 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D8763466728219331215 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7601 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D1990558642959993370 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7602 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14820710472205611758 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7603 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D17988263847535957564 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7604 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D9074579715639503710 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7605 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D7380805449198346130 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7606 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14095065704284774807 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7608 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14210808866933114134 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7609 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D16507105915758526206 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7611 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D16507105915758526206 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7612 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14210808866933114134 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7613 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14095065704284774807 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7614 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D7380805449198346130 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7615 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D9074579715639503710 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7616 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D17988263847535957564 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7617 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14820710472205611758 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7622 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D1990558642959993370 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7623 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D4194317377705274678 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7624 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D15639356900216775821 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7625 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D2561450086681946212 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7626 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D10413121849404218778 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7627 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D8127914873893432002 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7628 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14246187174326895068 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7629 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D6389469421591901177 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7630 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D8259610273091962707 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7631 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D12050979589317346012 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7632 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D8763466728219331215 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7635 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D16917928679977478064 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7636 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D6966954865890890828 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7637 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14982550634718449379 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7638 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D9848374120506155620 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7639 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D1710845772795751127 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7640 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D16787165405018665869 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7641 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D12702932251572878906 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7643 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D5441109895052906660 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7644 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D3992540214599636121 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7649 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D3806768047047858597 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7650 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D15356162330707639367 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7651 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D16917928679977478064 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7652 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D8763466728219331215 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7653 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D12050979589317346012 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7654 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D8259610273091962707 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7655 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D6389469421591901177 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7656 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14246187174326895068 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7657 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D8127914873893432002 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7658 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D10413121849404218778 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7659 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D2561450086681946212 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7660 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D15639356900216775821 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7661 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D4194317377705274678 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7662 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D1990558642959993370 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7663 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14820710472205611758 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7664 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D17988263847535957564 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7666 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D9074579715639503710 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7667 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D7380805449198346130 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7668 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14095065704284774807 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7670 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14210808866933114134 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7671 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D16507105915758526206 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7672 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14210808866933114134 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7673 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14095065704284774807 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7675 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D7380805449198346130 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7676 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D9074579715639503710 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7677 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D17988263847535957564 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7683 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14820710472205611758 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7684 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D1990558642959993370 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7773 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D16507105915758526206 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7784 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14210808866933114134 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7785 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14095065704284774807 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7786 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D7380805449198346130 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7787 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D16507105915758526206 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7794 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D16507105915758526206 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7795 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D7380805449198346130 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7796 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14095065704284774807 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7797 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14210808866933114134 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7262 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D9074579715639503710 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7264 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D17988263847535957564 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7265 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14820710472205611758 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7266 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D1990558642959993370 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7267 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D4194317377705274678 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7268 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D15639356900216775821 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7269 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D2561450086681946212 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7270 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D10413121849404218778 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7271 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D8127914873893432002 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7277 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D4194317377705274678 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7431 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D4194317377705274678 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7432 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D16507105915758526206 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7434 - "GET /places/photo-from-google-url?url=https%3A%2F%2Fmaps.google.com%2F%3Fcid%3D14210808866933114134 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:7435 - "GET /places/ HTTP/1.1" 200 OK

@@ -91,36 +91,6 @@ class FeatureIntroPage extends StatelessWidget {
   }
 }
 
-class _DotRing extends StatelessWidget {
-  const _DotRing({required this.isActive});
-
-  final bool isActive;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color ringColor =
-        isActive ? const Color(0xFF2B84B4) : const Color(0xFFBFC7D1);
-    return Container(
-      width: isActive ? 28 : 24,
-      height: isActive ? 28 : 24,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: ringColor, width: 2),
-      ),
-      child: Center(
-        child: Container(
-          width: isActive ? 8 : 5,
-          height: isActive ? 8 : 5,
-          decoration: BoxDecoration(
-            color: isActive ? const Color(0xFF2B84B4) : Colors.transparent,
-            shape: BoxShape.circle,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _Dot extends StatelessWidget {
   const _Dot({required this.isActive});
 

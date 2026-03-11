@@ -83,7 +83,7 @@ class CustomImageWidget extends StatelessWidget {
   }
 
   ///build the image with border radius
-  _buildCircleImage() {
+  Widget _buildCircleImage() {
     if (radius != null) {
       return ClipRRect(
         borderRadius: radius ?? BorderRadius.zero,
@@ -95,7 +95,7 @@ class CustomImageWidget extends StatelessWidget {
   }
 
   ///build the image with border and border radius style
-  _buildImageWithBorder() {
+  Widget _buildImageWithBorder() {
     if (border != null) {
       return Container(
         decoration: BoxDecoration(border: border, borderRadius: radius),
@@ -137,6 +137,7 @@ class CustomImageWidget extends StatelessWidget {
             semanticLabel: semanticLabel,
           );
         case ImageType.network:
+          debugPrint('CustomImageWidget: loading network image $imageUrl');
           return CachedNetworkImage(
             height: height,
             width: width,
@@ -151,8 +152,12 @@ class CustomImageWidget extends StatelessWidget {
                 backgroundColor: Colors.grey.shade100,
               ),
             ),
-            errorWidget: (context, url, error) =>
-                errorWidget ?? _safeFallback(),
+            errorWidget: (context, url, error) {
+              debugPrint(
+                'CustomImageWidget: failed network image $url -> $error',
+              );
+              return errorWidget ?? _safeFallback();
+            },
           );
         case ImageType.png:
         default:
@@ -163,7 +168,12 @@ class CustomImageWidget extends StatelessWidget {
             fit: fit ?? BoxFit.cover,
             color: color,
             semanticLabel: semanticLabel,
-            errorBuilder: (context, error, stackTrace) => _safeFallback(),
+            errorBuilder: (context, error, stackTrace) {
+              debugPrint(
+                'CustomImageWidget: failed asset image $imageUrl -> $error',
+              );
+              return _safeFallback();
+            },
           );
       }
     }

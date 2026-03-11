@@ -18,19 +18,24 @@ class ApiService {
     return 'http://127.0.0.1:8000';
   }
 
-  static Future<List<dynamic>> fetchPlaces({String? accessToken}) async {
+  static Future<List<dynamic>> fetchPlaces({
+    String? accessToken,
+    int limit = 100,
+    int offset = 0,
+  }) async {
     final headers = <String, String>{
       'Content-Type': 'application/json',
       if (accessToken != null && accessToken.isNotEmpty)
         'Authorization': 'Bearer $accessToken',
     };
 
+    final uri = Uri.parse(
+      '$baseUrl/places/',
+    ).replace(queryParameters: {'limit': '$limit', 'offset': '$offset'});
+
     final response = await http
-        .get(
-          Uri.parse('$baseUrl/places/'),
-          headers: headers,
-        )
-        .timeout(const Duration(seconds: 10));
+        .get(uri, headers: headers)
+        .timeout(const Duration(seconds: 30));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as List<dynamic>;
@@ -38,6 +43,52 @@ class ApiService {
 
     throw Exception(
       'Failed to load places: ${response.statusCode} ${response.body}',
+    );
+  }
+
+  static Future<List<dynamic>> searchPlacesFromDb({
+    required String query,
+    double? latitude,
+    double? longitude,
+    double radiusKm = 60,
+    int limit = 30,
+    String? accessToken,
+  }) async {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      if (accessToken != null && accessToken.isNotEmpty)
+        'Authorization': 'Bearer $accessToken',
+    };
+
+    final queryParameters = <String, String>{
+      'q': query,
+      'radius_km': '$radiusKm',
+      'limit': '$limit',
+      if (latitude != null) 'latitude': '$latitude',
+      if (longitude != null) 'longitude': '$longitude',
+    };
+
+    final uri = Uri.parse(
+      '$baseUrl/places/search',
+    ).replace(queryParameters: queryParameters);
+
+    final response = await http
+        .get(uri, headers: headers)
+        .timeout(const Duration(seconds: 30));
+
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        final places = decoded['places'];
+        if (places is List) {
+          return places;
+        }
+      }
+      throw Exception('Unexpected search response format');
+    }
+
+    throw Exception(
+      'Failed to search places: ${response.statusCode} ${response.body}',
     );
   }
 
@@ -49,10 +100,7 @@ class ApiService {
         .post(
           Uri.parse('$baseUrl/routing/optimize'),
           headers: const {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'origin': origin,
-            'destinations': destinations,
-          }),
+          body: jsonEncode({'origin': origin, 'destinations': destinations}),
         )
         .timeout(const Duration(seconds: 30));
 
