@@ -1,41 +1,131 @@
-from fastapi import APIRouter, Depends, status
-from app.dependencies import get_authenticated_user
-from app.schemas.saved_destination import SaveDestinationRequest
-from app.schemas.update_destination import UpdateDestinationRequest
-from app.services import destinations as destination_service
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field
 
-router = APIRouter(prefix="/destinations", tags=["Destinations"])
+from ..dependencies import get_current_user, get_supabase_client
 
-@router.post("/save", status_code=status.HTTP_201_CREATED)
-def save_place(place: SaveDestinationRequest, user: dict = Depends(get_authenticated_user)):
-    result = destination_service.save_destination(user.id, place.dict())
-    return {"saved": True, "data": result}
+router = APIRouter(prefix='/destinations', tags=['destinations'])
 
-@router.get("/me")
-def get_my_destinations(user: dict = Depends(get_authenticated_user)):
-    destinations = destination_service.get_my_destinations(user.id)
-    return {"destinations": destinations}
+SAVED_TABLE = 'saved_destinations'
 
-@router.get("/me/paginated")
-def get_my_destinations_paginated(
+
+# ── Schemas (inline since they only serve this router) ──────────────────────
+
+class SaveDestinationRequest(BaseModel):
+    name: str
+    latitude: float
+    longitude: float
+    address: str | None = None
+    google_place_id: str | None = None
+    category: str | None = None
+    place_type: str | None = None
+    rating: float | None = Field(default=None, ge=0, le=5)
+    is_offline_available: bool = False
+
+
+class UpdateDestinationRequest(BaseModel):
+    name: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    address: str | None = None
+    google_place_id: str | None = None
+    category: str | None = None
+    place_type: str | None = None
+    rating: float | None = Field(default=None, ge=0, le=5)
+    is_offline_available: bool | None = None
+
+
+# ── Endpoints ───────────────────────────────────────────────────────────────
+
+@router.post('/save', status_code=status.HTTP_201_CREATED)
+async def save_destination(
+    place: SaveDestinationRequest,
+    user=Depends(get_current_user),
+):
+    supabase = get_supabase_client()
+    payload = place.model_dump()
+    payload['user_id'] = str(user.id)
+
+    response = supabase.table(SAVED_TABLE).insert(payload).execute()
+    if not response.data:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Failed to save destination.')
+    return {'saved': True, 'data': response.data[0]}
+
+
+@router.get('/me')
+async def get_my_destinations(user=Depends(get_current_user)):
+    supabase = get_supabase_client()
+    response = supabase.table(SAVED_TABLE).select('*').eq('user_id', str(user.id)).execute()
+    return {'destinations': response.data}
+
+
+@router.get('/me/paginated')
+async def get_my_destinations_paginated(
     page: int = 1,
     limit: int = 10,
-    user: dict = Depends(get_authenticated_user),
+    user=Depends(get_current_user),
 ):
-    destinations = destination_service.get_my_destinations_paginated(user.id, page, limit)
-    return {"page": page, "limit": limit, "destinations": destinations}
+    supabase = get_supabase_client()
+    start = (page - 1) * limit
+    end = start + limit - 1
+    response = (
+        supabase.table(SAVED_TABLE)
+        .select('*')
+        .eq('user_id', str(user.id))
+        .range(start, end)
+        .execute()
+    )
+    return {'page': page, 'limit': limit, 'destinations': response.data}
 
-@router.put("/{destination_id}", status_code=status.HTTP_200_OK)
-def update_destination(
+
+@router.put('/{destination_id}')
+async def update_destination(
     destination_id: int,
     update: UpdateDestinationRequest,
-    user: dict = Depends(get_authenticated_user),
+    user=Depends(get_current_user),
 ):
-    result = destination_service.update_destination(user.id, destination_id, update.dict())
-    return {"message": "Destination updated successfully", "data": result}
+    supabase = get_supabase_client()
 
-@router.delete("/{destination_id}", status_code=status.HTTP_200_OK)
-def delete_destination(destination_id: int, user: dict = Depends(get_authenticated_user)):
-    destination_service.delete_destination(user.id, destination_id)
+    existing = (
+        supabase.table(SAVED_TABLE)
+        .select('id')
+        .eq('id', destination_id)
+        .eq('user_id', str(user.id))
+        .execute()
+    )
+    if not existing.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Destination not found or does not belong to you.')
 
-    return {"message": "Destination deleted successfully"}
+    fields = {k: v for k, v in update.model_dump().items() if v is not None}
+    if not fields:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='No fields provided to update.')
+
+    response = (
+        supabase.table(SAVED_TABLE)
+        .update(fields)
+        .eq('id', destination_id)
+        .eq('user_id', str(user.id))
+        .execute()
+    )
+    return {'message': 'Destination updated successfully', 'data': response.data}
+
+
+@router.delete('/{destination_id}')
+async def delete_destination(
+    destination_id: int,
+    user=Depends(get_current_user),
+):
+    supabase = get_supabase_client()
+
+    existing = (
+        supabase.table(SAVED_TABLE)
+        .select('id')
+        .eq('id', destination_id)
+        .eq('user_id', str(user.id))
+        .execute()
+    )
+    if not existing.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Destination not found or does not belong to you.')
+
+    supabase.table(SAVED_TABLE).delete().eq('id', destination_id).eq('user_id', str(user.id)).execute()
+    return {'message': 'Destination deleted successfully'}
+
