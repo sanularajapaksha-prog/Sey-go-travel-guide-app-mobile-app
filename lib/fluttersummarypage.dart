@@ -9,163 +9,36 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(fontFamily: "Poppins"),
-      home: const TravelPage(),
+      home: RouteSummaryPage(),
     );
   }
 }
-
-class TravelPage extends StatelessWidget {
-  const TravelPage({super.key});
+class RouteSummaryPage extends StatelessWidget {
+  const RouteSummaryPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xfff5f5f5),
 
-      // 🔍 Search Bar
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        backgroundColor: Colors.white,
-        title: Container(
-          height: 45,
-          padding: const EdgeInsets.symmetric(horizontal: 15),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(25),
-          ),
-          child: const Row(
-            children: [
-              Icon(Icons.search, color: Colors.grey),
-              SizedBox(width: 10),
-              Text("Sigiriya", style: TextStyle(color: Colors.grey)),
-              Spacer(),
-              Icon(Icons.tune, color: Colors.grey),
-            ],
-          ),
+        centerTitle: true,
+        leading: const Icon(Icons.arrow_back, color: Colors.black),
+        title: const Text(
+          "Route Summary",
+          style: TextStyle(color: Colors.black),
         ),
-      ),
-
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-
-            // Tabs
-            Row(
-              children: const [
-                Text("All", style: TextStyle(fontWeight: FontWeight.bold)),
-                SizedBox(width: 20),
-                Text("Latest"),
-                SizedBox(width: 20),
-                Text("Popular", style: TextStyle(color: Colors.blue)),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Image Carousel (Mock)
-            SizedBox(
-              height: 200,
-              child: PageView(
-                children: [
-                  travelImage("https://images.unsplash.com/photo-1595854341625-f33ee10dbf94"),
-                  travelImage("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee"),
-                  travelImage("https://images.unsplash.com/photo-1518684079-7b3a7cde7b6a"),
-                ],
-              ),
-            ),
-            const SizedBox(height: 15),
-
-            // Title + Distance
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
-                Text(
-                  "Sigiriya Lion Rock",
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                ),
-                Row(
-                  children: [
-                    Icon(Icons.location_on, color: Colors.blue),
-                    SizedBox(width: 4),
-                    Text("185 km"),
-                  ],
-                )
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            // Overview
-            const Text(
-              "Overview",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-
-            // Duration + Rating
-            Row(
-              children: const [
-                Icon(Icons.access_time, color: Colors.blue),
-                SizedBox(width: 5),
-                Text("1 Day"),
-                SizedBox(width: 20),
-                Icon(Icons.star, color: Colors.amber),
-                SizedBox(width: 5),
-                Text("6.0 (2.9k Reviews)"),
-              ],
-            ),
-            const SizedBox(height: 15),
-
-            // Description
-            const Text(
-              "Sigiriya Lion Rock is an engineering and artistic marvel set within the lush landscapes of Sri Lanka’s Cultural Triangle. It features preserved frescoes, landscaped gardens, and the imposing lion paws leading to the summit.",
-              style: TextStyle(color: Colors.grey),
-            ),
-
-            const SizedBox(height: 25),
-
-            // Add to Cart Button
-            Center(
-              child: OutlinedButton(
-                onPressed: () {},
-                style: OutlinedButton.styleFrom(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                ),
-                child: const Text("Add to cart"),
-              ),
-            ),
-          ],
-        ),
-      ),
-
-      // Bottom Navigation
-      bottomNavigationBar: BottomNavigationBar(
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey,
-        currentIndex: 1,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: ""),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: ""),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: ""),
-          BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: ""),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: ""),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 16),
+            child: Icon(Icons.share, color: Colors.black),
+          )
         ],
       ),
     );
   }
-}
-
-// Image Widget
-Widget travelImage(String url) {
-  return ClipRRect(
-    borderRadius: BorderRadius.circular(20),
-    child: Image.network(url, fit: BoxFit.cover),
-  );
 }
