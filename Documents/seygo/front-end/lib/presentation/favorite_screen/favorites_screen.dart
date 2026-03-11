@@ -225,3 +225,131 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                       ),
                     ),
                     SizedBox(height: 1.h),
+
+                                        Expanded(
+                      child: filtered.isEmpty
+                          ? Center(
+                              child: Text(
+                                'No matches found',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            )
+                          : ListView.separated(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 4.w,
+                                vertical: 1.6.h,
+                              ),
+                              itemCount: filtered.length,
+                              separatorBuilder: (context, index) =>
+                                  SizedBox(height: 2.h),
+                              itemBuilder: (context, index) {
+                                final place = filtered[index];
+                                return _FavoritePlaceCard(
+                                  place: place,
+                                  onRemove: () => favoritesProvider
+                                      .removeFavorite(place.id),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+        );
+      },
+    );
+  }
+}
+
+class _FavoritesSummaryCard extends StatelessWidget {
+  final int total;
+  final int categories;
+
+  const _FavoritesSummaryCard({
+    required this.total,
+    required this.categories,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.8.h),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.shadow,
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _SummaryItem(
+            label: 'Places',
+            value: total.toString(),
+          ),
+          _SummaryItem(
+            label: 'Categories',
+            value: categories.toString(),
+          ),
+          _SummaryItem(
+            label: 'Status',
+            value: total == 0 ? 'Empty' : 'Saved',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryItem extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _SummaryItem({
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        SizedBox(height: 0.2.h),
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+enum _SortOption {
+  recent('Recently added'),
+  nameAsc('Name (A-Z)'),
+  nameDesc('Name (Z-A)'),
+  category('Category');
+
+  final String label;
+  const _SortOption(this.label);
+}
+
