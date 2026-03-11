@@ -353,3 +353,95 @@ enum _SortOption {
   const _SortOption(this.label);
 }
 
+class _FavoritePlaceCard extends StatelessWidget {
+  final FavoritePlace place;
+  final VoidCallback onRemove;
+
+  const _FavoritePlaceCard({
+    required this.place,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.shadow,
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(18),
+              bottomLeft: Radius.circular(18),
+            ),
+            child: CustomImageWidget(
+              imageUrl: place.imageUrl,
+              width: 28.w,
+              height: 12.h,
+              fit: BoxFit.cover,
+              semanticLabel: place.semanticLabel,
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.6.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    place.name,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: 0.6.h),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on_outlined,
+                        size: 16,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      SizedBox(width: 1.w),
+                      Expanded(
+                        child: Text(
+                          place.location,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Remove',
+            icon: Icon(
+              Icons.delete_outline,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            onPressed: onRemove,
+          ),
+        ],
+      ),
+    );
+  }
+}
