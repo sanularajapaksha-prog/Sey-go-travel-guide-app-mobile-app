@@ -1,0 +1,181 @@
+{
+  "info": {
+    "name": "SeyGo API",
+    "_postman_id": "c3b5f4aa-0000-4e5b-b111-1234567890ab",
+    "description": "Postman collection for SeyGo backend (FastAPI + Supabase).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Ada Lovelace\",\n  \"email\": \"ada@example.com\",\n  \"password\": \"Passw0rd!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ada@example.com\",\n  \"password\": \"Passw0rd!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Resend verification",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/resend-verification", "host": ["{{baseUrl}}"], "path": ["auth", "resend-verification"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"ada@example.com\"\n}" }
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/verify-otp", "host": ["{{baseUrl}}"], "path": ["auth", "verify-otp"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"ada@example.com\",\n  \"code\": \"123456\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Places",
+      "item": [
+        {
+          "name": "List places",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/places?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["places"],
+              "query": [
+                { "key": "limit", "value": "20" },
+                { "key": "offset", "value": "0" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search places",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/places/search?q=surf&radius_km=80&latitude=6.9271&longitude=79.8612",
+              "host": ["{{baseUrl}}"],
+              "path": ["places", "search"],
+              "query": [
+                { "key": "q", "value": "surf" },
+                { "key": "radius_km", "value": "80" },
+                { "key": "latitude", "value": "6.9271" },
+                { "key": "longitude", "value": "79.8612" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Recommend places",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/places/recommend", "host": ["{{baseUrl}}"], "path": ["places", "recommend"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_place_id\": \"123\",\n  \"liked_tags\": [\"beach\"],\n  \"disliked_tags\": [\"crowded\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "Google search",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/places/google/search", "host": ["{{baseUrl}}"], "path": ["places", "google", "search"] },
+            "body": { "mode": "raw", "raw": "{\n  \"query\": \"Sigiriya\",\n  \"language\": \"en\"\n}" }
+          }
+        },
+        {
+          "name": "Google details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/places/google/details/PLACE_ID", "host": ["{{baseUrl}}"], "path": ["places", "google", "details", "PLACE_ID"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Destinations",
+      "item": [
+        {
+          "name": "Save destination",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/destinations/save", "host": ["{{baseUrl}}"], "path": ["destinations", "save"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"place_id\": \"123\",\n  \"name\": \"Galle Fort\",\n  \"latitude\": 6.026,\n  \"longitude\": 80.217,\n  \"tags\": [\"heritage\"],\n  \"description\": \"Old fort\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List my destinations",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/destinations/me?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["destinations", "me"],
+              "query": [
+                { "key": "limit", "value": "20" },
+                { "key": "offset", "value": "0" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete destination",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/destinations/DEST_ID", "host": ["{{baseUrl}}"], "path": ["destinations", "DEST_ID"] }
+          }
+        }
+      ]
+    }
+  ],
+  "event": [],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000" },
+    { "key": "token", "value": "" }
+  ]
+}
