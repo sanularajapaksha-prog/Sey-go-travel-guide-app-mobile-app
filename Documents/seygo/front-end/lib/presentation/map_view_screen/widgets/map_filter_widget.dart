@@ -21,16 +21,20 @@ class MapFilterWidget extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Container(
-      height: 8.h,
+      height: 9.h,
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        border: Border(
-          bottom: BorderSide(color: theme.dividerColor, width: 1.0),
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.shadow,
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
+        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.6.h),
         itemCount: categories.length,
         separatorBuilder: (context, index) => SizedBox(width: 2.w),
         itemBuilder: (context, index) {
@@ -41,20 +45,29 @@ class MapFilterWidget extends StatelessWidget {
             color: Colors.transparent,
             child: InkWell(
               onTap: () => onCategorySelected(category),
-              borderRadius: BorderRadius.circular(24.0),
+              borderRadius: BorderRadius.circular(28.0),
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+                padding: EdgeInsets.symmetric(horizontal: 4.5.w, vertical: 1.1.h),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? theme.colorScheme.primary
                       : theme.colorScheme.surface.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(24.0),
+                  borderRadius: BorderRadius.circular(28.0),
                   border: Border.all(
                     color: isSelected
                         ? theme.colorScheme.primary
                         : theme.dividerColor,
                     width: 1.0,
                   ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: theme.colorScheme.shadow,
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
+                      : null,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
