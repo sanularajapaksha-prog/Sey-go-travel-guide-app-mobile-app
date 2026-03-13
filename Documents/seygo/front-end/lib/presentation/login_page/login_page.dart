@@ -13,7 +13,11 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   String? _emailError;
+  String? _passwordError;
+  final bool _isSubmitting = false;
+  bool _isPasswordVisible = false;
 
   String? _validateEmail(String value) {
     final normalized = value.trim().toLowerCase();
@@ -29,6 +33,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void dispose() {
     _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -68,10 +73,8 @@ class _LoginPageState extends State<LoginPage> {
                 rightLabel: 'Register',
                 leftActive: true,
                 onLeft: () {},
-                onRight: () => Navigator.pushNamed(
-                  context,
-                  AppRoutes.registerPage,
-                ),
+                onRight: () =>
+                    Navigator.pushNamed(context, AppRoutes.registerPage),
               ),
               const SizedBox(height: 18),
               LabeledAuthField(
@@ -86,11 +89,25 @@ class _LoginPageState extends State<LoginPage> {
                 },
               ),
               const SizedBox(height: 14),
-              const LabeledAuthField(
+              LabeledAuthField(
                 label: 'Password',
                 hintText: '********',
-                obscure: true,
-                suffixIcon: Icon(Icons.visibility_off_outlined, size: 18),
+                obscure: !_isPasswordVisible,
+                suffixIcon: IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _isPasswordVisible = !_isPasswordVisible;
+                    });
+                  },
+                  icon: Icon(
+                    _isPasswordVisible
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    size: 18,
+                  ),
+                ),
+                controller: _passwordController,
+                errorText: _passwordError,
               ),
               const SizedBox(height: 10),
               Align(
@@ -109,10 +126,7 @@ class _LoginPageState extends State<LoginPage> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.pushReplacementNamed(
-                    context,
-                    AppRoutes.welcomeHomeScreen,
-                  ),
+                  onPressed: _isSubmitting ? null : _submitLogin,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: brandBlue,
                     foregroundColor: Colors.white,
@@ -121,13 +135,22 @@ class _LoginPageState extends State<LoginPage> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: Text(
-                    'Login',
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                    ),
-                  ),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          'Login',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(height: 18),
@@ -211,6 +234,55 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
+
+  Future<void> _submitLogin() async {
+    // Temporary bypass for frontend-only development: skip validation/API and go straight home.
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      AppRoutes.welcomeHomeScreen,
+      (route) => false,
+    );
+    return;
+
+    /*
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    setState(() {
+      _emailError = _validateEmail(email);
+      _passwordError = password.isEmpty ? 'Password is required' : null;
+    });
+
+    if (_emailError != null || _passwordError != null) {
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      await ApiService.login(email: email, password: password);
+      if (!mounted) return;
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.welcomeHomeScreen,
+        (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+    */
+  }
 }
 
 class _SocialPill extends StatelessWidget {
@@ -237,11 +309,7 @@ class _SocialPill extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: Center(child: leading),
-            ),
+            SizedBox(width: 20, height: 20, child: Center(child: leading)),
             const SizedBox(width: 8),
             Text(
               label,

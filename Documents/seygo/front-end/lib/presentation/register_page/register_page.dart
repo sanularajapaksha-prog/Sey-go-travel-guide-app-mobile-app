@@ -1,5 +1,9 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/services/api_service.dart';
 import '../../routes/app_routes.dart';
@@ -21,8 +25,11 @@ class _RegisterPageState extends State<RegisterPage> {
   String? _passwordError;
   String? _confirmError;
   bool _isSubmitting = false;
+  bool _isGoogleLoading = false;
+  bool _isAppleLoading = false;
   bool _isPasswordVisible = false;
   bool _isConfirmVisible = false;
+  StreamSubscription<AuthState>? _authSubscription;
   final FocusNode _nameFocus = FocusNode();
   final FocusNode _emailFocus = FocusNode();
   final FocusNode _passwordFocus = FocusNode();
@@ -40,7 +47,28 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    try {
+      _authSubscription = Supabase.instance.client.auth.onAuthStateChange
+          .listen((data) {
+            if (!mounted) return;
+            if (data.event == AuthChangeEvent.signedIn) {
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                AppRoutes.welcomeHomeScreen,
+                (route) => false,
+              );
+            }
+          });
+    } catch (_) {
+      // Supabase not initialized; email/password flow can still work via backend API.
+    }
+  }
+
+  @override
   void dispose() {
+    _authSubscription?.cancel();
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -245,6 +273,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   Expanded(
                     child: _SocialPill(
                       label: 'Google',
+                      onPressed: _isGoogleLoading || _isAppleLoading
+                          ? null
+                          : _signInWithGoogle,
                       leading: Image.asset(
                         'assets/images/google_logo.png',
                         width: 18,
@@ -257,6 +288,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   Expanded(
                     child: _SocialPill(
                       label: 'Apple',
+                      onPressed: _isGoogleLoading || _isAppleLoading
+                          ? null
+                          : _signInWithApple,
                       leading: Image.asset(
                         'assets/images/apple_logo.png',
                         width: 18,
@@ -319,12 +353,16 @@ class _RegisterPageState extends State<RegisterPage> {
         SnackBar(
           content: Text(
             verificationSent
-                ? 'Account created. Verification code sent to your email.'
+                ? 'Account created successfully.'
                 : 'Account created successfully.',
           ),
         ),
       );
-      Navigator.pushNamed(context, AppRoutes.otpPage, arguments: email);
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.welcomeHomeScreen,
+        (route) => false,
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -338,20 +376,71 @@ class _RegisterPageState extends State<RegisterPage> {
       }
     }
   }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isGoogleLoading = true;
+    });
+    try {
+      await Supabase.instance.client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: kIsWeb ? null : 'io.supabase.flutter://login-callback/',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGoogleLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _signInWithApple() async {
+    setState(() {
+      _isAppleLoading = true;
+    });
+    try {
+      await Supabase.instance.client.auth.signInWithOAuth(
+        OAuthProvider.apple,
+        redirectTo: kIsWeb ? null : 'io.supabase.flutter://login-callback/',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAppleLoading = false;
+        });
+      }
+    }
+  }
 }
 
 class _SocialPill extends StatelessWidget {
-  const _SocialPill({required this.label, required this.leading});
+  const _SocialPill({
+    required this.label,
+    required this.leading,
+    required this.onPressed,
+  });
 
   final String label;
   final Widget leading;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 50,
       child: ElevatedButton(
-        onPressed: () {},
+        onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
           elevation: 2,

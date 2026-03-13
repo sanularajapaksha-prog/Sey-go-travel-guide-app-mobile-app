@@ -1,12 +1,14 @@
 import os
 from functools import lru_cache
+from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from supabase import Client, create_client
 
-load_dotenv()
+_ENV_PATH = Path(__file__).resolve().parent.parent / '.env'
+load_dotenv(dotenv_path=_ENV_PATH)
 
 security = HTTPBearer()
 
