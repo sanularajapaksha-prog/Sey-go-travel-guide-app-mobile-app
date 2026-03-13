@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
-import '../../core/app_export.dart';
-import '../../widgets/custom_icon_widget.dart';
-
 /// Splash Screen - Branded app launch experience with initialization
 /// Displays SeyGo logo with subtle animation during 2-3 second initialization
 /// Handles background tasks: cache loading, network check, image optimization
@@ -19,7 +16,6 @@ class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
-  bool _isInitialized = false;
 
   @override
   void initState() {
@@ -53,25 +49,23 @@ class _SplashScreenState extends State<SplashScreen>
         Future.delayed(const Duration(milliseconds: 2500)),
       ]);
 
-      setState(() => _isInitialized = true);
-
       // Navigate to Welcome/Home screen
-      if (mounted) {
-        await Future.delayed(const Duration(milliseconds: 500));
-        Navigator.of(
-          context,
-          rootNavigator: true,
-        ).pushReplacementNamed('/welcome-home-screen');
-      }
+      if (!mounted) return;
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+      Navigator.of(
+        context,
+        rootNavigator: true,
+      ).pushReplacementNamed('/welcome-home-screen');
     } catch (e) {
       // Handle initialization errors gracefully
-      if (mounted) {
-        await Future.delayed(const Duration(seconds: 3));
-        Navigator.of(
-          context,
-          rootNavigator: true,
-        ).pushReplacementNamed('/welcome-home-screen');
-      }
+      if (!mounted) return;
+      await Future.delayed(const Duration(seconds: 3));
+      if (!mounted) return;
+      Navigator.of(
+        context,
+        rootNavigator: true,
+      ).pushReplacementNamed('/welcome-home-screen');
     }
   }
 
@@ -147,7 +141,7 @@ class _SplashScreenState extends State<SplashScreen>
       width: 40.w,
       height: 40.w,
       decoration: BoxDecoration(
-        color: theme.colorScheme.primary,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20.w),
         boxShadow: [
           BoxShadow(
@@ -157,25 +151,21 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         ],
       ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CustomIconWidget(
-              iconName: 'explore',
-              color: theme.colorScheme.tertiary,
-              size: 15.w,
-            ),
-            SizedBox(height: 1.h),
-            Text(
+      child: Padding(
+        padding: EdgeInsets.all(4.w),
+        child: Image.asset(
+          'assets/images/img_app_logo.png',
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) {
+            return Text(
               'SeyGo',
               style: theme.textTheme.headlineSmall?.copyWith(
-                color: theme.colorScheme.tertiary,
+                color: theme.colorScheme.primary,
                 fontWeight: FontWeight.w700,
-                letterSpacing: 1.5,
+                letterSpacing: 1.0,
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );

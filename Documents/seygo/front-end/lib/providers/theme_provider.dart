@@ -62,7 +62,6 @@ class ThemeProvider extends ChangeNotifier {
       case ThemeMode.dark:
         return 'dark';
       case ThemeMode.system:
-      default:
         return 'system';
     }
   }
@@ -73,7 +72,6 @@ class ThemeProvider extends ChangeNotifier {
         return ThemeMode.light;
       case 'dark':
         return ThemeMode.dark;
-      case 'system':
       default:
         return ThemeMode.system;
     }

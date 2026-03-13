@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
-import 'package:google_fonts/google_fonts.dart';
-
-import '../../core/app_export.dart';
-import '../../widgets/custom_icon_widget.dart';
 import './widgets/category_pill_widget.dart';
 import './widgets/destination_card_widget.dart';
 import './widgets/featured_carousel_widget.dart';
@@ -204,8 +200,8 @@ class _WelcomeHomeScreenInitialPageState
                             style: theme.textTheme.headlineMedium?.copyWith(
                               fontWeight: FontWeight.w700,
                               letterSpacing: -0.5,
-                              color: theme.colorScheme.onSurface.withOpacity(
-                                0.65,
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.65,
                               ),
                               height: 1.1,
                             ),
@@ -289,7 +285,7 @@ class _WelcomeHomeScreenInitialPageState
                                     onTap: () {
                                       final query = _searchController.text
                                           .trim();
-                                      print("Search pressed: '$query'");
+                                      debugPrint("Search pressed: '$query'");
                                       // TODO: real search logic here
                                     },
                                     child: Container(
@@ -303,7 +299,7 @@ class _WelcomeHomeScreenInitialPageState
                                             color: theme
                                                 .colorScheme
                                                 .shadow
-                                                .withOpacity(0.3),
+                                                .withValues(alpha: 0.3),
                                             blurRadius: 8,
                                             offset: const Offset(0, 4),
                                           ),

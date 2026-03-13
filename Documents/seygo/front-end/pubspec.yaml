@@ -51,8 +51,3 @@ flutter:
   # CRITICAL FONTS RULE:
   # - THIS PROJECT USES GOOGLE FONTS INSTEAD OF LOCAL FONTS
   # - DO NOT ADD ANY LOCAL FONTS SECTION OR FONT FILES
-fonts:
-  - family: SFPro
-    fonts:
-      - asset: assets/fonts/SF-Pro-Display-Regular.otf
-      - asset: assets/fonts/SF-Pro-Display-Semibold.otf

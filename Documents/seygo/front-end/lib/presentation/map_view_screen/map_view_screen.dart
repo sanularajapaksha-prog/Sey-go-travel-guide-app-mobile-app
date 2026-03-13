@@ -1,9 +1,13 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:sizer/sizer.dart';
 
-import '../../../core/app_export.dart';
+import '../../core/app_export.dart';
+import '../../data/services/api_service.dart';
 import './widgets/destination_bottom_sheet_widget.dart';
 import './widgets/destination_marker_widget.dart';
 import './widgets/map_filter_widget.dart';
@@ -16,15 +20,24 @@ class MapViewScreen extends StatefulWidget {
 }
 
 class _MapViewScreenState extends State<MapViewScreen> {
+  static const LatLng _defaultSriLankaCenter = LatLng(7.8731, 80.7718);
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
   Position? _currentPosition;
+  bool _hasLocationPermission = false;
   bool _isLoading = true;
   String _selectedCategory = 'All';
+  double _selectedRadiusKm = 20.0;
   Map<String, dynamic>? _selectedDestination;
   final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
+  bool _isSearchingPlaces = false;
+  List<Map<String, dynamic>> _searchSuggestions = [];
+  List<Map<String, dynamic>> _apiSearchPlaces = [];
+  LatLng? _searchCenter;
   bool _showListView = false;
   final List<Map<String, dynamic>> _tripCart = [];
+  final List<double> _radiusOptionsKm = [1, 3, 5, 10, 15, 20, 30, 40, 50, 60];
 
   // Mock destination data with geographic coordinates
   final List<Map<String, dynamic>> _destinations = [
@@ -34,12 +47,11 @@ class _MapViewScreenState extends State<MapViewScreen> {
       "category": "Mountains",
       "latitude": 6.8667,
       "longitude": 81.0467,
-      "image":
-      "https://images.unsplash.com/photo-1620744577685-8fac0be42e44",
+      "image": "https://images.unsplash.com/photo-1620744577685-8fac0be42e44",
       "semanticLabel":
-      "Scenic mountain view of Ella with lush green tea plantations and misty peaks",
+          "Scenic mountain view of Ella with lush green tea plantations and misty peaks",
       "description":
-      "Picturesque hill country town famous for Nine Arch Bridge and stunning mountain views",
+          "Picturesque hill country town famous for Nine Arch Bridge and stunning mountain views",
       "rating": 4.8,
       "reviews": 2847,
     },
@@ -50,11 +62,11 @@ class _MapViewScreenState extends State<MapViewScreen> {
       "latitude": 7.2906,
       "longitude": 80.6337,
       "image":
-      "https://img.rocket.new/generatedImages/rocket_gen_img_193f33a5e-1766335454247.png",
+          "https://img.rocket.new/generatedImages/rocket_gen_img_193f33a5e-1766335454247.png",
       "semanticLabel":
-      "Sacred Temple of the Tooth Relic in Kandy with traditional Sri Lankan architecture",
+          "Sacred Temple of the Tooth Relic in Kandy with traditional Sri Lankan architecture",
       "description":
-      "Cultural capital home to the sacred Temple of the Tooth Relic and beautiful lake",
+          "Cultural capital home to the sacred Temple of the Tooth Relic and beautiful lake",
       "rating": 4.7,
       "reviews": 3521,
     },
@@ -65,11 +77,11 @@ class _MapViewScreenState extends State<MapViewScreen> {
       "latitude": 9.6615,
       "longitude": 80.0255,
       "image":
-      "https://img.rocket.new/generatedImages/rocket_gen_img_1b20076d0-1768674030531.png",
+          "https://img.rocket.new/generatedImages/rocket_gen_img_1b20076d0-1768674030531.png",
       "semanticLabel":
-      "Historic Jaffna Fort with ancient stone walls overlooking the northern coastline",
+          "Historic Jaffna Fort with ancient stone walls overlooking the northern coastline",
       "description":
-      "Northern peninsula known for unique Tamil culture, historic fort and pristine beaches",
+          "Northern peninsula known for unique Tamil culture, historic fort and pristine beaches",
       "rating": 4.6,
       "reviews": 1893,
     },
@@ -79,12 +91,11 @@ class _MapViewScreenState extends State<MapViewScreen> {
       "category": "Beach Side",
       "latitude": 5.9467,
       "longitude": 80.4589,
-      "image":
-      "https://images.unsplash.com/photo-1585723816185-2b158d4d5a34",
+      "image": "https://images.unsplash.com/photo-1585723816185-2b158d4d5a34",
       "semanticLabel":
-      "Golden sandy beach at Mirissa with turquoise waters and palm trees swaying in breeze",
+          "Golden sandy beach at Mirissa with turquoise waters and palm trees swaying in breeze",
       "description":
-      "Stunning southern beach perfect for whale watching, surfing and tropical sunsets",
+          "Stunning southern beach perfect for whale watching, surfing and tropical sunsets",
       "rating": 4.9,
       "reviews": 4156,
     },
@@ -94,12 +105,11 @@ class _MapViewScreenState extends State<MapViewScreen> {
       "category": "Camping",
       "latitude": 6.3725,
       "longitude": 81.5185,
-      "image":
-      "https://images.unsplash.com/photo-1420639246026-982a997b3abf",
+      "image": "https://images.unsplash.com/photo-1420639246026-982a997b3abf",
       "semanticLabel":
-      "Wild leopard resting on rocky outcrop in Yala National Park surrounded by dry forest",
+          "Wild leopard resting on rocky outcrop in Yala National Park surrounded by dry forest",
       "description":
-      "Premier wildlife sanctuary with highest leopard density and diverse ecosystems",
+          "Premier wildlife sanctuary with highest leopard density and diverse ecosystems",
       "rating": 4.8,
       "reviews": 2934,
     },
@@ -109,12 +119,11 @@ class _MapViewScreenState extends State<MapViewScreen> {
       "category": "Beach Side",
       "latitude": 6.0094,
       "longitude": 80.2506,
-      "image":
-      "https://images.unsplash.com/photo-1662319173895-a2c67d4f473c",
+      "image": "https://images.unsplash.com/photo-1662319173895-a2c67d4f473c",
       "semanticLabel":
-      "Crescent-shaped Unawatuna beach with clear blue waters and coral reef visible underwater",
+          "Crescent-shaped Unawatuna beach with clear blue waters and coral reef visible underwater",
       "description":
-      "Crescent-shaped bay with coral reef, perfect for snorkeling and beach relaxation",
+          "Crescent-shaped bay with coral reef, perfect for snorkeling and beach relaxation",
       "rating": 4.7,
       "reviews": 3687,
     },
@@ -125,11 +134,11 @@ class _MapViewScreenState extends State<MapViewScreen> {
       "latitude": 6.8103,
       "longitude": 80.7981,
       "image":
-      "https://img.rocket.new/generatedImages/rocket_gen_img_1e356b9db-1766848581776.png",
+          "https://img.rocket.new/generatedImages/rocket_gen_img_1e356b9db-1766848581776.png",
       "semanticLabel":
-      "Dramatic cliff edge at World's End viewpoint in Horton Plains with clouds below",
+          "Dramatic cliff edge at World's End viewpoint in Horton Plains with clouds below",
       "description":
-      "High-altitude plateau featuring World's End cliff and unique cloud forest ecosystem",
+          "High-altitude plateau featuring World's End cliff and unique cloud forest ecosystem",
       "rating": 4.9,
       "reviews": 2156,
     },
@@ -140,13 +149,41 @@ class _MapViewScreenState extends State<MapViewScreen> {
       "latitude": 8.4381,
       "longitude": 80.0255,
       "image":
-      "https://img.rocket.new/generatedImages/rocket_gen_img_1d28e9dd5-1767182645659.png",
+          "https://img.rocket.new/generatedImages/rocket_gen_img_1d28e9dd5-1767182645659.png",
       "semanticLabel":
-      "Elephant herd walking through grasslands in Wilpattu National Park at golden hour",
+          "Elephant herd walking through grasslands in Wilpattu National Park at golden hour",
       "description":
-      "Largest national park known for natural lakes and diverse wildlife including leopards",
+          "Largest national park known for natural lakes and diverse wildlife including leopards",
       "rating": 4.7,
       "reviews": 1745,
+    },
+    {
+      "id": 9,
+      "name": "Sinharaja Forest Reserve",
+      "category": "Camping",
+      "latitude": 6.4040,
+      "longitude": 80.4581,
+      "image": "https://images.unsplash.com/photo-1448375240586-882707db888b",
+      "semanticLabel":
+          "Dense tropical rainforest canopy in Sinharaja Forest Reserve with rich biodiversity",
+      "description":
+          "UNESCO rainforest reserve with rare endemic birds, reptiles and guided jungle trails",
+      "rating": 4.8,
+      "reviews": 2260,
+    },
+    {
+      "id": 10,
+      "name": "Kumana National Park",
+      "category": "Camping",
+      "latitude": 6.5314,
+      "longitude": 81.6666,
+      "image": "https://images.unsplash.com/photo-1474511320723-9a56873867b5",
+      "semanticLabel":
+          "Wetlands and wild birds in Kumana National Park during golden hour",
+      "description":
+          "Eastern wildlife sanctuary known for bird migration, wetlands and safari routes",
+      "rating": 4.7,
+      "reviews": 1480,
     },
   ];
 
@@ -160,11 +197,13 @@ class _MapViewScreenState extends State<MapViewScreen> {
   void dispose() {
     _mapController?.dispose();
     _searchController.dispose();
+    _searchDebounce?.cancel();
     super.dispose();
   }
 
   Future<void> _initializeMap() async {
     try {
+      await _loadPlacesFromBackend();
       await _getCurrentLocation();
       await _createMarkers();
       setState(() => _isLoading = false);
@@ -173,10 +212,46 @@ class _MapViewScreenState extends State<MapViewScreen> {
     }
   }
 
+  Future<void> _loadPlacesFromBackend() async {
+    try {
+      var rows = await ApiService.fetchPlaces();
+      if (rows.isEmpty) {
+        await Future.delayed(const Duration(milliseconds: 300));
+        rows = await ApiService.fetchPlaces();
+      }
+      final mapped = rows
+          .whereType<Map>()
+          .toList()
+          .asMap()
+          .entries
+          .map(
+            (entry) => _mapPlaceRow(
+              Map<String, dynamic>.from(entry.value),
+              entry.key,
+            ),
+          )
+          .whereType<Map<String, dynamic>>()
+          .toList();
+      if (mapped.isNotEmpty && mounted) {
+        setState(() {
+          _destinations
+            ..clear()
+            ..addAll(mapped);
+          if (_selectedCategory != 'All' && !_availableCategories.contains(_selectedCategory)) {
+            _selectedCategory = 'All';
+          }
+        });
+      }
+    } catch (_) {
+      // Keep bundled fallback places if backend is unavailable.
+    }
+  }
+
   Future<void> _getCurrentLocation() async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
+        setState(() => _hasLocationPermission = false);
         return;
       }
 
@@ -184,13 +259,17 @@ class _MapViewScreenState extends State<MapViewScreen> {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
+          setState(() => _hasLocationPermission = false);
           return;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
+        setState(() => _hasLocationPermission = false);
         return;
       }
+
+      setState(() => _hasLocationPermission = true);
 
       Position position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
@@ -200,16 +279,15 @@ class _MapViewScreenState extends State<MapViewScreen> {
 
       setState(() => _currentPosition = position);
     } catch (e) {
+      if (mounted) {
+        setState(() => _hasLocationPermission = false);
+      }
       // Silent fail - map will show default location
     }
   }
 
   Future<void> _createMarkers() async {
-    final filteredDestinations = _selectedCategory == 'All'
-        ? _destinations
-        : _destinations
-        .where((d) => d['category'] == _selectedCategory)
-        .toList();
+    final filteredDestinations = _filteredDestinations;
 
     _markers.clear();
 
@@ -233,24 +311,369 @@ class _MapViewScreenState extends State<MapViewScreen> {
     setState(() {});
   }
 
-  Future<BitmapDescriptor> _getMarkerIcon(String category) async {
-    // Use default markers with different colors based on category
-    switch (category) {
-      case 'Beach Side':
-        return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
-      case 'Mountains':
-        return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
-      case 'Temples':
-        return BitmapDescriptor.defaultMarkerWithHue(
-          BitmapDescriptor.hueOrange,
-        );
-      case 'Camping':
-        return BitmapDescriptor.defaultMarkerWithHue(
-          BitmapDescriptor.hueYellow,
-        );
-      default:
-        return BitmapDescriptor.defaultMarker;
+  Map<String, dynamic>? _mapPlaceRow(Map<String, dynamic> row, int index) {
+    final parsedCoords = _parseCoordinates(row['coordinates']);
+    final latitude =
+        _toDouble(row['latitude'] ?? row['lat']) ?? parsedCoords.$1;
+    final longitude =
+        _toDouble(row['longitude'] ?? row['lng'] ?? row['lon']) ??
+        parsedCoords.$2;
+
+    if (latitude == null || longitude == null) {
+      return null;
     }
+
+    final name = (row['name'] ?? row['address'] ?? 'Unknown Place').toString();
+    final category = _mapCategory(
+      row['primary_category'] ?? row['category'],
+      row['categories'] ?? row['types'],
+    );
+    final imageUrl = _extractImageUrl(
+      row,
+      latitude: latitude,
+      longitude: longitude,
+    );
+    final idValue = row['place_id'] ?? row['id'] ?? '${name}_$index';
+
+    return {
+      'id': idValue,
+      'name': name,
+      'category': category,
+      'latitude': latitude,
+      'longitude': longitude,
+      'image':
+          imageUrl ??
+          'https://images.unsplash.com/photo-1501785888041-af3ef285b470',
+      'semanticLabel': 'Photo of $name',
+      'description': (row['description'] ??
+              row['address'] ??
+              row['location'] ??
+              'No description available.')
+          .toString(),
+      'rating': _toDouble(row['avg_rating'] ?? row['rating']) ?? 0.0,
+      'reviews':
+          row['review_count'] is num ? (row['review_count'] as num).toInt() : 0,
+      'google_url': row['google_url'],
+    };
+  }
+
+  (double?, double?) _parseCoordinates(dynamic value) {
+    if (value is String && value.contains(',')) {
+      final parts = value.split(',');
+      if (parts.length >= 2) {
+        return (_toDouble(parts[0]), _toDouble(parts[1]));
+      }
+    }
+    if (value is Map) {
+      return (_toDouble(value['lat']), _toDouble(value['lng']));
+    }
+    return (null, null);
+  }
+
+  double? _toDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value.trim());
+    return null;
+  }
+
+  String _mapCategory(dynamic rawCategory, dynamic rawTypes) {
+    final rawAsString = (rawCategory ?? '').toString().trim();
+    final rawAsCode = rawCategory is num
+        ? rawCategory.toInt()
+        : int.tryParse(rawAsString);
+
+    if (rawAsCode != null) {
+      switch (rawAsCode) {
+        case 1:
+          return 'Beach Side';
+        case 2:
+          return 'Mountains';
+        case 3:
+          return 'Temples';
+        case 4:
+          return 'Camping';
+        default:
+          return 'Other';
+      }
+    }
+
+    final rawCategoryText = (rawCategory ?? '').toString().trim();
+    final categoryText = rawCategoryText.toLowerCase();
+    final typesText = (rawTypes ?? '').toString().toLowerCase();
+    final combined = '$categoryText $typesText';
+
+    if (combined.contains('historical') ||
+        combined.contains('heritage') ||
+        combined.contains('museum') ||
+        combined.contains('fort') ||
+        combined.contains('ruins')) {
+      return 'Historical Sites';
+    }
+
+    if (combined.contains('beach') ||
+        combined.contains('coast') ||
+        combined.contains('sea')) {
+      return 'Beach Side';
+    }
+    if (combined.contains('mountain') ||
+        combined.contains('hill') ||
+        combined.contains('peak')) {
+      return 'Mountains';
+    }
+    if (combined.contains('temple') ||
+        combined.contains('shrine') ||
+        combined.contains('church') ||
+        combined.contains('mosque')) {
+      return 'Temples';
+    }
+    if (combined.contains('camp') ||
+        combined.contains('park') ||
+        combined.contains('wildlife')) {
+      return 'Camping';
+    }
+
+    return rawCategoryText.isNotEmpty ? rawCategoryText : 'Other';
+  }
+
+  List<Map<String, dynamic>> _localSuggestions(String query, {int limit = 8}) {
+    final q = query.toLowerCase().trim();
+    if (q.isEmpty) return [];
+
+    final scored = _destinations.map((d) {
+      final name = (d['name'] as String).toLowerCase();
+      final category = (d['category'] as String).toLowerCase();
+      final desc = (d['description'] as String).toLowerCase();
+      double score = 0;
+      if (name == q) score += 5;
+      if (name.startsWith(q)) score += 3;
+      if (name.contains(q)) score += 2;
+      if (category.contains(q)) score += 1.2;
+      if (desc.contains(q)) score += 0.8;
+      return {'score': score, 'item': d};
+    }).toList();
+
+    scored.sort(
+      (a, b) => (b['score'] as double).compareTo(a['score'] as double),
+    );
+    return scored
+        .where((row) => (row['score'] as double) > 0)
+        .take(limit)
+        .map(
+          (row) =>
+              Map<String, dynamic>.from(row['item'] as Map<String, dynamic>),
+        )
+        .toList();
+  }
+
+  bool _isLikelySriLanka(double lat, double lon) {
+    return lat >= 5.5 && lat <= 10.1 && lon >= 79.4 && lon <= 82.1;
+  }
+
+  List<Map<String, dynamic>> _rankSearchResults(
+    List<Map<String, dynamic>> items,
+    String query,
+  ) {
+    final q = query.toLowerCase().trim();
+    final ranked = items.map((item) {
+      final name = (item['name'] as String? ?? '').toLowerCase();
+      final location = (item['location'] as String? ?? '').toLowerCase();
+      final lat = (item['latitude'] as num?)?.toDouble();
+      final lon = (item['longitude'] as num?)?.toDouble();
+      double score = 0;
+
+      if (name == q) {
+        score += 6;
+      }
+      if (name.startsWith(q)) {
+        score += 4;
+      }
+      if (name.contains(q)) {
+        score += 2.5;
+      }
+      if (location.contains('sri lanka')) {
+        score += 3.5;
+      }
+      if (lat != null && lon != null && _isLikelySriLanka(lat, lon)) {
+        score += 3.5;
+      }
+
+      final centerLat = _activeCenterLat;
+      final centerLon = _activeCenterLon;
+      if (centerLat != null &&
+          centerLon != null &&
+          lat != null &&
+          lon != null) {
+        final d = _haversineKm(centerLat, centerLon, lat, lon);
+        if (d <= 30) {
+          score += 2.5;
+        } else if (d <= 100) {
+          score += 1.5;
+        } else if (d <= 200) {
+          score += 0.8;
+        }
+      }
+      return {'score': score, 'item': item};
+    }).toList();
+
+    ranked.sort(
+      (a, b) => (b['score'] as double).compareTo(a['score'] as double),
+    );
+    return ranked.map((row) => row['item'] as Map<String, dynamic>).toList();
+  }
+
+  Future<BitmapDescriptor> _getMarkerIcon(String category) async {
+    final value = category.toLowerCase().trim();
+
+    if (value.contains('beach') || value.contains('coast')) {
+      return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
+    }
+    if (value.contains('mount') ||
+        value.contains('hill') ||
+        value.contains('hiking')) {
+      return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+    }
+    if (value.contains('temple') ||
+        value.contains('church') ||
+        value.contains('mosque') ||
+        value.contains('sacred')) {
+      return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
+    }
+    if (value.contains('camp') ||
+        value.contains('wildlife') ||
+        value.contains('park') ||
+        value.contains('forest')) {
+      return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow);
+    }
+    if (value.contains('histor') ||
+        value.contains('ancient') ||
+        value.contains('heritage') ||
+        value.contains('museum') ||
+        value.contains('fort') ||
+        value.contains('ruin')) {
+      return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet);
+    }
+    if (value.contains('restaurant') ||
+        value.contains('cafe') ||
+        value.contains('food')) {
+      return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRose);
+    }
+
+    return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+  }
+
+  String? _extractImageUrl(
+    Map<String, dynamic> row, {
+    required double latitude,
+    required double longitude,
+  }) {
+    final placeName =
+        (row['name'] ?? row['place_name'] ?? row['place_id'] ?? 'unknown')
+            .toString();
+    debugPrint('Map image: resolving source for $placeName');
+
+    final googleUrl = (row['google_url'] ?? '').toString().trim();
+    if (googleUrl.startsWith('http://') || googleUrl.startsWith('https://')) {
+      if (_isDirectGooglePhotoUrl(googleUrl)) {
+        debugPrint('Map image: $placeName -> direct google_url $googleUrl');
+        return googleUrl;
+      }
+
+      final url = '${ApiService.baseUrl}/places/photo-from-google-url'
+          '?url=${Uri.encodeComponent(googleUrl)}';
+      debugPrint('Map image: $placeName -> google_url resolver $url');
+      return url;
+    }
+
+    final directImage = _extractDirectImageUrl(row);
+    if (directImage != null) {
+      debugPrint('Map image: $placeName -> direct url $directImage');
+      return directImage;
+    }
+
+    final placeId = (row['place_id'] ?? '').toString().trim();
+    if (placeId.isNotEmpty) {
+      final url = '${ApiService.baseUrl}/places/photo/$placeId';
+      debugPrint('Map image: $placeName -> place_id proxy $url');
+      return url;
+    }
+
+    final publicUrls = _asStringList(row['photo_public_urls']);
+    if (publicUrls.isNotEmpty) {
+      debugPrint('Map image: $placeName -> public url ${publicUrls.first}');
+      return publicUrls.first;
+    }
+    final storagePaths = _asStringList(row['photo_storage_paths']);
+    if (storagePaths.isNotEmpty) {
+      final path = storagePaths.first;
+      if (path.startsWith('http://') || path.startsWith('https://')) {
+        debugPrint('Map image: $placeName -> storage http path $path');
+        return path;
+      }
+      debugPrint('Map image: $placeName -> storage path present but not usable $path');
+    }
+
+    debugPrint('Map image: $placeName -> no source, using fallback');
+    return null;
+  }
+
+  String? _extractDirectImageUrl(Map<String, dynamic> row) {
+    final candidates = <dynamic>[
+      row['photo_url'],
+      row['image_url'],
+      row['image'],
+      row['place_url'],
+    ];
+
+    for (final candidate in candidates) {
+      final value = candidate?.toString().trim() ?? '';
+      if (value.isEmpty) continue;
+      if (value.startsWith('http://') || value.startsWith('https://')) {
+        if (value.contains('/storage/v1/object/public/')) {
+          continue;
+        }
+        return value;
+      }
+    }
+
+    return null;
+  }
+
+  List<String> _asStringList(dynamic value) {
+    if (value is List) {
+      return value
+          .map((item) => item.toString().trim())
+          .where((item) => item.isNotEmpty)
+          .toList();
+    }
+
+    if (value is String) {
+      final trimmed = value.trim();
+      if (trimmed.isEmpty) {
+        return const [];
+      }
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        final body = trimmed.substring(1, trimmed.length - 1);
+        return body
+            .split(',')
+            .map((item) => item.trim().replaceAll('"', '').replaceAll("'", ''))
+            .where((item) => item.isNotEmpty)
+            .toList();
+      }
+      return [trimmed];
+    }
+
+    return const [];
+  }
+
+  bool _isDirectGooglePhotoUrl(String url) {
+    final lower = url.toLowerCase();
+    return lower.contains('googleusercontent.com') ||
+        lower.contains('ggpht.com') ||
+        lower.contains('streetviewpixels-pa.googleapis.com') ||
+        (lower.contains('gstatic.com') &&
+            (lower.contains('/p/') ||
+                lower.contains('=s') ||
+                lower.contains('=w')));
   }
 
   void _onMarkerTapped(Map<String, dynamic> destination) {
@@ -269,7 +692,10 @@ class _MapViewScreenState extends State<MapViewScreen> {
           Navigator.pop(context);
           Navigator.of(context, rootNavigator: true).pushNamed(
             '/destination-detail-screen',
-            arguments: _selectedDestination,
+            arguments: {
+              'destination': _selectedDestination,
+              'allDestinations': _destinations,
+            },
           );
         },
         onAddToPlaylist: () {
@@ -311,7 +737,9 @@ class _MapViewScreenState extends State<MapViewScreen> {
     final destination = _selectedDestination;
     if (destination == null) return;
 
-    final alreadyAdded = _tripCart.any((item) => item['id'] == destination['id']);
+    final alreadyAdded = _tripCart.any(
+      (item) => item['id'] == destination['id'],
+    );
     if (!alreadyAdded) {
       setState(() {
         _tripCart.add(Map<String, dynamic>.from(destination));
@@ -345,10 +773,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
       return;
     }
 
-    final result = await Navigator.of(
-      context,
-      rootNavigator: true,
-    ).pushNamed(
+    final result = await Navigator.of(context, rootNavigator: true).pushNamed(
       AppRoutes.routePlanner,
       arguments: {
         'destinations': _tripCart,
@@ -366,7 +791,9 @@ class _MapViewScreenState extends State<MapViewScreen> {
         _tripCart
           ..clear()
           ..addAll(
-            result.whereType<Map>().map((item) => Map<String, dynamic>.from(item)),
+            result.whereType<Map>().map(
+              (item) => Map<String, dynamic>.from(item),
+            ),
           );
       });
     }
@@ -399,54 +826,294 @@ class _MapViewScreenState extends State<MapViewScreen> {
   }
 
   void _onSearchChanged(String query) {
-    if (query.isEmpty) return;
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () async {
+      final trimmed = query.trim();
+      if (trimmed.isEmpty) {
+        if (!mounted) return;
+        setState(() {
+          _searchSuggestions = [];
+          _apiSearchPlaces = [];
+          _searchCenter = null;
+        });
+        await _createMarkers();
+        return;
+      }
 
-    final results = _destinations
-        .where(
-          (d) =>
-      (d['name'] as String).toLowerCase().contains(
-        query.toLowerCase(),
-      ) ||
-          (d['category'] as String).toLowerCase().contains(
-            query.toLowerCase(),
+      await _fetchSearchSuggestions(trimmed);
+      await _createMarkers();
+    });
+  }
+
+  Future<void> _fetchSearchSuggestions(String query) async {
+    try {
+      if (!mounted) return;
+      setState(() => _isSearchingPlaces = true);
+
+      final local = _localSuggestions(query, limit: 8);
+
+      final results = await ApiService.searchPlacesFromDb(
+        query: query,
+        latitude: null,
+        longitude: null,
+        radiusKm: 500,
+        limit: 12,
+      );
+
+      final mapped = results
+          .whereType<Map>()
+          .map((item) => _mapPlaceRow(Map<String, dynamic>.from(item), 0))
+          .whereType<Map<String, dynamic>>()
+          .where(
+            (item) =>
+                (item['latitude'] as double) != 0.0 ||
+                (item['longitude'] as double) != 0.0,
+          )
+          .toList();
+      final merged = <Map<String, dynamic>>[...local, ...mapped];
+      final dedup = <String, Map<String, dynamic>>{};
+      for (final item in merged) {
+        final key =
+            ((item['name'] as String? ?? '') +
+                    (item['location'] as String? ?? ''))
+                .toLowerCase()
+                .trim();
+        if (key.isEmpty) continue;
+        dedup[key] = item;
+      }
+      final ranked = _rankSearchResults(
+        dedup.values.toList(),
+        query,
+      ).take(8).toList();
+
+      if (!mounted) return;
+      setState(() {
+        _searchSuggestions = ranked;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _searchSuggestions = _localSuggestions(query, limit: 8);
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isSearchingPlaces = false);
+      }
+    }
+  }
+
+  Future<void> _runSearch() async {
+    final query = _searchController.text.trim().toLowerCase();
+    if (query.isEmpty) {
+      setState(() {
+        _apiSearchPlaces = [];
+        _searchCenter = null;
+        _searchSuggestions = [];
+      });
+      await _createMarkers();
+      return;
+    }
+    try {
+      if (!mounted) return;
+      setState(() => _isSearchingPlaces = true);
+
+      final local = _localSuggestions(query, limit: 20);
+
+      final places = await ApiService.searchPlacesFromDb(
+        query: query,
+        latitude: null,
+        longitude: null,
+        radiusKm: 500,
+        limit: 100,
+      );
+      final mapped = places
+          .whereType<Map>()
+          .map((item) => _mapPlaceRow(Map<String, dynamic>.from(item), 0))
+          .whereType<Map<String, dynamic>>()
+          .toList();
+      final merged = <Map<String, dynamic>>[...local, ...mapped];
+      final dedup = <String, Map<String, dynamic>>{};
+      for (final item in merged) {
+        final key =
+            ((item['name'] as String? ?? '') +
+                    (item['location'] as String? ?? ''))
+                .toLowerCase()
+                .trim();
+        if (key.isEmpty) continue;
+        dedup[key] = item;
+      }
+      final ranked = _rankSearchResults(dedup.values.toList(), query);
+
+      if (!mounted) return;
+      setState(() {
+        _apiSearchPlaces = ranked;
+        _searchSuggestions = [];
+      });
+      await _createMarkers();
+
+      if (ranked.isNotEmpty && _mapController != null) {
+        final first = ranked.first;
+        final lat = first['latitude'] as double;
+        final lon = first['longitude'] as double;
+        setState(() => _searchCenter = LatLng(lat, lon));
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLngZoom(
+            LatLng(lat, lon),
+            _zoomForRadius(_selectedRadiusKm),
           ),
-    )
-        .toList();
+        );
+      }
+    } catch (_) {
+      final local = _localSuggestions(query, limit: 20);
+      if (mounted && local.isNotEmpty) {
+        setState(() {
+          _apiSearchPlaces = local;
+          _searchSuggestions = [];
+        });
+        await _createMarkers();
+        if (_mapController != null) {
+          final first = local.first;
+          final lat = first['latitude'] as double;
+          final lon = first['longitude'] as double;
+          setState(() => _searchCenter = LatLng(lat, lon));
+          _mapController!.animateCamera(
+            CameraUpdate.newLatLngZoom(
+              LatLng(lat, lon),
+              _zoomForRadius(_selectedRadiusKm),
+            ),
+          );
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSearchingPlaces = false);
+      }
+    }
+  }
 
-    if (results.isNotEmpty && _mapController != null) {
-      final destination = results.first;
+  void _onSuggestionTap(Map<String, dynamic> destination) {
+    _searchController.text = destination['name'] as String;
+    setState(() {
+      _searchSuggestions = [];
+      _apiSearchPlaces = [destination];
+      _searchCenter = LatLng(
+        destination['latitude'] as double,
+        destination['longitude'] as double,
+      );
+    });
+    _runSearch();
+  }
+
+  void _onRadiusSelected(double radiusKm) {
+    setState(() => _selectedRadiusKm = radiusKm);
+    _createMarkers();
+    final center =
+        _searchCenter ??
+        (_currentPosition != null
+            ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+            : null);
+    if (center != null && _mapController != null) {
       _mapController!.animateCamera(
-        CameraUpdate.newLatLngZoom(
-          LatLng(
-            destination['latitude'] as double,
-            destination['longitude'] as double,
-          ),
-          14.0,
-        ),
+        CameraUpdate.newLatLngZoom(center, _zoomForRadius(radiusKm)),
       );
     }
   }
 
+  double _zoomForRadius(double radiusKm) {
+    if (radiusKm <= 1) return 14.5;
+    if (radiusKm <= 3) return 13.5;
+    if (radiusKm <= 5) return 12.8;
+    if (radiusKm <= 10) return 12.0;
+    if (radiusKm <= 20) return 11.0;
+    if (radiusKm <= 30) return 10.4;
+    if (radiusKm <= 40) return 10.0;
+    if (radiusKm <= 50) return 9.6;
+    return 9.2;
+  }
+
+  List<Map<String, dynamic>> _applyRadiusFilter(
+    List<Map<String, dynamic>> places,
+  ) {
+    if (_searchCenter == null) {
+      return places;
+    }
+    final centerLat = _activeCenterLat;
+    final centerLon = _activeCenterLon;
+    if (centerLat == null || centerLon == null) {
+      return places;
+    }
+    return places.where((place) {
+      final lat = place['latitude'] as double;
+      final lon = place['longitude'] as double;
+      final distance = _haversineKm(centerLat, centerLon, lat, lon);
+      return distance <= _selectedRadiusKm;
+    }).toList();
+  }
+
+  double? get _activeCenterLat =>
+      _searchCenter?.latitude ?? _currentPosition?.latitude;
+
+  double? get _activeCenterLon =>
+      _searchCenter?.longitude ?? _currentPosition?.longitude;
+
+  double _haversineKm(double lat1, double lon1, double lat2, double lon2) {
+    const r = 6371.0;
+    final dLat = _toRadians(lat2 - lat1);
+    final dLon = _toRadians(lon2 - lon1);
+    final a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_toRadians(lat1)) *
+            math.cos(_toRadians(lat2)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+    return r * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+  }
+
+  double _toRadians(double value) => value * (math.pi / 180.0);
+
   List<Map<String, dynamic>> get _filteredDestinations {
-    final filtered = _selectedCategory == 'All'
-        ? _destinations
-        : _destinations
-        .where((d) => d['category'] == _selectedCategory)
-        .toList();
+    final source =
+        _apiSearchPlaces.isNotEmpty && _searchController.text.trim().isNotEmpty
+        ? _apiSearchPlaces
+        : _destinations;
+    final categoryFiltered = _selectedCategory == 'All'
+        ? source
+        : source.where((d) => d['category'] == _selectedCategory).toList();
+    final radiusFiltered = _applyRadiusFilter(categoryFiltered);
 
-    if (_searchController.text.isEmpty) return filtered;
+    if (_searchController.text.isEmpty) return radiusFiltered;
 
-    return filtered
+    return radiusFiltered
         .where(
           (d) =>
-      (d['name'] as String).toLowerCase().contains(
-        _searchController.text.toLowerCase(),
-      ) ||
-          (d['category'] as String).toLowerCase().contains(
-            _searchController.text.toLowerCase(),
-          ),
-    )
+              (d['name'] as String).toLowerCase().contains(
+                _searchController.text.toLowerCase(),
+              ) ||
+              (d['category'] as String).toLowerCase().contains(
+                _searchController.text.toLowerCase(),
+              ) ||
+              ((d['description'] as String?) ?? '').toLowerCase().contains(
+                _searchController.text.toLowerCase(),
+              ),
+        )
         .toList();
+  }
+
+  List<String> get _availableCategories {
+    final set = <String>{'All'};
+    for (final item in _destinations) {
+      final value = (item['category'] as String?)?.trim() ?? '';
+      if (value.isNotEmpty) {
+        set.add(value);
+      }
+    }
+    final categories = set.toList();
+    categories.sort((a, b) {
+      if (a == 'All') return -1;
+      if (b == 'All') return 1;
+      return a.toLowerCase().compareTo(b.toLowerCase());
+    });
+    return categories;
   }
 
   @override
@@ -470,124 +1137,209 @@ class _MapViewScreenState extends State<MapViewScreen> {
           ),
           child: SafeArea(
             bottom: false,
-            child: Row(
+            child: Column(
               children: [
-                Expanded(
-                  child: Container(
-                    height: 6.h,
-                    decoration: BoxDecoration(
-                      color: theme.scaffoldBackgroundColor,
-                      borderRadius: BorderRadius.circular(12.0),
-                      border: Border.all(color: theme.dividerColor, width: 1.0),
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: _onSearchChanged,
-                      style: theme.textTheme.bodyLarge,
-                      decoration: InputDecoration(
-                        hintText: 'Search destinations...',
-                        hintStyle: theme.inputDecorationTheme.hintStyle,
-                        prefixIcon: CustomIconWidget(
-                          iconName: 'search',
-                          color: theme.colorScheme.onSurfaceVariant,
-                          size: 20,
-                        ),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                          icon: CustomIconWidget(
-                            iconName: 'clear',
-                            color: theme.colorScheme.onSurfaceVariant,
-                            size: 20,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 6.h,
+                        decoration: BoxDecoration(
+                          color: theme.scaffoldBackgroundColor,
+                          borderRadius: BorderRadius.circular(12.0),
+                          border: Border.all(
+                            color: theme.dividerColor,
+                            width: 1.0,
                           ),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() {});
-                          },
-                        )
-                            : null,
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 4.w,
-                          vertical: 1.5.h,
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: _onSearchChanged,
+                          onSubmitted: (_) => _runSearch(),
+                          style: theme.textTheme.bodyLarge,
+                          decoration: InputDecoration(
+                            hintText: 'Search destinations...',
+                            hintStyle: theme.inputDecorationTheme.hintStyle,
+                            prefixIcon: CustomIconWidget(
+                              iconName: 'search',
+                              color: theme.colorScheme.onSurfaceVariant,
+                              size: 20,
+                            ),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: CustomIconWidget(
+                                      iconName: 'clear',
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                      size: 20,
+                                    ),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() {
+                                        _searchSuggestions = [];
+                                        _apiSearchPlaces = [];
+                                        _searchCenter = null;
+                                      });
+                                      _createMarkers();
+                                    },
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 4.w,
+                              vertical: 1.5.h,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-                SizedBox(width: 2.w),
-                Container(
-                  height: 6.h,
-                  width: 6.h,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
-                  child: IconButton(
-                    tooltip: 'Trip cart',
-                    icon: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        CustomIconWidget(
-                          iconName: 'shopping_cart',
+                    SizedBox(width: 2.w),
+                    Container(
+                      height: 6.h,
+                      width: 6.h,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary,
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
+                      child: IconButton(
+                        tooltip: 'Search',
+                        icon: CustomIconWidget(
+                          iconName: 'search',
                           color: theme.colorScheme.onPrimary,
                           size: 22,
                         ),
-                        if (_tripCart.isNotEmpty)
-                          Positioned(
-                            right: -6,
-                            top: -6,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              constraints: const BoxConstraints(
-                                minWidth: 18,
-                                minHeight: 18,
-                              ),
-                              child: Text(
-                                '${_tripCart.length}',
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
+                        onPressed: () => _runSearch(),
+                      ),
+                    ),
+                    SizedBox(width: 2.w),
+                    Container(
+                      height: 6.h,
+                      width: 6.h,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary,
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
+                      child: IconButton(
+                        tooltip: 'Trip cart',
+                        icon: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            CustomIconWidget(
+                              iconName: 'shopping_cart',
+                              color: theme.colorScheme.onPrimary,
+                              size: 22,
+                            ),
+                            if (_tripCart.isNotEmpty)
+                              Positioned(
+                                right: -6,
+                                top: -6,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 18,
+                                    minHeight: 18,
+                                  ),
+                                  child: Text(
+                                    '${_tripCart.length}',
+                                    textAlign: TextAlign.center,
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                                 ),
                               ),
+                          ],
+                        ),
+                        onPressed: _openRoutePlannerScreen,
+                      ),
+                    ),
+                    SizedBox(width: 2.w),
+                    Container(
+                      height: 6.h,
+                      width: 6.h,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary,
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
+                      child: IconButton(
+                        tooltip: _showListView ? 'Show map' : 'Show list',
+                        icon: CustomIconWidget(
+                          iconName: _showListView ? 'map' : 'list',
+                          color: theme.colorScheme.onPrimary,
+                          size: 24,
+                        ),
+                        onPressed: () =>
+                            setState(() => _showListView = !_showListView),
+                      ),
+                    ),
+                  ],
+                ),
+                if (_isSearchingPlaces)
+                  Padding(
+                    padding: EdgeInsets.only(top: 1.h),
+                    child: LinearProgressIndicator(
+                      minHeight: 3,
+                      color: theme.colorScheme.primary,
+                      backgroundColor:
+                          theme.colorScheme.surfaceContainerHighest,
+                    ),
+                  ),
+                if (_searchSuggestions.isNotEmpty)
+                  Container(
+                    margin: EdgeInsets.only(top: 1.h),
+                    constraints: BoxConstraints(maxHeight: 26.h),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12.0),
+                      border: Border.all(color: theme.dividerColor),
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: _searchSuggestions.length,
+                      separatorBuilder: (context, index) =>
+                          Divider(height: 1, color: theme.dividerColor),
+                      itemBuilder: (context, index) {
+                        final item = _searchSuggestions[index];
+                        return ListTile(
+                          dense: true,
+                          leading: CustomIconWidget(
+                            iconName: 'place',
+                            color: theme.colorScheme.primary,
+                            size: 18,
+                          ),
+                          title: Text(
+                            item['name'] as String,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                          subtitle: Text(
+                            item['location'] as String,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
-                      ],
+                          onTap: () => _onSuggestionTap(item),
+                        );
+                      },
                     ),
-                    onPressed: _openRoutePlannerScreen,
                   ),
-                ),
-                SizedBox(width: 2.w),
-                Container(
-                  height: 6.h,
-                  width: 6.h,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
-                  child: IconButton(
-                    tooltip: _showListView ? 'Show map' : 'Show list',
-                    icon: CustomIconWidget(
-                      iconName: _showListView ? 'map' : 'list',
-                      color: theme.colorScheme.onPrimary,
-                      size: 24,
-                    ),
-                    onPressed: () =>
-                        setState(() => _showListView = !_showListView),
-                  ),
-                ),
               ],
             ),
           ),
         ),
+        if (_searchSuggestions.isNotEmpty) SizedBox(height: 0.8.h),
 
         // Category filter
         MapFilterWidget(
+          categories: _availableCategories,
           selectedCategory: _selectedCategory,
           onCategorySelected: _onCategorySelected,
         ),
@@ -611,17 +1363,12 @@ class _MapViewScreenState extends State<MapViewScreen> {
       children: [
         GoogleMap(
           initialCameraPosition: CameraPosition(
-            target: _currentPosition != null
-                ? LatLng(
-              _currentPosition!.latitude,
-              _currentPosition!.longitude,
-            )
-                : LatLng(7.8731, 80.7718), // Center of Sri Lanka
+            target: _defaultSriLankaCenter,
             zoom: 8.0,
           ),
           markers: _markers,
           onMapCreated: (controller) => _mapController = controller,
-          myLocationEnabled: true,
+          myLocationEnabled: _hasLocationPermission,
           myLocationButtonEnabled: false,
           zoomControlsEnabled: false,
           mapToolbarEnabled: false,
@@ -636,35 +1383,75 @@ class _MapViewScreenState extends State<MapViewScreen> {
         Positioned(
           right: 4.w,
           bottom: 4.h,
-          child: Container(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(12.0),
-              boxShadow: [
-                BoxShadow(
-                  color: theme.colorScheme.shadow,
-                  blurRadius: 8.0,
-                  offset: Offset(0, 2),
+          child: Column(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(12.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.shadow,
+                      blurRadius: 8.0,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: _centerOnCurrentLocation,
-                borderRadius: BorderRadius.circular(12.0),
-                child: Container(
-                  width: 12.w,
-                  height: 12.w,
-                  alignment: Alignment.center,
-                  child: CustomIconWidget(
-                    iconName: 'my_location',
-                    color: theme.colorScheme.primary,
-                    size: 24,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _centerOnCurrentLocation,
+                    borderRadius: BorderRadius.circular(12.0),
+                    child: Container(
+                      width: 12.w,
+                      height: 12.w,
+                      alignment: Alignment.center,
+                      child: CustomIconWidget(
+                        iconName: 'my_location',
+                        color: theme.colorScheme.primary,
+                        size: 24,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
+              SizedBox(height: 1.2.h),
+              PopupMenuButton<double>(
+                tooltip: 'Radius',
+                onSelected: _onRadiusSelected,
+                itemBuilder: (context) => _radiusOptionsKm
+                    .map(
+                      (radius) => PopupMenuItem<double>(
+                        value: radius,
+                        child: Text('${radius.toInt()} km'),
+                      ),
+                    )
+                    .toList(),
+                child: Container(
+                  height: 5.4.h,
+                  width: 12.w,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(12.0),
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.colorScheme.shadow,
+                        blurRadius: 8.0,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '${_selectedRadiusKm.toInt()}',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],

@@ -175,7 +175,7 @@ class PlaylistCardWidget extends StatelessWidget {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: theme.dialogBackgroundColor,
+      backgroundColor: theme.dialogTheme.backgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
       ),

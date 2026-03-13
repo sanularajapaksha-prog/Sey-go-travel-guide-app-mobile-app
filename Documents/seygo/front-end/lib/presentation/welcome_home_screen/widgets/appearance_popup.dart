@@ -67,7 +67,7 @@ class _AppearancePopupState extends State<AppearancePopup> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withOpacity(0.12),
+                        color: theme.colorScheme.primary.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -111,18 +111,21 @@ class _AppearancePopupState extends State<AppearancePopup> {
             ),
             SizedBox(height: 1.5.h),
 
-            _buildRadio("Light mode", _theme == "Light mode", (v) {
-              if (v == true) setState(() => _theme = "Light mode");
-            }),
-            _buildRadio("Dark mode", _theme == "Dark mode", (v) {
-              if (v == true) setState(() => _theme = "Dark mode");
-            }),
-            _buildRadio("System Default", _theme == "System Default", (v) {
-              if (v == true) setState(() => _theme = "System Default");
-            }),
-            _buildRadio("Custom", _theme == "Custom", (v) {
-              if (v == true) setState(() => _theme = "Custom");
-            }),
+            RadioGroup<String>(
+              groupValue: _theme,
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() => _theme = value);
+              },
+              child: Column(
+                children: const [
+                  _AppearanceRadio(label: "Light mode"),
+                  _AppearanceRadio(label: "Dark mode"),
+                  _AppearanceRadio(label: "System Default"),
+                  _AppearanceRadio(label: "Custom"),
+                ],
+              ),
+            ),
 
             SizedBox(height: 4.h),
 
@@ -135,17 +138,20 @@ class _AppearancePopupState extends State<AppearancePopup> {
             ),
             SizedBox(height: 1.5.h),
 
-            _buildRadio("Large", _fontSize == "Large", (v) {
-              if (v == true) setState(() => _fontSize = "Large");
-            }),
-            _buildRadio("Medium (Default)", _fontSize == "Medium (Default)", (
-              v,
-            ) {
-              if (v == true) setState(() => _fontSize = "Medium (Default)");
-            }),
-            _buildRadio("Small", _fontSize == "Small", (v) {
-              if (v == true) setState(() => _fontSize = "Small");
-            }),
+            RadioGroup<String>(
+              groupValue: _fontSize,
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() => _fontSize = value);
+              },
+              child: Column(
+                children: const [
+                  _AppearanceRadio(label: "Large"),
+                  _AppearanceRadio(label: "Medium (Default)"),
+                  _AppearanceRadio(label: "Small"),
+                ],
+              ),
+            ),
 
             SizedBox(height: 5.h),
 
@@ -207,19 +213,17 @@ class _AppearancePopupState extends State<AppearancePopup> {
     );
   }
 
-  Widget _buildRadio(
-    String label,
-    bool selected,
-    ValueChanged<bool?> onChanged,
-  ) {
+}
+
+class _AppearanceRadio extends StatelessWidget {
+  const _AppearanceRadio({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
     return RadioListTile<String>(
       value: label,
-      groupValue: label.contains("mode") || label == "Custom"
-          ? _theme
-          : _fontSize,
-      onChanged: (value) {
-        onChanged(value != null);
-      },
       title: Text(label),
       dense: true,
       contentPadding: EdgeInsets.zero,

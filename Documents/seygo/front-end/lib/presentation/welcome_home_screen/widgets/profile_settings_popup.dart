@@ -100,7 +100,7 @@ class _ProfileSettingsPopupState extends State<ProfileSettingsPopup> {
                           ),
                           child: IconButton(
                             icon: Icon(Icons.camera_alt_outlined, size: 22),
-                            onPressed: () => print("Upload photo"),
+                            onPressed: () => debugPrint("Upload photo"),
                           ),
                         ),
                       ),

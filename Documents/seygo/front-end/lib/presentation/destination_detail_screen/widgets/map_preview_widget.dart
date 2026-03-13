@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
@@ -21,6 +22,10 @@ class MapPreviewWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final mapsApiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
+    final hasMapsApiKey = mapsApiKey.trim().isNotEmpty;
+    final staticMapUrl =
+        'https://maps.googleapis.com/maps/api/staticmap?center=$latitude,$longitude&zoom=14&size=600x400&markers=color:red%7C$latitude,$longitude&key=$mapsApiKey';
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 4.w),
@@ -43,14 +48,26 @@ class MapPreviewWidget extends StatelessWidget {
               child: Stack(
                 children: [
                   // Static map preview image
-                  CustomImageWidget(
-                    imageUrl:
-                    'https://maps.googleapis.com/maps/api/staticmap?center=$latitude,$longitude&zoom=14&size=600x400&markers=color:red%7C$latitude,$longitude&key=YOUR_GOOGLE_MAPS_API_KEY_HERE',
-                    width: double.infinity,
-                    height: 25.h,
-                    fit: BoxFit.cover,
-                    semanticLabel: 'Map showing location of $locationName',
-                  ),
+                  if (hasMapsApiKey)
+                    CustomImageWidget(
+                      imageUrl: staticMapUrl,
+                      width: double.infinity,
+                      height: 25.h,
+                      fit: BoxFit.cover,
+                      semanticLabel: 'Map showing location of $locationName',
+                    )
+                  else
+                    Container(
+                      width: double.infinity,
+                      height: 25.h,
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Set GOOGLE_MAPS_API_KEY in .env to show map preview',
+                        style: theme.textTheme.bodyMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
 
                   // Navigate button overlay
                   Positioned(

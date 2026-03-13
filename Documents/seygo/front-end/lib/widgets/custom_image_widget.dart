@@ -33,7 +33,7 @@ class CustomImageWidget extends StatelessWidget {
     this.radius,
     this.margin,
     this.border,
-    this.placeHolder = 'assets/images/no-image.jpg',
+    this.placeHolder = 'assets/images/img_app_logo.png',
     this.errorWidget,
     this.semanticLabel,
   });
@@ -83,7 +83,7 @@ class CustomImageWidget extends StatelessWidget {
   }
 
   ///build the image with border radius
-  _buildCircleImage() {
+  Widget _buildCircleImage() {
     if (radius != null) {
       return ClipRRect(
         borderRadius: radius ?? BorderRadius.zero,
@@ -95,7 +95,7 @@ class CustomImageWidget extends StatelessWidget {
   }
 
   ///build the image with border and border radius style
-  _buildImageWithBorder() {
+  Widget _buildImageWithBorder() {
     if (border != null) {
       return Container(
         decoration: BoxDecoration(border: border, borderRadius: radius),
@@ -137,6 +137,7 @@ class CustomImageWidget extends StatelessWidget {
             semanticLabel: semanticLabel,
           );
         case ImageType.network:
+          debugPrint('CustomImageWidget: loading network image $imageUrl');
           return CachedNetworkImage(
             height: height,
             width: width,
@@ -151,15 +152,12 @@ class CustomImageWidget extends StatelessWidget {
                 backgroundColor: Colors.grey.shade100,
               ),
             ),
-            errorWidget: (context, url, error) =>
-            errorWidget ??
-                Image.asset(
-                  placeHolder,
-                  height: height,
-                  width: width,
-                  fit: fit ?? BoxFit.cover,
-                  semanticLabel: semanticLabel,
-                ),
+            errorWidget: (context, url, error) {
+              debugPrint(
+                'CustomImageWidget: failed network image $url -> $error',
+              );
+              return errorWidget ?? _safeFallback();
+            },
           );
         case ImageType.png:
         default:
@@ -170,9 +168,29 @@ class CustomImageWidget extends StatelessWidget {
             fit: fit ?? BoxFit.cover,
             color: color,
             semanticLabel: semanticLabel,
+            errorBuilder: (context, error, stackTrace) {
+              debugPrint(
+                'CustomImageWidget: failed asset image $imageUrl -> $error',
+              );
+              return _safeFallback();
+            },
           );
       }
     }
-    return SizedBox();
+    return _safeFallback();
+  }
+
+  Widget _safeFallback() {
+    return Container(
+      height: height,
+      width: width,
+      color: Colors.grey.shade200,
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.image_not_supported_outlined,
+        color: Colors.grey.shade600,
+        size: 24,
+      ),
+    );
   }
 }

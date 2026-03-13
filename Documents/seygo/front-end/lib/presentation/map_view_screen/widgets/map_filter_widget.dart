@@ -5,11 +5,13 @@ import '../../../../core/app_export.dart';
 import '../../../widgets/custom_icon_widget.dart';
 
 class MapFilterWidget extends StatelessWidget {
+  final List<String> categories;
   final String selectedCategory;
   final Function(String) onCategorySelected;
 
   const MapFilterWidget({
     super.key,
+    required this.categories,
     required this.selectedCategory,
     required this.onCategorySelected,
   });
@@ -17,14 +19,6 @@ class MapFilterWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    final categories = [
-      {'name': 'All', 'icon': 'explore'},
-      {'name': 'Camping', 'icon': 'camping'},
-      {'name': 'Beach Side', 'icon': 'beach_access'},
-      {'name': 'Mountains', 'icon': 'terrain'},
-      {'name': 'Temples', 'icon': 'temple_buddhist'},
-    ];
 
     return Container(
       height: 8.h,
@@ -41,12 +35,12 @@ class MapFilterWidget extends StatelessWidget {
         separatorBuilder: (context, index) => SizedBox(width: 2.w),
         itemBuilder: (context, index) {
           final category = categories[index];
-          final isSelected = selectedCategory == category['name'];
+          final isSelected = selectedCategory == category;
 
           return Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: () => onCategorySelected(category['name'] as String),
+              onTap: () => onCategorySelected(category),
               borderRadius: BorderRadius.circular(24.0),
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
@@ -66,7 +60,7 @@ class MapFilterWidget extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     CustomIconWidget(
-                      iconName: category['icon'] as String,
+                      iconName: _iconForCategory(category),
                       color: isSelected
                           ? theme.colorScheme.onPrimary
                           : theme.colorScheme.onSurfaceVariant,
@@ -74,7 +68,7 @@ class MapFilterWidget extends StatelessWidget {
                     ),
                     SizedBox(width: 2.w),
                     Text(
-                      category['name'] as String,
+                      category,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: isSelected
                             ? theme.colorScheme.onPrimary
@@ -92,5 +86,20 @@ class MapFilterWidget extends StatelessWidget {
         },
       ),
     );
+  }
+
+  String _iconForCategory(String category) {
+    final value = category.toLowerCase();
+    if (value == 'all') return 'explore';
+    if (value.contains('camp')) return 'camping';
+    if (value.contains('beach')) return 'beach_access';
+    if (value.contains('mount') || value.contains('hiking')) return 'terrain';
+    if (value.contains('temple') || value.contains('church') || value.contains('mosque')) return 'temple_buddhist';
+    if (value.contains('histor')) return 'account_balance';
+    if (value.contains('market') || value.contains('shop')) return 'storefront';
+    if (value.contains('food') || value.contains('restaurant') || value.contains('cafe')) return 'restaurant';
+    if (value.contains('wildlife') || value.contains('park') || value.contains('forest')) return 'pets';
+    if (value.contains('event') || value.contains('festival') || value.contains('music')) return 'celebration';
+    return 'place';
   }
 }

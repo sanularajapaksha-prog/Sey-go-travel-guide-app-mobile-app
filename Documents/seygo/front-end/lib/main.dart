@@ -8,21 +8,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/app_export.dart'; // AppRoutes
 import 'providers/theme_provider.dart';
 import 'providers/font_scale_provider.dart';
-import 'theme/app_theme.dart'; // your AppTheme class
 import 'widgets/custom_error_widget.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: '.env');
 
-  final supabaseUrl = dotenv.env['SUPABASE_URL'];
-  final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
-  if (supabaseUrl != null &&
-      supabaseUrl.isNotEmpty &&
-      supabaseAnonKey != null &&
-      supabaseAnonKey.isNotEmpty) {
-    await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
-  }
+  await _initializeEnvironment();
+  await _initializeSupabaseSafely();
 
   bool hasShownError = false;
 
@@ -42,6 +34,43 @@ void main() async {
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   runApp(const MyApp());
+}
+
+Future<void> _initializeEnvironment() async {
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (error, stackTrace) {
+    debugPrint('Failed to load .env: $error');
+    debugPrintStack(stackTrace: stackTrace);
+  }
+}
+
+Future<void> _initializeSupabaseSafely() async {
+  final supabaseUrl = (dotenv.env['SUPABASE_URL'] ?? '').trim();
+  final supabaseAnonKey = (dotenv.env['SUPABASE_ANON_KEY'] ?? '').trim();
+
+  if (supabaseUrl.isEmpty || supabaseUrl.contains('your-project-ref')) {
+    debugPrint(
+      'Supabase disabled: invalid SUPABASE_URL in front-end/.env.',
+    );
+    return;
+  }
+
+  if (supabaseAnonKey.isEmpty ||
+      supabaseAnonKey.contains('your-supabase-anon-key')) {
+    debugPrint(
+      'Supabase disabled: invalid SUPABASE_ANON_KEY in front-end/.env.',
+    );
+    return;
+  }
+
+  try {
+    await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey)
+        .timeout(const Duration(seconds: 8));
+  } catch (error, stackTrace) {
+    debugPrint('Supabase initialization failed: $error');
+    debugPrintStack(stackTrace: stackTrace);
+  }
 }
 
 class MyApp extends StatelessWidget {
