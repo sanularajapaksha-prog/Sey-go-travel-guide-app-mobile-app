@@ -24,108 +24,163 @@ class TravelPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+
+      // 🔍 Search Bar
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        title: Container(
+          height: 45,
+          padding: const EdgeInsets.symmetric(horizontal: 15),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade200,
+            borderRadius: BorderRadius.circular(25),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.search, color: Colors.grey),
+              SizedBox(width: 10),
+              Text("Sigiriya", style: TextStyle(color: Colors.grey)),
+              Spacer(),
+              Icon(Icons.tune, color: Colors.grey),
+            ],
+          ),
+        ),
+      ),
+
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+
+            // Tabs
+            Row(
+              children: const [
+                Text("All", style: TextStyle(fontWeight: FontWeight.bold)),
+                SizedBox(width: 20),
+                Text("Latest"),
+                SizedBox(width: 20),
+                Text("Popular", style: TextStyle(color: Colors.blue)),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // Sigiriya Image Carousel
+            SizedBox(
+              height: 220,
+              child: PageView(
+                children: [
+                  travelAssetImage("Imagesnew/sigiriya.jpeg"),
+                  travelAssetImage("Imagesnew/sigiriya.jpeg"),
+                  travelAssetImage("Imagesnew/sigiriya.jpeg"),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 15),
+
+            // Title + Distance
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: const [
+                Text(
+                  "Sigiriya Lion Rock",
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                Row(
+                  children: [
+                    Icon(Icons.location_on, color: Colors.blue),
+                    SizedBox(width: 4),
+                    Text("185 km"),
+                  ],
+                )
+              ],
+            ),
+
+            const SizedBox(height: 10),
+
+            // Overview Title
+            const Text(
+              "Overview",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 10),
+
+            // Duration + Rating
+            Row(
+              children: const [
+                Icon(Icons.access_time, color: Colors.blue),
+                SizedBox(width: 5),
+                Text("1 Day"),
+                SizedBox(width: 20),
+                Icon(Icons.star, color: Colors.amber),
+                SizedBox(width: 5),
+                Text("6.0 (2.9k Reviews)"),
+              ],
+            ),
+
+            const SizedBox(height: 15),
+
+            // Display a description of Sigiriya Lion Rock
+             const Text(
+              "Sigiriya Lion Rock is an engineering and artistic marvel set within "
+              "the lush landscapes of Sri Lanka’s Cultural Triangle. It features "
+              "preserved frescoes, landscaped gardens, and the imposing lion paws "
+              "leading to the summit.",
+             style: TextStyle(
+               color: Colors.black; // Set the text color to grey
+               fontSize:18,       // Optional: add font size for better readability
+              ),
+            ),
+
+// Add vertical space of 25 pixels between this Text and the next widget
+const SizedBox(height: 25),
+
+            // Add to Cart Button
+            Center(
+              child: OutlinedButton(
+                onPressed: () {},
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 40, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                child: const Text("Add to cart"),
+              ),
+            ),
+          ],
+        ),
+      ),
+
+      // Bottom Navigation
+      bottomNavigationBar: BottomNavigationBar(
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
+        currentIndex: 1,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: ""),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: ""),
+          BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: ""),
+          BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: ""),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: ""),
+        ],
+      ),
     );
   }
 }
-appBar: AppBar(
-  elevation: 0, // Remove shadow under the AppBar
-  backgroundColor: Colors.white, // Set AppBar background to white
-  title: Container(
-    height: 45, // Set fixed height for the search bar container
-    padding: const EdgeInsets.symmetric(horizontal: 15), // Add horizontal padding inside the container
-    decoration: BoxDecoration(
-      color: Colors.grey.shade200, // Light grey background for the search bar
-      borderRadius: BorderRadius.circular(25), // Rounded corners for the search bar
-    ),
-    child: const Row(
-      children: [
-        Icon(Icons.search, color: Colors.grey), // Search icon at the start
-        SizedBox(width: 10), // Space between icon and text
-        Text("Sigiriya", style: TextStyle(color: Colors.grey)), // Placeholder text inside the search bar
-        Spacer(), // Pushes the icons to the edges, creating space in between
-        Icon(Icons.tune, color: Colors.grey), // Filter or options icon at the end
-      ],
-    ),
-  ),
-)
 
-// Travel category tabs
-Row(
-  children: const [
-
-    // All category (default selected)
-    Text(
-      "All",
-      style: TextStyle(
-        fontWeight: FontWeight.bold,
-      ),
-    ),
-
-    SizedBox(width: 20),
-
-    // Latest category
-    Text(
-      "Latest",
-    ),
-
-    SizedBox(width: 20),
-
-    // Popular category (highlighted)
-    Text(
-      "Popular",
-      style: TextStyle(
-        color: Colors.blue,
-      ),
-    ),
-  ],
-),
-// List of images for the travel carousel
-final List<String> travelImages = [
-  "Imagesnew/sigiriya.jpeg",
-  "Imagesnew/sigiriya.jpeg",
-  "Imagesnew/sigiriya.jpeg",
-];
-
-// Image carousel widget
-SizedBox(
-  height: 220, // Fixed height for the slider
-  child: PageView(
-    scrollDirection: Axis.horizontal, // Allows horizontal swipe
-    children: travelImages.map((imagePath) {
-      return travelAssetImage(imagePath); // Display each image
-    }).toList(),
-  ),
-),
-// Destination title and distance information
-Row(
-  mainAxisAlignment: MainAxisAlignment.spaceBetween, // Space between title and distance
-  children: [
-
-    // Travel destination name
-    const Text(
-      "Sigiriya Lion Rock",
-      style: TextStyle(
-        fontSize:23; // Large font size for title
-        fontWeight: FontWeight.bold, // Bold text for emphasis
-      ),
-    ),
-
-    // Location and distance information
-    Row(
-      children: const [
-
-        // Location icon
-        Icon(
-          Icons.location_on,
-          color: Colors.blue,
-        ),
-
-        // Small spacing between icon and text
-        SizedBox(width: 5),
-
-        // Distance from current location
-        Text("185 km"),
-      ],
-    ),
-  ],
-)
+// Widget for asset images
+Widget travelAssetImage(String path) {
+  return ClipRRect(
+    borderRadius: BorderRadius.circular(20),
+    child: Image.asset(
+      path,
+      fit: BoxFit.cover,
+    )
+  );
+}
