@@ -9,67 +9,52 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: RouteSummaryPage(),
+      theme: ThemeData(fontFamily: "Poppins"),
+      home: const TravelPage(),
     );
   }
 }
-// RouteSummaryPage is a StatelessWidget because the UI does not change dynamically
-class RouteSummaryPage extends StatelessWidget {
 
-  // Constructor for the widget
-  const RouteSummaryPage({super.key});
+class TravelPage extends StatelessWidget {
+  const TravelPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-
-    // Scaffold provides the basic page structure (AppBar, body, etc.)
     return Scaffold(
-
-      // Set the background color of the whole screen
-      backgroundColor: const Color(0xfff5f5f5),
-
-      // AppBar at the top of the page
-      appBar: AppBar(
-
-        // Make the app bar transparent
-        backgroundColor: Colors.transparent,
-
-        // Remove shadow under the AppBar
-        elevation: 0,
-
-        // Center the title text
-        centerTitle: true,
-
-        // Leading widget (left side of AppBar)
-        // This is a back arrow icon
-        leading: const Icon(
-          Icons.arrow_back,
-          color: Colors.black,
-        ),
-
-        // Title displayed in the center of the AppBar
-        title: const Text(
-          "Route Summary",
-          style: TextStyle(color: Colors.black),
-        ),
-
-        // Widgets displayed on the right side of the AppBar
-        actions: const [
-
-          // Padding is added to create space from the right edge
-          Padding(
-            padding: EdgeInsets.only(right: 16),
-
-            // Share icon button
-            child: Icon(
-              Icons.share,
-              color: Colors.black,
-            ),
-          )
-        ],
-      ),
+      backgroundColor: Colors.white,
     );
   }
 }
+appBar: AppBar(
+  elevation: 0, // Remove shadow under the AppBar
+  backgroundColor: Colors.white, // Set AppBar background to white
+  title: Container(
+    height: 45, // Set fixed height for the search bar container
+    padding: const EdgeInsets.symmetric(horizontal: 15), // Add horizontal padding inside the container
+    decoration: BoxDecoration(
+      color: Colors.grey.shade200, // Light grey background for the search bar
+      borderRadius: BorderRadius.circular(25), // Rounded corners for the search bar
+    ),
+    child: const Row(
+      children: [
+        Icon(Icons.search, color: Colors.grey), // Search icon at the start
+        SizedBox(width: 10), // Space between icon and text
+        Text("Sigiriya", style: TextStyle(color: Colors.grey)), // Placeholder text inside the search bar
+        Spacer(), // Pushes the icons to the edges, creating space in between
+        Icon(Icons.tune, color: Colors.grey), // Filter or options icon at the end
+      ],
+    ),
+  ),
+)
+//add travel category tabs
+Row(
+  children: const [
+    Text("All", style: TextStyle(fontWeight: FontWeight.bold)),//all bold
+    SizedBox(width: 20),
+    Text("Latest"),
+    SizedBox(width: 20),//sizedbox 20
+    Text("Popular", style: TextStyle(color: Colors.blue)),
+  ],
+),
