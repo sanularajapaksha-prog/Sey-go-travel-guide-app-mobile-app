@@ -53,7 +53,7 @@ class WelcomeIntroPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Explore top Destinations, Create\npersonalized itineraries, and enjoy a hassle-\nfree journey with our smart travel tool.',
+                        'Discover amazing destinations, plan personalized itineraries, and enjoy a seamless travel experience with our smart travel companion.',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.poppins(
                           fontSize: 16,
