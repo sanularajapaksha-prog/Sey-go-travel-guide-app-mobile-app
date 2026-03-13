@@ -10,7 +10,7 @@ extension ImageTypeExtension on String {
       return ImageType.network;
     } else if (endsWith('.svg')) {
       return ImageType.svg;
-    } else if (startsWith('file://')) {
+    } else if (startsWith('file: //')) {
       return ImageType.file;
     } else {
       return ImageType.png;
@@ -137,7 +137,6 @@ class CustomImageWidget extends StatelessWidget {
             semanticLabel: semanticLabel,
           );
         case ImageType.network:
-          debugPrint('CustomImageWidget: loading network image $imageUrl');
           return CachedNetworkImage(
             height: height,
             width: width,
@@ -152,12 +151,15 @@ class CustomImageWidget extends StatelessWidget {
                 backgroundColor: Colors.grey.shade100,
               ),
             ),
-            errorWidget: (context, url, error) {
-              debugPrint(
-                'CustomImageWidget: failed network image $url -> $error',
-              );
-              return errorWidget ?? _safeFallback();
-            },
+            errorWidget: (context, url, error) =>
+            errorWidget ??
+                Image.asset(
+                  placeHolder,
+                  height: height,
+                  width: width,
+                  fit: fit ?? BoxFit.cover,
+                  semanticLabel: semanticLabel,
+                ),
           );
         case ImageType.png:
         default:
@@ -168,15 +170,9 @@ class CustomImageWidget extends StatelessWidget {
             fit: fit ?? BoxFit.cover,
             color: color,
             semanticLabel: semanticLabel,
-            errorBuilder: (context, error, stackTrace) {
-              debugPrint(
-                'CustomImageWidget: failed asset image $imageUrl -> $error',
-              );
-              return _safeFallback();
-            },
           );
       }
     }
-    return const SizedBox.shrink();
+    return SizedBox();
   }
 }
