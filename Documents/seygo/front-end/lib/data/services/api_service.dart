@@ -117,6 +117,34 @@ class ApiService {
     throw Exception('Registration failed: ${response.statusCode}');
   }
 
+  static Future<Map<String, dynamic>> login({
+    required String email,
+    required String password,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/login'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email.trim().toLowerCase(),
+        'password': password,
+      }),
+    );
+
+    final bodyText = response.body.isEmpty ? '{}' : response.body;
+    final decoded = jsonDecode(bodyText);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+      return <String, dynamic>{};
+    }
+
+    if (decoded is Map<String, dynamic> && decoded['detail'] != null) {
+      throw Exception(decoded['detail'].toString());
+    }
+    throw Exception('Login failed: ${response.statusCode}');
+  }
+
   static Future<void> resendVerificationCode({required String email}) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/resend-verification'),
