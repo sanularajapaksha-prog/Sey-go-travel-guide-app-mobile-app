@@ -13,17 +13,33 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   String? _emailError;
+  String? _passwordError;
+  final bool _isSubmitting = false;
+  bool _isPasswordVisible = false;
+
+  String? _validateEmail(String value) {
+    final normalized = value.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return null;
+    }
+    if (!normalized.endsWith('@gmail.com')) {
+      return 'Email must end with @gmail.com';
+    }
+    return null;
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    const accentBlue = Color(0xFF2B84B4);
+    const brandBlue = Color(0xFF2B84B4);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FB),
@@ -57,10 +73,8 @@ class _LoginPageState extends State<LoginPage> {
                 rightLabel: 'Register',
                 leftActive: true,
                 onLeft: () {},
-                onRight: () => Navigator.pushNamed(
-                  context,
-                  AppRoutes.registerPage,
-                ),
+                onRight: () =>
+                    Navigator.pushNamed(context, AppRoutes.registerPage),
               ),
               const SizedBox(height: 18),
               LabeledAuthField(
@@ -69,24 +83,31 @@ class _LoginPageState extends State<LoginPage> {
                 controller: _emailController,
                 errorText: _emailError,
                 onChanged: (value) {
-                  final trimmed = value.trim();
                   setState(() {
-                    if (trimmed.isEmpty) {
-                      _emailError = null;
-                    } else if (!trimmed.endsWith('@gmail.com')) {
-                      _emailError = 'Email must end with @gmail.com';
-                    } else {
-                      _emailError = null;
-                    }
+                    _emailError = _validateEmail(value);
                   });
                 },
               ),
               const SizedBox(height: 14),
-              const LabeledAuthField(
+              LabeledAuthField(
                 label: 'Password',
                 hintText: '********',
-                obscure: true,
-                suffixIcon: Icon(Icons.visibility_off_outlined, size: 18),
+                obscure: !_isPasswordVisible,
+                suffixIcon: IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _isPasswordVisible = !_isPasswordVisible;
+                    });
+                  },
+                  icon: Icon(
+                    _isPasswordVisible
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    size: 18,
+                  ),
+                ),
+                controller: _passwordController,
+                errorText: _passwordError,
               ),
               const SizedBox(height: 10),
               Align(
@@ -95,7 +116,7 @@ class _LoginPageState extends State<LoginPage> {
                   'Forgot Password?',
                   style: GoogleFonts.poppins(
                     fontSize: 12.5,
-                    color: accentBlue,
+                    color: brandBlue,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -105,25 +126,31 @@ class _LoginPageState extends State<LoginPage> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.pushReplacementNamed(
-                    context,
-                    AppRoutes.welcomeHomeScreen,
-                  ),
+                  onPressed: _isSubmitting ? null : _submitLogin,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: accentBlue,
+                    backgroundColor: brandBlue,
                     foregroundColor: Colors.white,
                     elevation: 4,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: Text(
-                    'Login',
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                    ),
-                  ),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          'Login',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(height: 18),
@@ -161,7 +188,12 @@ class _LoginPageState extends State<LoginPage> {
                   Expanded(
                     child: _SocialPill(
                       label: 'Apple',
-                      leading: const Icon(Icons.apple, size: 18),
+                      leading: Image.asset(
+                        'assets/images/apple_logo.png',
+                        width: 18,
+                        height: 18,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                 ],
@@ -186,7 +218,7 @@ class _LoginPageState extends State<LoginPage> {
                             'Sign Up',
                             style: GoogleFonts.poppins(
                               fontSize: 12.5,
-                              color: accentBlue,
+                              color: brandBlue,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -202,6 +234,55 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
+
+  Future<void> _submitLogin() async {
+    // Temporary bypass for frontend-only development: skip validation/API and go straight home.
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      AppRoutes.welcomeHomeScreen,
+      (route) => false,
+    );
+    return;
+
+    /*
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    setState(() {
+      _emailError = _validateEmail(email);
+      _passwordError = password.isEmpty ? 'Password is required' : null;
+    });
+
+    if (_emailError != null || _passwordError != null) {
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      await ApiService.login(email: email, password: password);
+      if (!mounted) return;
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.welcomeHomeScreen,
+        (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+    */
+  }
 }
 
 class _SocialPill extends StatelessWidget {
@@ -213,13 +294,14 @@ class _SocialPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 46,
+      height: 50,
       child: ElevatedButton(
         onPressed: () {},
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
           elevation: 2,
           shadowColor: const Color(0x22000000),
+          side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
@@ -227,11 +309,7 @@ class _SocialPill extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: Center(child: leading),
-            ),
+            SizedBox(width: 20, height: 20, child: Center(child: leading)),
             const SizedBox(width: 8),
             Text(
               label,
@@ -306,13 +384,13 @@ class _SegmentButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accentBlue = Color(0xFF2B84B4);
+    const brandBlue = Color(0xFF2B84B4);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         height: 40,
         decoration: BoxDecoration(
-          color: active ? accentBlue : Colors.transparent,
+          color: active ? brandBlue : Colors.transparent,
           borderRadius: BorderRadius.circular(26),
         ),
         child: Center(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
+
 import './widgets/category_pill_widget.dart';
 import './widgets/destination_card_widget.dart';
 import './widgets/featured_carousel_widget.dart';
@@ -124,6 +125,7 @@ class _WelcomeHomeScreenInitialPageState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    const loginBlue = Color(0xFF2B84B4);
 
     return Scaffold(
       key: _scaffoldKey,
@@ -292,7 +294,7 @@ class _WelcomeHomeScreenInitialPageState
                                       width: 11.w,
                                       height: 11.w,
                                       decoration: BoxDecoration(
-                                        color: theme.colorScheme.primary,
+                                        color: loginBlue,
                                         shape: BoxShape.circle,
                                         boxShadow: [
                                           BoxShadow(
@@ -448,4 +450,3 @@ class _WelcomeHomeScreenInitialPageState
     );
   }
 }
-

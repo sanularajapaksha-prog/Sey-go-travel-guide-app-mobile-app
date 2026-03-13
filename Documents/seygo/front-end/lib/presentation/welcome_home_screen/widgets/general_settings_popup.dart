@@ -133,7 +133,8 @@ class _GeneralSettingsPopupState extends State<GeneralSettingsPopup> {
 
               SizedBox(height: 1.5.h),
 
-              RadioGroup<String>(
+              RadioListTile<String>(
+                value: 'Unmute',
                 groupValue: _notificationPref,
                 onChanged: (value) {
                   if (value == null) return;

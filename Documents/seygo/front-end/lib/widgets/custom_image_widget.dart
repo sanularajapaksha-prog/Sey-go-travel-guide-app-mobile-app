@@ -10,7 +10,7 @@ extension ImageTypeExtension on String {
       return ImageType.network;
     } else if (endsWith('.svg')) {
       return ImageType.svg;
-    } else if (startsWith('file: //')) {
+    } else if (startsWith('file://')) {
       return ImageType.file;
     } else {
       return ImageType.png;
@@ -33,7 +33,7 @@ class CustomImageWidget extends StatelessWidget {
     this.radius,
     this.margin,
     this.border,
-    this.placeHolder = 'assets/images/img_app_logo.png',
+    this.placeHolder = 'assets/images/no-image.jpg',
     this.errorWidget,
     this.semanticLabel,
   });
@@ -83,7 +83,7 @@ class CustomImageWidget extends StatelessWidget {
   }
 
   ///build the image with border radius
-  Widget _buildCircleImage() {
+  dynamic _buildCircleImage() {
     if (radius != null) {
       return ClipRRect(
         borderRadius: radius ?? BorderRadius.zero,
@@ -177,20 +177,6 @@ class CustomImageWidget extends StatelessWidget {
           );
       }
     }
-    return _safeFallback();
-  }
-
-  Widget _safeFallback() {
-    return Container(
-      height: height,
-      width: width,
-      color: Colors.grey.shade200,
-      alignment: Alignment.center,
-      child: Icon(
-        Icons.image_not_supported_outlined,
-        color: Colors.grey.shade600,
-        size: 24,
-      ),
-    );
+    return const SizedBox.shrink();
   }
 }

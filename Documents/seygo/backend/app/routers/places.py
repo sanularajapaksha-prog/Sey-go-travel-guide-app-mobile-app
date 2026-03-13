@@ -5,7 +5,6 @@ import re
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 import httpx
-from fastapi.responses import Response
 
 from ..dependencies import get_current_user, get_supabase_client
 from ..schemas.google_places import GooglePlacesSearchRequest
@@ -18,17 +17,11 @@ from ..services.recommender import PlaceFeature, PlaceRecommender, _haversine_km
 router = APIRouter(prefix='/places', tags=['places'])
 recommender = PlaceRecommender()
 google_places_service = GooglePlacesService()
-PLACES_TABLE = os.getenv('SUPABASE_PLACES_TABLE', 'placses')
+# Default table name corrected to the expected `places`.
+PLACES_TABLE = os.getenv('SUPABASE_PLACES_TABLE', 'places')
 PHOTOS_BUCKET = os.getenv('SUPABASE_PLACE_PHOTOS_BUCKET', 'place-photos')
 SUPABASE_URL = os.getenv('SUPABASE_URL', '').rstrip('/')
 PHOTOS_PRIVATE = os.getenv('SUPABASE_PLACE_PHOTOS_PRIVATE', 'false').lower() == 'true'
-GOOGLE_IMAGE_HEADERS = {
-    'User-Agent': (
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-        'AppleWebKit/537.36 (KHTML, like Gecko) '
-        'Chrome/122.0.0.0 Safari/537.36'
-    )
-}
 
 
 def _parse_tags(value) -> list[str]:

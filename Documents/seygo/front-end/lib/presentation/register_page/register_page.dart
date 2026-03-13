@@ -1,6 +1,11 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../data/services/api_service.dart';
 import '../../routes/app_routes.dart';
 import '../onboarding_widgets/onboarding_widgets.dart';
 
@@ -17,13 +22,53 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmController = TextEditingController();
   String? _emailError;
+  String? _passwordError;
+  String? _confirmError;
+  bool _isSubmitting = false;
+  bool _isGoogleLoading = false;
+  bool _isAppleLoading = false;
+  bool _isPasswordVisible = false;
+  bool _isConfirmVisible = false;
+  StreamSubscription<AuthState>? _authSubscription;
   final FocusNode _nameFocus = FocusNode();
   final FocusNode _emailFocus = FocusNode();
   final FocusNode _passwordFocus = FocusNode();
   final FocusNode _confirmFocus = FocusNode();
 
+  String? _validateEmail(String value) {
+    final normalized = value.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return null;
+    }
+    if (!normalized.endsWith('@gmail.com')) {
+      return 'Email must end with @gmail.com';
+    }
+    return null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    try {
+      _authSubscription = Supabase.instance.client.auth.onAuthStateChange
+          .listen((data) {
+            if (!mounted) return;
+            if (data.event == AuthChangeEvent.signedIn) {
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                AppRoutes.welcomeHomeScreen,
+                (route) => false,
+              );
+            }
+          });
+    } catch (_) {
+      // Supabase not initialized; email/password flow can still work via backend API.
+    }
+  }
+
   @override
   void dispose() {
+    _authSubscription?.cancel();
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -37,7 +82,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    const accentBlue = Color(0xFF2B84B4);
+    const brandBlue = Color(0xFF2B84B4);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FB),
@@ -66,16 +111,14 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () => Navigator.pushNamed(
-                      context,
-                      AppRoutes.loginPage,
-                    ),
+                    onTap: () =>
+                        Navigator.pushNamed(context, AppRoutes.loginPage),
                     child: Text(
                       'Log in',
                       style: GoogleFonts.poppins(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
-                        color: accentBlue,
+                        color: brandBlue,
                       ),
                     ),
                   ),
@@ -86,10 +129,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 leftLabel: 'Login',
                 rightLabel: 'Register',
                 leftActive: false,
-                onLeft: () => Navigator.pushNamed(
-                  context,
-                  AppRoutes.loginPage,
-                ),
+                onLeft: () => Navigator.pushNamed(context, AppRoutes.loginPage),
                 onRight: () {},
               ),
               const SizedBox(height: 18),
@@ -112,15 +152,8 @@ class _RegisterPageState extends State<RegisterPage> {
                 onTap: () => _emailFocus.requestFocus(),
                 errorText: _emailError,
                 onChanged: (value) {
-                  final trimmed = value.trim();
                   setState(() {
-                    if (trimmed.isEmpty) {
-                      _emailError = null;
-                    } else if (!trimmed.endsWith('@gmail.com')) {
-                      _emailError = 'Email must end with @gmail.com';
-                    } else {
-                      _emailError = null;
-                    }
+                    _emailError = _validateEmail(value);
                   });
                 },
               ),
@@ -128,50 +161,95 @@ class _RegisterPageState extends State<RegisterPage> {
               LabeledAuthField(
                 label: 'Password',
                 hintText: '********',
-                obscure: true,
-                suffixIcon: Icon(Icons.visibility_off_outlined, size: 18),
+                obscure: !_isPasswordVisible,
+                suffixIcon: IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _isPasswordVisible = !_isPasswordVisible;
+                    });
+                  },
+                  icon: Icon(
+                    _isPasswordVisible
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    size: 18,
+                  ),
+                ),
                 controller: _passwordController,
                 focusNode: _passwordFocus,
                 textInputAction: TextInputAction.next,
                 onTap: () => _passwordFocus.requestFocus(),
+                errorText: _passwordError,
               ),
               const SizedBox(height: 14),
               LabeledAuthField(
                 label: 'Confirm Password',
                 hintText: '********',
-                obscure: true,
-                suffixIcon: Icon(Icons.visibility_off_outlined, size: 18),
+                obscure: !_isConfirmVisible,
+                suffixIcon: IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _isConfirmVisible = !_isConfirmVisible;
+                    });
+                  },
+                  icon: Icon(
+                    _isConfirmVisible
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    size: 18,
+                  ),
+                ),
                 controller: _confirmController,
                 focusNode: _confirmFocus,
                 textInputAction: TextInputAction.done,
                 onTap: () => _confirmFocus.requestFocus(),
+                errorText: _confirmError,
               ),
               const SizedBox(height: 18),
               SizedBox(
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.pushNamed(
-                    context,
-                    AppRoutes.otpPage,
-                  ),
+                  onPressed: _isSubmitting ? null : _submitRegister,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: accentBlue,
+                    backgroundColor: brandBlue,
                     foregroundColor: Colors.white,
                     elevation: 4,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          'Create account',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
+                        ),
+                ),
+              ),
+              if (_emailError != null ||
+                  _passwordError != null ||
+                  _confirmError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
                   child: Text(
-                    'Create account',
+                    _emailError ?? _passwordError ?? _confirmError ?? '',
                     style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
+                      fontSize: 12,
+                      color: Colors.red.shade600,
                     ),
                   ),
                 ),
-              ),
               const SizedBox(height: 18),
               Row(
                 children: [
@@ -195,6 +273,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   Expanded(
                     child: _SocialPill(
                       label: 'Google',
+                      onPressed: _isGoogleLoading || _isAppleLoading
+                          ? null
+                          : _signInWithGoogle,
                       leading: Image.asset(
                         'assets/images/google_logo.png',
                         width: 18,
@@ -207,7 +288,15 @@ class _RegisterPageState extends State<RegisterPage> {
                   Expanded(
                     child: _SocialPill(
                       label: 'Apple',
-                      leading: const Icon(Icons.apple, size: 18),
+                      onPressed: _isGoogleLoading || _isAppleLoading
+                          ? null
+                          : _signInWithApple,
+                      leading: Image.asset(
+                        'assets/images/apple_logo.png',
+                        width: 18,
+                        height: 18,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                 ],
@@ -218,24 +307,145 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
     );
   }
+
+  Future<void> _submitRegister() async {
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final confirm = _confirmController.text;
+
+    setState(() {
+      _emailError = _validateEmail(email);
+      _passwordError = password.length < 6
+          ? 'Password must be at least 6 characters'
+          : null;
+      _confirmError = confirm != password ? 'Passwords do not match' : null;
+    });
+
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter your name')));
+      return;
+    }
+
+    if (_emailError != null ||
+        _passwordError != null ||
+        _confirmError != null) {
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final result = await ApiService.register(
+        fullName: name,
+        email: email,
+        password: password,
+      );
+      if (!mounted) return;
+      final verificationSent =
+          result['verification_email_sent'] == true ||
+          result['requires_email_confirmation'] == true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            verificationSent
+                ? 'Account created successfully.'
+                : 'Account created successfully.',
+          ),
+        ),
+      );
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.welcomeHomeScreen,
+        (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isGoogleLoading = true;
+    });
+    try {
+      await Supabase.instance.client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: kIsWeb ? null : 'io.supabase.flutter://login-callback/',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGoogleLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _signInWithApple() async {
+    setState(() {
+      _isAppleLoading = true;
+    });
+    try {
+      await Supabase.instance.client.auth.signInWithOAuth(
+        OAuthProvider.apple,
+        redirectTo: kIsWeb ? null : 'io.supabase.flutter://login-callback/',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAppleLoading = false;
+        });
+      }
+    }
+  }
 }
 
 class _SocialPill extends StatelessWidget {
-  const _SocialPill({required this.label, required this.leading});
+  const _SocialPill({
+    required this.label,
+    required this.leading,
+    required this.onPressed,
+  });
 
   final String label;
   final Widget leading;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 46,
+      height: 50,
       child: ElevatedButton(
-        onPressed: () {},
+        onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
           elevation: 2,
           shadowColor: const Color(0x22000000),
+          side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
@@ -243,11 +453,7 @@ class _SocialPill extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: Center(child: leading),
-            ),
+            SizedBox(width: 20, height: 20, child: Center(child: leading)),
             const SizedBox(width: 8),
             Text(
               label,
@@ -322,13 +528,13 @@ class _SegmentButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accentBlue = Color(0xFF2B84B4);
+    const brandBlue = Color(0xFF2B84B4);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         height: 40,
         decoration: BoxDecoration(
-          color: active ? accentBlue : Colors.transparent,
+          color: active ? brandBlue : Colors.transparent,
           borderRadius: BorderRadius.circular(26),
         ),
         child: Center(

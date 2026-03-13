@@ -72,7 +72,7 @@ class _AppearancePopupState extends State<AppearancePopup> {
                       ),
                       child: const Icon(
                         Icons.palette_outlined,
-                        color: Color(0xFF2DD4BF),
+                        color: Color(0xFF2B84B4),
                         size: 24,
                       ),
                     ),

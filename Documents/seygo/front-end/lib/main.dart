@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/app_export.dart'; // AppRoutes
 import 'providers/theme_provider.dart';
 import 'providers/font_scale_provider.dart';
+// your AppTheme class
 import 'widgets/custom_error_widget.dart';
 
 Future<void> main() async {
