@@ -14,7 +14,7 @@ class WelcomeIntroPage extends StatelessWidget {
         child: Container(
           decoration: const BoxDecoration(
             image: DecorationImage(
-              image: AssetImage('assets/images/onboard_2.png'),
+              image: AssetImage('assets/images/onboard_first.png'),
               fit: BoxFit.cover,
               filterQuality: FilterQuality.high,
               isAntiAlias: true,
