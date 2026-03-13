@@ -23,13 +23,50 @@ class ApiService {
     return 'http://127.0.0.1:8000';
   }
 
-    // Android emulator accesses host machine via 10.0.2.2.
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:8000';
+  /// Client-side fallback when backend route optimization is unavailable.
+  /// Returns the destinations in their given order with empty polyline data.
+  static Future<Map<String, dynamic>> optimizeRoute({
+    required Map<String, dynamic> origin,
+    required List<Map<String, dynamic>> destinations,
+    String? accessToken,
+  }) async {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      if (accessToken != null && accessToken.isNotEmpty)
+        'Authorization': 'Bearer $accessToken',
+    };
+
+    // Try backend if available; otherwise gracefully fall back.
+    final uri = Uri.parse('$baseUrl/route/optimize');
+    try {
+      final response = await http
+          .post(
+            uri,
+            headers: headers,
+            body: jsonEncode({
+              'origin': origin,
+              'destinations': destinations,
+            }),
+          )
+          .timeout(const Duration(seconds: 20));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          return decoded;
+        }
+      }
+      // If backend fails, drop to client fallback below.
+    } catch (_) {
+      // Intentionally swallow; we return a safe fallback.
     }
 
-    // Desktop/web/iOS simulator local fallback.
-    return 'http://127.0.0.1:8000';
+    return {
+      'optimized_stops': destinations,
+      'polyline_points': <Map<String, dynamic>>[],
+      'total_distance_km': null,
+      'total_duration_min': null,
+    };
   }
 
   static Future<List<dynamic>> fetchPlaces({
