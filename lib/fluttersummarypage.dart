@@ -48,13 +48,84 @@ appBar: AppBar(
     ),
   ),
 )
-//add travel category tabs
+
+// Travel category tabs
 Row(
   children: const [
-    Text("All", style: TextStyle(fontWeight: FontWeight.bold)),//all bold
+
+    // All category (default selected)
+    Text(
+      "All",
+      style: TextStyle(
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+
     SizedBox(width: 20),
-    Text("Latest"),
-    SizedBox(width: 20),//sizedbox 20
-    Text("Popular", style: TextStyle(color: Colors.blue)),
+
+    // Latest category
+    Text(
+      "Latest",
+    ),
+
+    SizedBox(width: 20),
+
+    // Popular category (highlighted)
+    Text(
+      "Popular",
+      style: TextStyle(
+        color: Colors.blue,
+      ),
+    ),
   ],
 ),
+// List of images for the travel carousel
+final List<String> travelImages = [
+  "Imagesnew/sigiriya.jpeg",
+  "Imagesnew/sigiriya.jpeg",
+  "Imagesnew/sigiriya.jpeg",
+];
+
+// Image carousel widget
+SizedBox(
+  height: 220, // Fixed height for the slider
+  child: PageView(
+    scrollDirection: Axis.horizontal, // Allows horizontal swipe
+    children: travelImages.map((imagePath) {
+      return travelAssetImage(imagePath); // Display each image
+    }).toList(),
+  ),
+),
+// Destination title and distance information
+Row(
+  mainAxisAlignment: MainAxisAlignment.spaceBetween, // Space between title and distance
+  children: [
+
+    // Travel destination name
+    const Text(
+      "Sigiriya Lion Rock",
+      style: TextStyle(
+        fontSize:23; // Large font size for title
+        fontWeight: FontWeight.bold, // Bold text for emphasis
+      ),
+    ),
+
+    // Location and distance information
+    Row(
+      children: const [
+
+        // Location icon
+        Icon(
+          Icons.location_on,
+          color: Colors.blue,
+        ),
+
+        // Small spacing between icon and text
+        SizedBox(width: 5),
+
+        // Distance from current location
+        Text("185 km"),
+      ],
+    ),
+  ],
+)
