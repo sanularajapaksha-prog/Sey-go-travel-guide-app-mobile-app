@@ -1,78 +1,40 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
-import 'package:sizer/sizer.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart'; // ✅ Import
+import 'map_page.dart';
 
-import 'core/app_export.dart'; // AppRoutes
-import 'providers/theme_provider.dart';
-import 'providers/font_scale_provider.dart';
-import 'theme/app_theme.dart'; // your AppTheme class
-import 'widgets/custom_error_widget.dart';
-
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  bool hasShownError = false;
-
-  // Custom global error widget
-  ErrorWidget.builder = (FlutterErrorDetails details) {
-    if (!hasShownError) {
-      hasShownError = true;
-      Future.delayed(const Duration(seconds: 5), () {
-        hasShownError = false;
-      });
-      return CustomErrorWidget(errorDetails: details);
-    }
-    return const SizedBox.shrink();
-  };
-
-  // Lock to portrait
-  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-
-  runApp(const MyApp());
+void main() {
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  // ✅ Keep the splash screen on screen while initializing
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  runApp(const SeyGoApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class SeyGoApp extends StatefulWidget {
+  const SeyGoApp({super.key});
+
+  @override
+  State<SeyGoApp> createState() => _SeyGoAppState();
+}
+
+class _SeyGoAppState extends State<SeyGoApp> {
+  @override
+  void initState() {
+    super.initState();
+    initialization();
+  }
+
+  void initialization() async {
+    // ✅ Simulate loading (e.g., getting location or API data)
+    await Future.delayed(const Duration(seconds: 2));
+    // ✅ Remove the splash screen once everything is ready
+    FlutterNativeSplash.remove();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        ChangeNotifierProvider(create: (_) => FontScaleProvider()),
-      ],
-      child: Sizer(
-        builder: (context, orientation, deviceType) {
-          return Consumer2<ThemeProvider, FontScaleProvider>(
-            builder: (context, themeProvider, fontProvider, child) {
-              return MaterialApp(
-                title: 'seygo_travel_app',
-                debugShowCheckedModeBanner: false,
-
-                // Your themes
-                theme: AppTheme.lightTheme,
-                darkTheme: AppTheme.darkTheme,
-                themeMode: themeProvider.themeMode,
-
-                // Apply dynamic font scaling
-                builder: (context, child) {
-                  return MediaQuery(
-                    data: MediaQuery.of(context).copyWith(
-                      textScaler: TextScaler.linear(fontProvider.scaleFactor),
-                    ),
-                    child: child!,
-                  );
-                },
-
-                // Routes
-                routes: AppRoutes.routes,
-                initialRoute: AppRoutes.initial,
-              );
-            },
-          );
-        },
-      ),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: const MapPage(),
     );
   }
 }
