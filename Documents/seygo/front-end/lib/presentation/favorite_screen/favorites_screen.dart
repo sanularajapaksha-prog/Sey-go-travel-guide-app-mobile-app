@@ -316,3 +316,39 @@ class _StatPill extends StatelessWidget {
     );
   }
 }
+
+class _FavoritesSearchField extends StatelessWidget {
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+  final bool showClear;
+
+  const _FavoritesSearchField({
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
+    required this.showClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        hintText: 'Search by place or city',
+        prefixIcon: const Icon(Icons.search),
+        suffixIcon: showClear
+            ? IconButton(
+                onPressed: onClear,
+                icon: const Icon(Icons.close),
+              )
+            : null,
+        filled: true,
+        fillColor: theme.colorScheme.surface,
+      ),
+    );
+  }
+}
