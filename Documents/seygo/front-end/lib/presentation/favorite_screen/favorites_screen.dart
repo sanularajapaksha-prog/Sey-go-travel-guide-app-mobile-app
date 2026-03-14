@@ -167,3 +167,107 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     );
   }
 }
+
+
+class _FavoritesHero extends StatelessWidget {
+  final int count;
+  final int locations;
+
+  const _FavoritesHero({
+    required this.count,
+    required this.locations,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cardColor = theme.colorScheme.surface.withOpacity(0.9);
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+      child: Container(
+        padding: EdgeInsets.all(4.w),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: LinearGradient(
+            colors: [
+              theme.colorScheme.primary.withOpacity(0.12),
+              theme.colorScheme.secondary.withOpacity(0.12),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(
+            color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -8.w,
+              top: -4.h,
+              child: Container(
+                width: 26.w,
+                height: 26.w,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: theme.colorScheme.primary.withOpacity(0.08),
+                ),
+              ),
+            ),
+            Positioned(
+              left: -6.w,
+              bottom: -5.h,
+              child: Container(
+                width: 22.w,
+                height: 22.w,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: theme.colorScheme.secondary.withOpacity(0.08),
+                ),
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Saved for your next trip',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 0.8.h),
+                Text(
+                  'Keep the places you love in one elegant space.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _StatPill(
+                        label: 'Places',
+                        value: count.toString(),
+                        backgroundColor: cardColor,
+                      ),
+                    ),
+                    SizedBox(width: 3.w),
+                    Expanded(
+                      child: _StatPill(
+                        label: 'Cities',
+                        value: locations.toString(),
+                        backgroundColor: cardColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
