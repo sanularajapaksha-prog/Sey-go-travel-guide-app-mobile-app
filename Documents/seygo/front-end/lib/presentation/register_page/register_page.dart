@@ -66,10 +66,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () => Navigator.pushNamed(
-                      context,
-                      AppRoutes.loginPage,
-                    ),
+                    onTap: () =>
+                        Navigator.pushNamed(context, AppRoutes.loginPage),
                     child: Text(
                       'Log in',
                       style: GoogleFonts.poppins(
@@ -86,10 +84,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 leftLabel: 'Login',
                 rightLabel: 'Register',
                 leftActive: false,
-                onLeft: () => Navigator.pushNamed(
-                  context,
-                  AppRoutes.loginPage,
-                ),
+                onLeft: () => Navigator.pushNamed(context, AppRoutes.loginPage),
                 onRight: () {},
               ),
               const SizedBox(height: 18),
@@ -151,10 +146,8 @@ class _RegisterPageState extends State<RegisterPage> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.pushNamed(
-                    context,
-                    AppRoutes.otpPage,
-                  ),
+                  onPressed: () =>
+                      Navigator.pushNamed(context, AppRoutes.otpPage),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: accentBlue,
                     foregroundColor: Colors.white,
@@ -232,14 +225,18 @@ class _SocialPill extends StatelessWidget {
       height: 46,
       child: ElevatedButton(
         onPressed: () {},
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          elevation: 2,
+          shadowColor: const Color(0x22000000),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: Center(child: leading),
-            ),
+            SizedBox(width: 20, height: 20, child: Center(child: leading)),
             const SizedBox(width: 8),
             Text(
               label,
@@ -250,14 +247,6 @@ class _SocialPill extends StatelessWidget {
               ),
             ),
           ],
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          elevation: 2,
-          shadowColor: const Color(0x22000000),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
         ),
       ),
     );

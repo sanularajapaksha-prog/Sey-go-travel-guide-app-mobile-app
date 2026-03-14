@@ -57,10 +57,8 @@ class _LoginPageState extends State<LoginPage> {
                 rightLabel: 'Register',
                 leftActive: true,
                 onLeft: () {},
-                onRight: () => Navigator.pushNamed(
-                  context,
-                  AppRoutes.registerPage,
-                ),
+                onRight: () =>
+                    Navigator.pushNamed(context, AppRoutes.registerPage),
               ),
               const SizedBox(height: 18),
               LabeledAuthField(
@@ -216,14 +214,18 @@ class _SocialPill extends StatelessWidget {
       height: 46,
       child: ElevatedButton(
         onPressed: () {},
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          elevation: 2,
+          shadowColor: const Color(0x22000000),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: Center(child: leading),
-            ),
+            SizedBox(width: 20, height: 20, child: Center(child: leading)),
             const SizedBox(width: 8),
             Text(
               label,
@@ -234,14 +236,6 @@ class _SocialPill extends StatelessWidget {
               ),
             ),
           ],
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          elevation: 2,
-          shadowColor: const Color(0x22000000),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
         ),
       ),
     );

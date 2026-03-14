@@ -60,12 +60,12 @@ class RouteSummaryPage extends StatelessWidget {
 
                 StopCard(
                   index: 1,
-                  title: "Temple of the Sacred Tooth R",
+                  title: "Temple of the  Tooth ",
                   location: "Kandy",
                   time: "09:00 AM",
                   duration: "2 hours",
                   image:
-                  "https://images.unsplash.com/photo-1583394293214-28ded15ee548",
+                  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQVBTcgfay2dgZZZUkjUdmgV1Nv5kUy-mT2Bg&s",
                 ),
 
                 StopCard(
@@ -76,7 +76,7 @@ class RouteSummaryPage extends StatelessWidget {
                   duration: "1.5 hours",
                   distance: "5.8 km from previous",
                   image:
-                  "https://images.unsplash.com/photo-1501785888041-af3ef285b470",
+                  "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/10/a3/0a/4e/beautiful-botanical-garden.jpg?w=800&h=500&s=1",
                 ),
 
                 StopCard(
@@ -87,7 +87,7 @@ class RouteSummaryPage extends StatelessWidget {
                   duration: "1 hour",
                   distance: "6.2 km from previous",
                   image:
-                  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
+                  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTyGo-sb4-aD6orsle1ZmIT4XZzTY8OKeXQYw&s",
                 ),
 
                 StopCard(
@@ -98,7 +98,7 @@ class RouteSummaryPage extends StatelessWidget {
                   duration: "45 minutes",
                   distance: "3.1 km from previous",
                   image:
-                  "https://images.unsplash.com/photo-1505761671935-60b3a7427bad",
+                  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRI5Gg0RKvPXwXss4GRtzn8YbhXjY29YScShg&s",
                 ),
 
                 SizedBox(height: 80),
@@ -314,4 +314,3 @@ class StopCard extends StatelessWidget {
     );
   }
 }
-

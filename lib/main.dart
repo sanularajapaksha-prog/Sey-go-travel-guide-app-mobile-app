@@ -53,7 +53,6 @@ class TravelPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             // Tabs
             Row(
               children: const [
@@ -67,7 +66,7 @@ class TravelPage extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // Sigiriya Image Carousel
+            // Image Carousel
             SizedBox(
               height: 220,
               child: PageView(
@@ -95,13 +94,12 @@ class TravelPage extends StatelessWidget {
                     SizedBox(width: 4),
                     Text("185 km"),
                   ],
-                )
+                ),
               ],
             ),
 
             const SizedBox(height: 10),
 
-            // Overview Title
             const Text(
               "Overview",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -124,33 +122,49 @@ class TravelPage extends StatelessWidget {
 
             const SizedBox(height: 15),
 
-            // Display a description of Sigiriya Lion Rock
-             const Text(
+            // Description
+            const Text(
               "Sigiriya Lion Rock is an engineering and artistic marvel set within "
               "the lush landscapes of Sri Lanka’s Cultural Triangle. It features "
               "preserved frescoes, landscaped gardens, and the imposing lion paws "
               "leading to the summit.",
-             style: TextStyle(
-               color: Colors.black; // Set the text color to grey
-               fontSize:18,       // Optional: add font size for better readability
-              ),
+              style: TextStyle(color: Colors.black, fontSize: 18),
             ),
 
-// Add vertical space of 25 pixels between this Text and the next widget
-const SizedBox(height: 25),
+            const SizedBox(height: 25),
 
             // Add to Cart Button
             Center(
-              child: OutlinedButton(
-                onPressed: () {},
-                style: OutlinedButton.styleFrom(
+              child: InkWell(
+                onTap: () {},
+                borderRadius: BorderRadius.circular(30),
+                child: Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 40, vertical: 12),
-                  shape: RoundedRectangleBorder(
+                    horizontal: 40,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Colors.orange, Colors.deepOrange],
+                    ),
                     borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.orange.withOpacity(0.4),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Text(
+                    "Add to cart",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-                child: const Text("Add to cart"),
               ),
             ),
           ],
@@ -174,13 +188,10 @@ const SizedBox(height: 25),
   }
 }
 
-// Widget for asset images
+// Image widget
 Widget travelAssetImage(String path) {
   return ClipRRect(
     borderRadius: BorderRadius.circular(20),
-    child: Image.asset(
-      path,
-      fit: BoxFit.cover,
-    )
+    child: Image.asset(path, fit: BoxFit.cover),
   );
 }
