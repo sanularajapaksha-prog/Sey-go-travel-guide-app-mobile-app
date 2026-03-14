@@ -66,7 +66,7 @@ class TravelPage extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // Image Carousel
+            // Sigiriya Image Carousel
             SizedBox(
               height: 220,
               child: PageView(
@@ -100,6 +100,7 @@ class TravelPage extends StatelessWidget {
 
             const SizedBox(height: 10),
 
+            // Overview Title
             const Text(
               "Overview",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -124,47 +125,26 @@ class TravelPage extends StatelessWidget {
 
             // Description
             const Text(
-              "Sigiriya Lion Rock is an engineering and artistic marvel set within "
-              "the lush landscapes of Sri Lanka’s Cultural Triangle. It features "
-              "preserved frescoes, landscaped gardens, and the imposing lion paws "
-              "leading to the summit.",
-              style: TextStyle(color: Colors.black, fontSize: 18),
+              "Sigiriya Lion Rock is an engineering and artistic marvel set within the lush landscapes of Sri Lanka’s Cultural Triangle. It features preserved frescoes, landscaped gardens, and the imposing lion paws leading to the summit.",
+              style: TextStyle(color: Colors.grey),
             ),
 
             const SizedBox(height: 25),
 
             // Add to Cart Button
             Center(
-              child: InkWell(
-                onTap: () {},
-                borderRadius: BorderRadius.circular(30),
-                child: Container(
+              child: OutlinedButton(
+                onPressed: () {},
+                style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 40,
-                    vertical: 14,
+                    vertical: 12,
                   ),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Colors.orange, Colors.deepOrange],
-                    ),
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.orange.withOpacity(0.4),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: const Text(
-                    "Add to cart",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
                   ),
                 ),
+                child: const Text("Add to cart"),
               ),
             ),
           ],
@@ -186,12 +166,4 @@ class TravelPage extends StatelessWidget {
       ),
     );
   }
-}
-
-// Image widget
-Widget travelAssetImage(String path) {
-  return ClipRRect(
-    borderRadius: BorderRadius.circular(20),
-    child: Image.asset(path, fit: BoxFit.cover),
-  );
 }
