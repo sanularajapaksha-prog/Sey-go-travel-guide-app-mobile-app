@@ -592,3 +592,29 @@ class _Pill extends StatelessWidget {
     );
   }
 }
+
+class _NoResultsState extends StatelessWidget {
+  final String query;
+  final VoidCallback onClear;
+
+  const _NoResultsState({
+    required this.query,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 8.w),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_off,
+              size: 10.w,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+
+            
