@@ -617,4 +617,33 @@ class _NoResultsState extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
 
-            
+             SizedBox(height: 2.h),
+            Text(
+              'No matches for "$query"',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            SizedBox(height: 1.h),
+            Text(
+              'Try a different keyword or clear the search.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            SizedBox(height: 2.4.h),
+            OutlinedButton.icon(
+              onPressed: onClear,
+              icon: const Icon(Icons.clear),
+              label: const Text('Clear search'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
