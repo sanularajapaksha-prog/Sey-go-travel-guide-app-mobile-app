@@ -352,3 +352,73 @@ class _FavoritesSearchField extends StatelessWidget {
     );
   }
 }
+
+
+class _FavoritesEmptyState extends StatelessWidget {
+  final VoidCallback onExplorePressed;
+
+  const _FavoritesEmptyState({
+    required this.onExplorePressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 8.w),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: EdgeInsets.all(5.w),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.colorScheme.shadow,
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.favorite_border,
+                size: 8.w,
+                color: theme.colorScheme.secondary,
+              ),
+            ),
+            SizedBox(height: 3.h),
+            Text(
+              'No favorites yet',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleLarge,
+            ),
+            SizedBox(height: 1.2.h),
+            Text(
+              'Start exploring and tap the heart on any place to save it here.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            SizedBox(height: 3.h),
+            ElevatedButton.icon(
+              onPressed: onExplorePressed,
+              icon: const Icon(Icons.explore_outlined),
+              label: const Text('Explore places'),
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.4.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
