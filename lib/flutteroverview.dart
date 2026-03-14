@@ -167,3 +167,11 @@ class TravelPage extends StatelessWidget {
     );
   }
 }
+
+// Widget for asset images
+Widget travelAssetImage(String path) {
+  return ClipRRect(
+    borderRadius: BorderRadius.circular(20),
+    child: Image.asset(path, fit: BoxFit.cover),
+  );
+}
