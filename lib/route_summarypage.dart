@@ -107,17 +107,17 @@ class RouteSummaryPage extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: SizedBox(
               width: double.infinity,
-              height: 55,
+              height: 56,
               child: ElevatedButton.icon(
                 onPressed: () {},
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xff3a3a3a),
+                  backgroundColor: const Color.fromARGB(255, 0, 0, 0),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
                 icon: const Icon(Icons.navigation_outlined),
-                label: const Text("view on google maps"),
+                label: const Text("click on google maps"),
               ),
             ),
           ),
