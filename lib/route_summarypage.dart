@@ -37,23 +37,19 @@ class RouteSummaryPage extends StatelessWidget {
           Padding(
             padding: EdgeInsets.only(right: 16),
             child: Icon(Icons.share, color: Colors.black),
-          )
+          ),
         ],
       ),
 
       body: Column(
         children: [
-
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: const [
-
                 Text(
                   "Your Itinerary",
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
 
                 SizedBox(height: 16),
@@ -65,7 +61,7 @@ class RouteSummaryPage extends StatelessWidget {
                   time: "09:00 AM",
                   duration: "2 hours",
                   image:
-                  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQVBTcgfay2dgZZZUkjUdmgV1Nv5kUy-mT2Bg&s",
+                      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQVBTcgfay2dgZZZUkjUdmgV1Nv5kUy-mT2Bg&s",
                 ),
 
                 StopCard(
@@ -76,7 +72,7 @@ class RouteSummaryPage extends StatelessWidget {
                   duration: "1.5 hours",
                   distance: "5.8 km from previous",
                   image:
-                  "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/10/a3/0a/4e/beautiful-botanical-garden.jpg?w=800&h=500&s=1",
+                      "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/10/a3/0a/4e/beautiful-botanical-garden.jpg?w=800&h=500&s=1",
                 ),
 
                 StopCard(
@@ -87,7 +83,7 @@ class RouteSummaryPage extends StatelessWidget {
                   duration: "1 hour",
                   distance: "6.2 km from previous",
                   image:
-                  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTyGo-sb4-aD6orsle1ZmIT4XZzTY8OKeXQYw&s",
+                      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTyGo-sb4-aD6orsle1ZmIT4XZzTY8OKeXQYw&s",
                 ),
 
                 StopCard(
@@ -98,7 +94,7 @@ class RouteSummaryPage extends StatelessWidget {
                   duration: "45 minutes",
                   distance: "3.1 km from previous",
                   image:
-                  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRI5Gg0RKvPXwXss4GRtzn8YbhXjY29YScShg&s",
+                      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRI5Gg0RKvPXwXss4GRtzn8YbhXjY29YScShg&s",
                 ),
 
                 SizedBox(height: 80),
@@ -124,7 +120,7 @@ class RouteSummaryPage extends StatelessWidget {
                 label: const Text("view on google maps"),
               ),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -159,7 +155,6 @@ class StopCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
           /// Number indicator
           Column(
             children: [
@@ -171,11 +166,7 @@ class StopCard extends StatelessWidget {
                   style: const TextStyle(color: Colors.white),
                 ),
               ),
-              Container(
-                width: 2,
-                height: 120,
-                color: Colors.grey.shade300,
-              )
+              Container(width: 2, height: 120, color: Colors.grey.shade300),
             ],
           ),
 
@@ -189,20 +180,15 @@ class StopCard extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(.1),
-                    blurRadius: 6,
-                  )
+                  BoxShadow(color: Colors.grey.withOpacity(.1), blurRadius: 6),
                 ],
               ),
 
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   Row(
                     children: [
-
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: Image.network(
@@ -217,10 +203,8 @@ class StopCard extends StatelessWidget {
 
                       Expanded(
                         child: Column(
-                          crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-
                             Text(
                               title,
                               style: const TextStyle(
@@ -230,29 +214,31 @@ class StopCard extends StatelessWidget {
 
                             Text(
                               location,
-                              style: const TextStyle(
-                                  color: Colors.grey),
+                              style: const TextStyle(color: Colors.grey),
                             ),
 
                             const SizedBox(height: 4),
 
                             Row(
                               children: [
-                                const Icon(Icons.access_time,
-                                    size: 14,
-                                    color: Colors.grey),
+                                const Icon(
+                                  Icons.access_time,
+                                  size: 14,
+                                  color: Colors.grey,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   "$time  •  $duration",
                                   style: const TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: 12),
-                                )
+                                    color: Colors.grey,
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ],
-                            )
+                            ),
                           ],
                         ),
-                      )
+                      ),
                     ],
                   ),
 
@@ -260,19 +246,21 @@ class StopCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xffe6f3f7),
-                        borderRadius:
-                        BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         distance!,
                         style: const TextStyle(
-                            color: Colors.blue,
-                            fontSize: 12),
+                          color: Colors.blue,
+                          fontSize: 12,
+                        ),
                       ),
-                    )
+                    ),
                   ],
 
                   const SizedBox(height: 8),
@@ -281,34 +269,27 @@ class StopCard extends StatelessWidget {
 
                   Row(
                     children: const [
-
-                      Icon(Icons.drag_indicator,
-                          size: 18, color: Colors.grey),
+                      Icon(Icons.drag_indicator, size: 18, color: Colors.grey),
                       SizedBox(width: 4),
                       Text("Reorder"),
 
                       SizedBox(width: 16),
 
-                      Icon(Icons.visibility,
-                          size: 18, color: Colors.grey),
+                      Icon(Icons.visibility, size: 18, color: Colors.grey),
                       SizedBox(width: 4),
                       Text("View"),
 
                       SizedBox(width: 16),
 
-                      Icon(Icons.delete,
-                          size: 18, color: Colors.red),
+                      Icon(Icons.delete, size: 18, color: Colors.red),
                       SizedBox(width: 4),
-                      Text(
-                        "Remove",
-                        style: TextStyle(color: Colors.red),
-                      )
+                      Text("Remove", style: TextStyle(color: Colors.red)),
                     ],
-                  )
+                  ),
                 ],
               ),
             ),
-          )
+          ),
         ],
       ),
     );
