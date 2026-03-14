@@ -485,3 +485,69 @@ class _FavoritePlaceCard extends StatelessWidget {
                       ),
                     ],
                   ),
+                  child: FavoriteButton(
+                    placeId: place.id,
+                    placeName: place.name,
+                    imageUrl: place.imageUrl,
+                    location: place.location,
+                    semanticLabel: place.semanticLabel,
+                    size: 26,
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 3.w,
+                top: 2.h,
+                child: _Pill(
+                  label: 'Saved',
+                  icon: Icons.bookmark_border,
+                ),
+              ),
+              Positioned(
+                left: 4.w,
+                right: 4.w,
+                bottom: 2.2.h,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      place.name,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 0.6.h),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                        SizedBox(width: 1.w),
+                        Expanded(
+                          child: Text(
+                            place.location,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.white,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
