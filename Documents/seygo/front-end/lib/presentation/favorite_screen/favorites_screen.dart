@@ -422,3 +422,66 @@ class _FavoritesEmptyState extends StatelessWidget {
     );
   }
 }
+
+class _FavoritePlaceCard extends StatelessWidget {
+  final FavoritePlace place;
+
+  const _FavoritePlaceCard({
+    required this.place,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Material(
+      color: theme.colorScheme.surface,
+      borderRadius: BorderRadius.circular(24),
+      elevation: 2,
+      shadowColor: theme.colorScheme.shadow,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: () {
+          // Placeholder: tap could navigate to a place detail screen.
+        },
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Stack(
+            children: [
+              CustomImageWidget(
+                imageUrl: place.imageUrl,
+                width: double.infinity,
+                height: 24.h,
+                fit: BoxFit.cover,
+                semanticLabel: place.semanticLabel,
+              ),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.transparent,
+                        theme.colorScheme.surface.withOpacity(0.92),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      stops: const [0.45, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 3.w,
+                top: 2.h,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(999),
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.colorScheme.shadow.withOpacity(0.2),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
