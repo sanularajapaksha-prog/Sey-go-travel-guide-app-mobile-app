@@ -15,7 +15,7 @@ from ..services.recommender import PlaceFeature, PlaceRecommender, _haversine_km
 router = APIRouter(prefix='/places', tags=['places'])
 recommender = PlaceRecommender()
 google_places_service = GooglePlacesService()
-PLACES_TABLE = os.getenv('SUPABASE_PLACES_TABLE', 'places')
+PLACES_TABLE = os.getenv('SUPABASE_PLACES_TABLE', 'placses')
 PHOTOS_BUCKET = os.getenv('SUPABASE_PLACE_PHOTOS_BUCKET', 'place-photos')
 SUPABASE_URL = os.getenv('SUPABASE_URL', '').rstrip('/')
 PHOTOS_PRIVATE = os.getenv('SUPABASE_PLACE_PHOTOS_PRIVATE', 'false').lower() == 'true'
