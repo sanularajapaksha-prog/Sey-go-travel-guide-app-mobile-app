@@ -2,6 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from ..dependencies import get_current_user, get_supabase_client
+from ..services.google_places import GooglePlacesService
+
+google_places_service = GooglePlacesService()
 
 router = APIRouter(prefix='/playlists', tags=['playlists'])
 
@@ -198,3 +201,61 @@ async def reorder_playlist_places(
 
     return {'message': 'Playlist reordered.', 'order': body.ordered_place_ids}
 ```
+@router.post('/{playlist_id}/route')
+async def get_playlist_route(
+    playlist_id: int,
+    user=Depends(get_current_user),
+):
+
+    supabase = get_supabase_client()
+    _get_playlist_or_404(supabase, playlist_id, str(user.id))
+
+    entries = (
+        supabase.table(PLAYLIST_PLACES_TABLE)
+        .select(f'position, {PLACES_TABLE}(id, name, lat, lng)')
+        .eq('playlist_id', playlist_id)
+        .order('position')
+        .execute()
+    )
+
+    if not entries.data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='This playlist has no places.',
+        )
+
+    stops = []
+    for entry in entries.data:
+        place = entry.get(PLACES_TABLE) or {}
+        lat = place.get('lat')
+        lng = place.get('lng')
+        if lat is None or lng is None:
+            continue
+        stops.append({
+            'name': place.get('name', 'Unknown'),
+            'latitude': lat,
+            'longitude': lng,
+        })
+
+    if len(stops) < 2:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='At least 2 places with coordinates are needed to generate a route.',
+        )
+
+    try:
+        route = google_places_service.get_multi_stop_route(stops)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Route generation failed: {exc}',
+        )
+
+    return {
+        'playlist_id': playlist_id,
+        'route': route,
+    }
