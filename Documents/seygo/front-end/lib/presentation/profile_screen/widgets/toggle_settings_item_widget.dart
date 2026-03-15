@@ -1,12 +1,9 @@
+// lib/presentation/profile_screen/widgets/toggle_settings_item_widget.dart
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
-import '../../../core/app_export.dart';
-import '../../../widgets/custom_icon_widget.dart';
-
-/// Toggle settings item widget with switch control
 class ToggleSettingsItemWidget extends StatelessWidget {
-  final String iconName;
+  final IconData icon;
   final String title;
   final String? subtitle;
   final bool value;
@@ -14,7 +11,7 @@ class ToggleSettingsItemWidget extends StatelessWidget {
 
   const ToggleSettingsItemWidget({
     super.key,
-    required this.iconName,
+    required this.icon,
     required this.title,
     this.subtitle,
     required this.value,
@@ -26,25 +23,20 @@ class ToggleSettingsItemWidget extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.8.h),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 10.w,
-            height: 10.w,
+            width: 11.w,
+            height: 11.w,
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+              color: theme.colorScheme.primary.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Center(
-              child: CustomIconWidget(
-                iconName: iconName,
-                color: theme.colorScheme.primary,
-                size: 5.w,
-              ),
-            ),
+            child: Icon(icon, color: theme.colorScheme.primary, size: 6.5.w),
           ),
-          SizedBox(width: 3.w),
+          SizedBox(width: 4.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,14 +44,14 @@ class ToggleSettingsItemWidget extends StatelessWidget {
                 Text(
                   title,
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 if (subtitle != null) ...[
-                  SizedBox(height: 0.5.h),
+                  SizedBox(height: 0.4.h),
                   Text(
                     subtitle!,
-                    style: theme.textTheme.bodySmall?.copyWith(
+                    style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
@@ -67,7 +59,13 @@ class ToggleSettingsItemWidget extends StatelessWidget {
               ],
             ),
           ),
-          Switch(value: value, onChanged: onChanged),
+          Switch.adaptive(
+            value: value,
+            onChanged: onChanged,
+            activeColor: theme.colorScheme.primary,
+            inactiveThumbColor: theme.colorScheme.outline,
+            inactiveTrackColor: theme.colorScheme.outlineVariant,
+          ),
         ],
       ),
     );

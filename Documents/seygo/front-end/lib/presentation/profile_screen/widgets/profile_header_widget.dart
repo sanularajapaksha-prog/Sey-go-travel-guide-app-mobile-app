@@ -1,13 +1,13 @@
+// lib/presentation/profile_screen/widgets/profile_header_widget.dart
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
-import '../../../core/app_export.dart';
-
-/// Profile header widget displaying user avatar, name, and edit button
 class ProfileHeaderWidget extends StatelessWidget {
   final String userName;
   final String userEmail;
-  final String avatarUrl;
+  final String? avatarUrl; // local path or network URL
   final VoidCallback onEditProfile;
   final VoidCallback onAvatarTap;
 
@@ -15,7 +15,7 @@ class ProfileHeaderWidget extends StatelessWidget {
     super.key,
     required this.userName,
     required this.userEmail,
-    required this.avatarUrl,
+    this.avatarUrl,
     required this.onEditProfile,
     required this.onAvatarTap,
   });
@@ -23,100 +23,105 @@ class ProfileHeaderWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final ImageProvider? avatarImage = avatarUrl == null
+        ? null
+        : avatarUrl!.startsWith('http')
+            ? NetworkImage(avatarUrl!)
+            : FileImage(File(avatarUrl!));
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 3.h),
+      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 4.h),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(28),
+          bottomRight: Radius.circular(28),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.shadow.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          // Avatar with edit indicator
+          // Avatar with camera icon overlay
           GestureDetector(
             onTap: onAvatarTap,
             child: Stack(
+              alignment: Alignment.bottomRight,
               children: [
-                Container(
-                  width: 25.w,
-                  height: 25.w,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: theme.colorScheme.primary,
-                      width: 3,
-                    ),
-                  ),
-                  child: ClipOval(
-                    child: CustomImageWidget(
-                      imageUrl: avatarUrl,
-                      width: 25.w,
-                      height: 25.w,
-                      fit: BoxFit.cover,
-                      semanticLabel: "Profile photo of $userName",
-                    ),
-                  ),
+                CircleAvatar(
+                  radius: 14.w,
+                  backgroundColor: theme.colorScheme.primary.withOpacity(0.15),
+                  backgroundImage: avatarImage,
+                  child: avatarUrl == null
+                      ? Icon(
+                          Icons.person,
+                          size: 24.w,
+                          color: theme.colorScheme.primary,
+                        )
+                      : null,
                 ),
                 Positioned(
                   bottom: 0,
                   right: 0,
-                  child: Container(
-                    width: 8.w,
-                    height: 8.w,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: theme.colorScheme.surface,
-                        width: 2,
-                      ),
-                    ),
-                    child: Center(
-                      child: CustomIconWidget(
-                        iconName: 'edit',
-                        color: theme.colorScheme.onPrimary,
-                        size: 4.w,
-                      ),
+                  child: CircleAvatar(
+                    radius: 3.5.w,
+                    backgroundColor: theme.colorScheme.primary,
+                    child: Icon(
+                      Icons.camera_alt_rounded,
+                      size: 4.5.w,
+                      color: Colors.white,
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          SizedBox(height: 2.h),
-          // User name
+
+          SizedBox(height: 2.5.h),
+
+          // Name
           Text(
             userName,
-            style: theme.textTheme.titleLarge?.copyWith(
+            style: theme.textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
             ),
             textAlign: TextAlign.center,
           ),
-          SizedBox(height: 0.5.h),
-          // User email
+
+          SizedBox(height: 0.8.h),
+
+          // Email
           Text(
             userEmail,
-            style: theme.textTheme.bodyMedium?.copyWith(
+            style: theme.textTheme.bodyLarge?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
             textAlign: TextAlign.center,
           ),
-          SizedBox(height: 2.h),
-          // Edit profile button
+
+          SizedBox(height: 3.h),
+
+          // Edit Profile Button
           OutlinedButton.icon(
             onPressed: onEditProfile,
-            icon: CustomIconWidget(
-              iconName: 'edit',
-              color: theme.colorScheme.primary,
-              size: 4.w,
+            icon: Icon(Icons.edit_outlined, size: 5.w),
+            label: Text(
+              "Edit Profile",
+              style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w600),
             ),
-            label: Text('Edit Profile'),
             style: OutlinedButton.styleFrom(
-              padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 1.5.h),
+              side: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 1.8.h),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
           ),
         ],
