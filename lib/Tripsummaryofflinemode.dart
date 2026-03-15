@@ -99,3 +99,35 @@ class _TripSummaryPageState extends State<TripSummaryPage> {
                     fit: BoxFit.cover,
                   ),
                 ),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+
+                    gradient: const LinearGradient(
+                      colors: [Colors.transparent, Colors.black54],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
+                )
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+
+                    children: const [
+                      Text(
+                        "Ruwan weli maha seya",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      SizedBox(height: 6),
+                    
+                
+              
+                 
