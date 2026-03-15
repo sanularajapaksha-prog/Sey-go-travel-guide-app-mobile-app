@@ -15,6 +15,7 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
 class TripSummaryPage extends StatefulWidget {
   const TripSummaryPage({super.key});
 
@@ -24,6 +25,7 @@ class TripSummaryPage extends StatefulWidget {
 
 class _TripSummaryPageState extends State<TripSummaryPage> {
   bool offlineMode = false;
+
   void startJourney() {
     ScaffoldMessenger.of(
       context,
@@ -35,7 +37,8 @@ class _TripSummaryPageState extends State<TripSummaryPage> {
       context,
     ).showSnackBar(const SnackBar(content: Text("Trip Shared")));
   }
-   void showEmergencyContact() {
+
+  void showEmergencyContact() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -50,6 +53,7 @@ class _TripSummaryPageState extends State<TripSummaryPage> {
       ),
     );
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -78,13 +82,14 @@ class _TripSummaryPageState extends State<TripSummaryPage> {
             onPressed: shareTrip,
           ),
         ],
-      )
+      ),
+
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16),
 
           child: Column(
-            children:[
+            children: [
               /// HEADER CARD
               Container(
                 height: 200,
@@ -99,6 +104,7 @@ class _TripSummaryPageState extends State<TripSummaryPage> {
                     fit: BoxFit.cover,
                   ),
                 ),
+
                 child: Container(
                   padding: const EdgeInsets.all(16),
 
@@ -111,7 +117,7 @@ class _TripSummaryPageState extends State<TripSummaryPage> {
                       end: Alignment.bottomCenter,
                     ),
                   ),
-                )
+
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,6 +133,7 @@ class _TripSummaryPageState extends State<TripSummaryPage> {
                       ),
 
                       SizedBox(height: 6),
+
                       Row(
                         children: [
                           Icon(
@@ -159,6 +166,7 @@ class _TripSummaryPageState extends State<TripSummaryPage> {
                   ),
                 ),
               ),
+
               const SizedBox(height: 20),
 
               /// INFO CARDS
@@ -196,9 +204,46 @@ class _TripSummaryPageState extends State<TripSummaryPage> {
 
                     const SizedBox(height: 15),
 
-            
-                
+                    Row(
+                      children: [
+                        const Icon(Icons.download),
+
+                        const SizedBox(width: 10),
+
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("Offline Mode"),
+                              Text(
+                                "Download maps & details",
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        Switch(
+                          value: offlineMode,
+                          onChanged: (value) {
+                            setState(() {
+                              offlineMode = value;
+                            });
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  offlineMode
+                                      ? "Offline Mode Enabled"
+                                      : "Offline Mode Disabled",
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+
+                    const Divider(height: 25),
+
                     
-                
-              
-                
