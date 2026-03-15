@@ -3,7 +3,7 @@ import html
 import json
 import re
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 import httpx
 
 from ..dependencies import get_current_user, get_supabase_client
