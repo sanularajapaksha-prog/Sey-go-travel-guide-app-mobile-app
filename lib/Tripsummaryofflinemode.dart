@@ -79,3 +79,23 @@ class _TripSummaryPageState extends State<TripSummaryPage> {
           ),
         ],
       )
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+
+          child: Column(
+            children: [
+              /// HEADER CARD
+              Container(
+                height: 200,
+
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+
+                  image: const DecorationImage(
+                    image: NetworkImage(
+                      "https://www.trawell.in/admin/images/upload/07208983Anuradhapura_Ruwanwalisaya.jpg",
+                    ),
+                    fit: BoxFit.cover,
+                  ),
+                ),
