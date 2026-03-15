@@ -6,7 +6,7 @@ from ..dependencies import get_current_user, get_supabase_client
 router = APIRouter(prefix='/playlists', tags=['playlists'])
 
 PLAYLISTS_TABLE = 'playlists'
-PLAYLIST_DEST_TABLE = 'playlist_destinations'
+PLAYLIST_DEST_TABLE = 'playlist_places'
 SAVED_TABLE = 'saved_destinations'
 
 class PlaylistCreate(BaseModel):
