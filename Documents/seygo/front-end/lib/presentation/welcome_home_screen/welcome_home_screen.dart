@@ -16,11 +16,11 @@ class WelcomeHomeScreenState extends State<WelcomeHomeScreen> {
   int currentIndex = 0;
 
   final List<String> routes = [
-    '/welcome-home-screen',
-    '/map-view-screen',
-    '/playlists-screen',
-    '/profile-screen',
-    '/profile-screen',
+    AppRoutes.welcomeHomeScreen,
+    AppRoutes.mapView,
+    AppRoutes.playlists,
+    AppRoutes.favorites,
+    AppRoutes.profile,
   ];
 
   @override

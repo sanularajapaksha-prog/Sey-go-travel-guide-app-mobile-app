@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/favorites_provider.dart';
+import '../widgets/favorite_button.dart';
 
 void main() {
   runApp(const MyApp());
@@ -9,9 +13,12 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: ExploreScreen(),
+    return ChangeNotifierProvider(
+      create: (_) => FavoritesProvider(),
+      child: const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: ExploreScreen(),
+      ),
     );
   }
 }
@@ -275,7 +282,14 @@ class PlaceCard extends StatelessWidget {
 
           const SizedBox(width: 10),
 
-          const Icon(Icons.favorite_border, size: 26),
+          FavoriteButton(
+            placeId: title.hashCode,
+            placeName: title,
+            imageUrl: 'https://picsum.photos/300',
+            location: 'Ella, Badulla District',
+            semanticLabel: title,
+            size: 26,
+          ),
         ],
       ),
     );

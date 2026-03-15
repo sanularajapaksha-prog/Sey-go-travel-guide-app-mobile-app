@@ -8,8 +8,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/app_export.dart'; // AppRoutes
 import 'providers/theme_provider.dart';
 import 'providers/font_scale_provider.dart';
-// your AppTheme class
+import 'providers/favorites_provider.dart';
 import 'widgets/custom_error_widget.dart';
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -83,6 +84,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => FontScaleProvider()),
+        ChangeNotifierProvider(create: (_) => FavoritesProvider()),
       ],
       child: Sizer(
         builder: (context, orientation, deviceType) {

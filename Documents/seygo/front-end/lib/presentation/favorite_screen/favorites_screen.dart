@@ -3,7 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../providers/favorites_provider.dart';
+import '../../routes/app_routes.dart';
 import '../../widgets/custom_image_widget.dart';
+import '../../widgets/favorite_button.dart';
+
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -14,8 +17,7 @@ class FavoritesScreen extends StatefulWidget {
 
 class _FavoritesScreenState extends State<FavoritesScreen> {
   final TextEditingController _searchController = TextEditingController();
-  String _selectedCategory = 'All';
-  _SortOption _sortOption = _SortOption.recent;
+  String _query = '';
 
   @override
   void dispose() {
@@ -23,343 +25,409 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     super.dispose();
   }
 
-  void _showSortSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Sort by',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                SizedBox(height: 1.h),
-                ..._SortOption.values.map(
-                  (option) => RadioListTile<_SortOption>(
-                    value: option,
-                    groupValue: _sortOption,
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() => _sortOption = value);
-                      Navigator.of(context).pop();
-                    },
-                    title: Text(option.label),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+  List<FavoritePlace> _filterFavorites(List<FavoritePlace> favorites) {
+    final query = _query.trim().toLowerCase();
+    if (query.isEmpty) {
+      return favorites;
+    }
+    return favorites.where((place) {
+      return place.name.toLowerCase().contains(query) ||
+          place.location.toLowerCase().contains(query);
+    }).toList();
   }
 
- @override
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Consumer<FavoritesProvider>(
       builder: (context, favoritesProvider, child) {
-        final favorites = favoritesProvider.favorites; //
-
-
-        final query = _searchController.text.trim().toLowerCase();
-        final categories = <String>{
-          for (final place in favorites) place.location,
-        }.toList()
-          ..sort();
-        final activeCategory =
-            _selectedCategory == 'All' ? null : _selectedCategory;
-        final filtered = favorites.where((place) {
-          final matchesCategory =
-              activeCategory == null || place.location == activeCategory;
-          final matchesQuery = query.isEmpty ||
-              place.name.toLowerCase().contains(query) ||
-              place.location.toLowerCase().contains(query);
-          return matchesCategory && matchesQuery;
-        }).toList();
-
-        switch (_sortOption) {
-          case _SortOption.recent:
-            break;
-          case _SortOption.nameAsc:
-            filtered.sort((a, b) => a.name.compareTo(b.name));
-            break;
-          case _SortOption.nameDesc:
-            filtered.sort((a, b) => b.name.compareTo(a.name));
-            break;
-          case _SortOption.category:
-            filtered.sort((a, b) => a.location.compareTo(b.location));
-            break;
-        }
+        final favorites = favoritesProvider.favorites;
+        final filteredFavorites = _filterFavorites(favorites);
+        final uniqueLocations = favorites
+            .map((place) => place.location.trim())
+            .where((location) => location.isNotEmpty)
+            .toSet()
+            .length;
 
         return Scaffold(
           backgroundColor: theme.scaffoldBackgroundColor,
           appBar: AppBar(
-            title: Text('Favorites (${favoritesProvider.count})'),
+            title: const Text('Favorites'),
             actions: [
-              IconButton(
-                tooltip: 'Sort',
-                onPressed: () => _showSortSheet(context),
-                icon: const Icon(Icons.sort),
-              ),
-              TextButton(
-                onPressed:
-                    favorites.isEmpty ? null : favoritesProvider.clearFavorites,
-                child: const Text('Clear all'),
-              ),
+              if (favorites.isNotEmpty)
+                TextButton.icon(
+                  onPressed: favoritesProvider.clearFavorites,
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Clear'),
+                ),
               SizedBox(width: 2.w),
             ],
           ),
-
-          body: favorites.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.favorite_border,
-                        size: 64,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      SizedBox(height: 1.5.h),
-                      Text(
-                        'No favorites yet',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      SizedBox(height: 0.8.h),
-                      Text(
-                        'Tap the heart on a place to save it here.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+          body: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: _FavoritesHero(
+                  count: favorites.length,
+                  locations: uniqueLocations,
+                ),
+              ),
+              if (favorites.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _FavoritesEmptyState(
+                    onExplorePressed: () {
+                      // Navigate back to the discover tab.
+                      // Using pushReplacement to ensure the favorites screen isn't
+                      // stacked on top of the main navigator stack.
+                      Navigator.of(context).pushReplacementNamed(
+                        AppRoutes.welcomeHomeScreen,
+                      );
+                    },
                   ),
                 )
-              : Column(
-                  children: [
-                    Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
-                      child: Column(
-                        children: [
-                          _FavoritesSummaryCard(
-                            total: favoritesProvider.count,
-                            categories: categories.length,
-                          ),
-                          SizedBox(height: 1.2.h),
-                          TextField(
-                            controller: _searchController,
-                            onChanged: (_) => setState(() {}),
-                            decoration: InputDecoration(
-                              hintText: 'Search favorites...',
-                              prefixIcon: const Icon(Icons.search),
-                              filled: true,
-                              fillColor: theme.colorScheme.surface,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(14),
-                                borderSide: BorderSide.none,
+              else ...[
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _FavoritesSearchField(
+                          controller: _searchController,
+                          onChanged: (value) {
+                            setState(() => _query = value);
+                          },
+                          onClear: () {
+                            _searchController.clear();
+                            setState(() => _query = '');
+                          },
+                          showClear: _query.trim().isNotEmpty,
+                        ),
+                        SizedBox(height: 2.h),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Saved places',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
-                          ),
-                          SizedBox(height: 1.2.h),
-                          SizedBox(
-                            height: 4.6.h,
-                            child: ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: categories.length + 1,
-                              separatorBuilder: (context, index) =>
-                                  SizedBox(width: 2.w),
-                              itemBuilder: (context, index) {
-                                final label = index == 0
-                                    ? 'All'
-                                    : categories[index - 1];
-                                final isSelected =
-                                    _selectedCategory == label;
-                                return ChoiceChip(
-                                  selected: isSelected,
-                                  label: Text(label),
-                                  onSelected: (_) {
-                                    setState(() {
-                                      _selectedCategory = label;
-                                    });
-                                  },
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4.w),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Your saved places',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            '${filtered.length} shown',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 1.h),
-
-                                        Expanded(
-                      child: filtered.isEmpty
-                          ? Center(
-                              child: Text(
-                                'No matches found',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
+                            Text(
+                              '${filteredFavorites.length} of ${favorites.length}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
                               ),
-                            )
-                          : ListView.separated(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 4.w,
-                                vertical: 1.6.h,
-                              ),
-                              itemCount: filtered.length,
-                              separatorBuilder: (context, index) =>
-                                  SizedBox(height: 2.h),
-                              itemBuilder: (context, index) {
-                                final place = filtered[index];
-                                return _FavoritePlaceCard(
-                                  place: place,
-                                  onRemove: () => favoritesProvider
-                                      .removeFavorite(place.id),
-                                );
-                              },
                             ),
+                          ],
+                        ),
+                        SizedBox(height: 1.4.h),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
+                if (filteredFavorites.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _NoResultsState(
+                      query: _query.trim(),
+                      onClear: () {
+                        _searchController.clear();
+                        setState(() => _query = '');
+                      },
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final place = filteredFavorites[index];
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: 2.h),
+                            child: _FavoritePlaceCard(
+                              place: place,
+                            ),
+                          );
+                        },
+                        childCount: filteredFavorites.length,
+                      ),
+                    ),
+                  ),
+              ],
+            ],
+          ),
         );
       },
     );
   }
 }
 
-class _FavoritesSummaryCard extends StatelessWidget {
-  final int total;
-  final int categories;
 
-  const _FavoritesSummaryCard({
-    required this.total,
-    required this.categories,
+class _FavoritesHero extends StatelessWidget {
+  final int count;
+  final int locations;
+
+  const _FavoritesHero({
+    required this.count,
+    required this.locations,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cardColor = theme.colorScheme.surface.withOpacity(0.9);
 
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.8.h),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: theme.colorScheme.shadow,
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+      child: Container(
+        padding: EdgeInsets.all(4.w),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: LinearGradient(
+            colors: [
+              theme.colorScheme.primary.withOpacity(0.12),
+              theme.colorScheme.secondary.withOpacity(0.12),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _SummaryItem(
-            label: 'Places',
-            value: total.toString(),
+          border: Border.all(
+            color: theme.colorScheme.outlineVariant.withOpacity(0.5),
           ),
-          _SummaryItem(
-            label: 'Categories',
-            value: categories.toString(),
-          ),
-          _SummaryItem(
-            label: 'Status',
-            value: total == 0 ? 'Empty' : 'Saved',
-          ),
-        ],
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -8.w,
+              top: -4.h,
+              child: Container(
+                width: 26.w,
+                height: 26.w,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: theme.colorScheme.primary.withOpacity(0.08),
+                ),
+              ),
+            ),
+            Positioned(
+              left: -6.w,
+              bottom: -5.h,
+              child: Container(
+                width: 22.w,
+                height: 22.w,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: theme.colorScheme.secondary.withOpacity(0.08),
+                ),
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Saved for your next trip',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 0.8.h),
+                Text(
+                  'Keep the places you love in one elegant space.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _StatPill(
+                        label: 'Places',
+                        value: count.toString(),
+                        backgroundColor: cardColor,
+                      ),
+                    ),
+                    SizedBox(width: 3.w),
+                    Expanded(
+                      child: _StatPill(
+                        label: 'Cities',
+                        value: locations.toString(),
+                        backgroundColor: cardColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _SummaryItem extends StatelessWidget {
+class _StatPill extends StatelessWidget {
   final String label;
   final String value;
+  final Color backgroundColor;
 
-  const _SummaryItem({
+  const _StatPill({
     required this.label,
     required this.value,
+    required this.backgroundColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.6.h),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            value,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          SizedBox(height: 0.4.h),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FavoritesSearchField extends StatelessWidget {
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+  final bool showClear;
+
+  const _FavoritesSearchField({
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
+    required this.showClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        hintText: 'Search by place or city',
+        prefixIcon: const Icon(Icons.search),
+        suffixIcon: showClear
+            ? IconButton(
+                onPressed: onClear,
+                icon: const Icon(Icons.close),
+              )
+            : null,
+        filled: true,
+        fillColor: theme.colorScheme.surface,
+      ),
+    );
+  }
+}
+
+
+class _FavoritesEmptyState extends StatelessWidget {
+  final VoidCallback onExplorePressed;
+
+  const _FavoritesEmptyState({
+    required this.onExplorePressed,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          value,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 8.w),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: EdgeInsets.all(5.w),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.colorScheme.shadow,
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.favorite_border,
+                size: 8.w,
+                color: theme.colorScheme.secondary,
+              ),
+            ),
+            SizedBox(height: 3.h),
+            Text(
+              'No favorites yet',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleLarge,
+            ),
+            SizedBox(height: 1.2.h),
+            Text(
+              'Start exploring and tap the heart on any place to save it here.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            SizedBox(height: 3.h),
+            ElevatedButton.icon(
+              onPressed: onExplorePressed,
+              icon: const Icon(Icons.explore_outlined),
+              label: const Text('Explore places'),
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.4.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ],
         ),
-        SizedBox(height: 0.2.h),
-        Text(
-          label,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
+      ),
     );
   }
-}
-
-enum _SortOption {
-  recent('Recently added'),
-  nameAsc('Name (A-Z)'),
-  nameDesc('Name (Z-A)'),
-  category('Category');
-
-  final String label;
-  const _SortOption(this.label);
 }
 
 class _FavoritePlaceCard extends StatelessWidget {
   final FavoritePlace place;
-  final VoidCallback onRemove;
 
   const _FavoritePlaceCard({
     required this.place,
-    required this.onRemove,
   });
 
   @override
@@ -386,7 +454,7 @@ class _FavoritePlaceCard extends StatelessWidget {
               bottomLeft: Radius.circular(18),
             ),
             child: CustomImageWidget(
-              imageUrl: place.googleUrl,
+              imageUrl: place.imageUrl,
               width: 28.w,
               height: 12.h,
               fit: BoxFit.cover,
@@ -445,3 +513,59 @@ class _FavoritePlaceCard extends StatelessWidget {
     );
   }
 }
+
+class _NoResultsState extends StatelessWidget {
+  final String query;
+  final VoidCallback onClear;
+
+  const _NoResultsState({
+    required this.query,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 8.w),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_off,
+              size: 10.w,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+
+             SizedBox(height: 2.h),
+            Text(
+              'No matches for "$query"',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            SizedBox(height: 1.h),
+            Text(
+              'Try a different keyword or clear the search.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            SizedBox(height: 2.4.h),
+            OutlinedButton.icon(
+              onPressed: onClear,
+              icon: const Icon(Icons.clear),
+              label: const Text('Clear search'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+
