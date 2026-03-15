@@ -387,9 +387,7 @@ class _RoutePlannerScreenState extends State<RoutePlannerScreen> {
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withValues(
-                alpha: 0.5,
-              ),
+              color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
