@@ -253,8 +253,8 @@ void showWriteReviewModal(BuildContext context) {
 
   _showProfileDialog(
     context,
-    width: 48.w,
-    height: 56.h,
+    width: 84.w,
+    height: 72.h,
     child: _WriteReviewDialog(controller: controller),
   );
 }
@@ -465,13 +465,13 @@ Widget _dialogHeader(
 }) {
   return Row(
     children: [
-      Icon(icon, color: iconColor, size: 3.2.w),
-      SizedBox(width: 1.7.w),
+      Icon(icon, color: iconColor, size: 4.3.w),
+      SizedBox(width: 2.2.w),
       Text(
         title,
         style: TextStyle(
-          fontSize: 22.sp,
-          fontWeight: FontWeight.w500,
+          fontSize: 18.5.sp,
+          fontWeight: FontWeight.w600,
           color: const Color(0xFF1C2438),
         ),
       ),
@@ -1095,150 +1095,166 @@ class _WriteReviewDialogState extends State<_WriteReviewDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              'Write a Review',
-              style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w700),
-            ),
-            const Spacer(),
-            IconButton(
-              onPressed: () => _closeOverlay(context),
-              icon: const Icon(Icons.close_rounded),
-            ),
-          ],
-        ),
-        SizedBox(height: 1.h),
-        Text(
-          'Select Place',
-          style: TextStyle(fontSize: 13.5.sp, color: const Color(0xFF5C6579)),
-        ),
-        SizedBox(height: 1.h),
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 2.w),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFDCE0E8)),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: selectedPlace,
-              isExpanded: true,
-              items: const [
-                DropdownMenuItem(
-                  value: 'Sigiriya Rock Fortress',
-                  child: Text('Sigiriya Rock Fortress'),
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: IntrinsicHeight(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Write a Review',
+                        style: TextStyle(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => _closeOverlay(context),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
                 ),
-                DropdownMenuItem(
-                  value: 'Ella Rock Hike',
-                  child: Text('Ella Rock Hike'),
+                SizedBox(height: 1.h),
+                Text(
+                  'Select Place',
+                  style: TextStyle(fontSize: 13.5.sp, color: const Color(0xFF5C6579)),
                 ),
-                DropdownMenuItem(
-                  value: 'Yala National Park',
-                  child: Text('Yala National Park'),
+                SizedBox(height: 1.h),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 2.w),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFDCE0E8)),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: selectedPlace,
+                      isExpanded: true,
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'Sigiriya Rock Fortress',
+                          child: Text('Sigiriya Rock Fortress'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Ella Rock Hike',
+                          child: Text('Ella Rock Hike'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Yala National Park',
+                          child: Text('Yala National Park'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setState(() => selectedPlace = value);
+                      },
+                    ),
+                  ),
+                ),
+                SizedBox(height: 2.4.h),
+                Text(
+                  'Rating',
+                  style: TextStyle(fontSize: 13.5.sp, color: const Color(0xFF5C6579)),
+                ),
+                SizedBox(height: 1.h),
+                Row(
+                  children: List.generate(5, (index) {
+                    final filled = index < rating;
+                    return GestureDetector(
+                      onTap: () => setState(() => rating = index + 1),
+                      child: Padding(
+                        padding: EdgeInsets.only(right: 1.8.w),
+                        child: Icon(
+                          Icons.star_rounded,
+                          size: 5.2.w,
+                          color: filled
+                              ? const Color(0xFFFFC107)
+                              : const Color(0xFFE4E7ED),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+                SizedBox(height: 2.2.h),
+                Text(
+                  'Your Review',
+                  style: TextStyle(fontSize: 13.5.sp, color: const Color(0xFF5C6579)),
+                ),
+                SizedBox(height: 1.h),
+                TextField(
+                  controller: widget.controller,
+                  maxLines: 5,
+                  maxLength: 500,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    counterText: '',
+                    hintText: 'Share your experience...',
+                    hintStyle: const TextStyle(color: Color(0xFF8A90A1)),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: Color(0xFFDCE0E8)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: Color(0xFF9FBDE6)),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 0.6.h),
+                Text(
+                  '${widget.controller.text.length}/500 characters',
+                  style: TextStyle(fontSize: 10.5.sp, color: const Color(0xFF7F8798)),
+                ),
+                SizedBox(height: 1.7.h),
+                OutlinedButton.icon(
+                  onPressed: () {},
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: Size(double.infinity, 6.h),
+                    side: const BorderSide(color: Color(0xFFD6DCE6)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  icon: const Icon(Icons.photo_library_outlined),
+                  label: Text(
+                    'Add Photos (Optional)',
+                    style: TextStyle(fontSize: 13.sp),
+                  ),
+                ),
+                const Spacer(),
+                SizedBox(height: 1.8.h),
+                ElevatedButton.icon(
+                  onPressed: rating == 0
+                      ? null
+                      : () {
+                          _closeOverlay(context);
+                          showSnackBar(context, 'Review published');
+                        },
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: Size(double.infinity, 6.h),
+                    backgroundColor: const Color(0xFFA6ACB6),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
+                  icon: const Icon(Icons.send_outlined),
+                  label: Text(
+                    'Publish Review',
+                    style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w700),
+                  ),
                 ),
               ],
-              onChanged: (value) {
-                if (value == null) return;
-                setState(() => selectedPlace = value);
-              },
             ),
           ),
         ),
-        SizedBox(height: 3.h),
-        Text(
-          'Rating',
-          style: TextStyle(fontSize: 13.5.sp, color: const Color(0xFF5C6579)),
-        ),
-        SizedBox(height: 1.h),
-        Row(
-          children: List.generate(5, (index) {
-            final filled = index < rating;
-            return GestureDetector(
-              onTap: () => setState(() => rating = index + 1),
-              child: Padding(
-                padding: EdgeInsets.only(right: 1.3.w),
-                child: Icon(
-                  Icons.star_rounded,
-                  size: 3.2.w,
-                  color: filled
-                      ? const Color(0xFFFFC107)
-                      : const Color(0xFFE4E7ED),
-                ),
-              ),
-            );
-          }),
-        ),
-        SizedBox(height: 2.2.h),
-        Text(
-          'Your Review',
-          style: TextStyle(fontSize: 13.5.sp, color: const Color(0xFF5C6579)),
-        ),
-        SizedBox(height: 1.h),
-        TextField(
-          controller: widget.controller,
-          maxLines: 5,
-          onChanged: (_) => setState(() {}),
-          decoration: InputDecoration(
-            hintText: 'Share your experience...',
-            hintStyle: const TextStyle(color: Color(0xFF8A90A1)),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: Color(0xFFDCE0E8)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: Color(0xFF9FBDE6)),
-            ),
-          ),
-        ),
-        SizedBox(height: 0.8.h),
-        Text(
-          '${widget.controller.text.length}/500 characters',
-          style: TextStyle(fontSize: 10.5.sp, color: const Color(0xFF7F8798)),
-        ),
-        SizedBox(height: 1.7.h),
-        OutlinedButton.icon(
-          onPressed: () {},
-          style: OutlinedButton.styleFrom(
-            minimumSize: Size(double.infinity, 6.h),
-            side: const BorderSide(color: Color(0xFFD6DCE6)),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-          icon: const Icon(Icons.photo_library_outlined),
-          label: Text(
-            'Add Photos (Optional)',
-            style: TextStyle(fontSize: 13.sp),
-          ),
-        ),
-        const Spacer(),
-        ElevatedButton.icon(
-          onPressed: rating == 0
-              ? null
-              : () {
-                  _closeOverlay(context);
-                  showSnackBar(context, 'Review published');
-                },
-          style: ElevatedButton.styleFrom(
-            minimumSize: Size(double.infinity, 6.h),
-            backgroundColor: const Color(0xFFA6ACB6),
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-          ),
-          icon: const Icon(Icons.send_outlined),
-          label: Text(
-            'Publish Review',
-            style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w700),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
 import 'profile_modals.dart';
+import '../../theme/app_theme.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -17,8 +18,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isPrivatePlaylist = true;
   bool _isSideRailVisible = false;
 
-  static const Color _ink = Color(0xFF272121);
-  static const Color _accent = Color(0xFF2F86C9);
+  static const Color _ink = AppTheme.secondaryLight;
+  static const Color _accent = AppTheme.secondaryLight;
+  static const Color _surface = AppTheme.surfaceLight;
+  static const Color _border = AppTheme.dividerLight;
+  static const Color _text = AppTheme.tertiaryLight;
+  static const Color _mutedText = AppTheme.neutralLight;
+  static const Color _chipFill = Color(0xFFEAF4FA);
 
   final List<_ProfileChip> _chips = const [
     _ProfileChip('Camping'),
@@ -81,25 +87,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             Positioned(
               left: 0,
-              top: isCompact ? 36.h : 31.h,
+              right: 0,
+              bottom: isCompact ? 15.h : 13.h,
               child: AnimatedSlide(
                 duration: const Duration(milliseconds: 220),
                 curve: Curves.easeOutCubic,
                 offset: _isSideRailVisible
                     ? Offset.zero
-                    : const Offset(-1.15, 0),
-                child: _buildSideRail(isCompact),
+                    : const Offset(0, 1.15),
+                child: Align(
+                  alignment: Alignment.bottomLeft,
+                  child: Padding(
+                    padding: EdgeInsets.only(left: isCompact ? 4.w : 5.w),
+                    child: _buildSideRail(isCompact),
+                  ),
+                ),
               ),
             ),
             Positioned(
-              left: isCompact ? 3.w : 3.5.w,
-              bottom: isCompact ? 8.h : 7.h,
+              left: 0,
+              right: 0,
+              bottom: isCompact ? 7.h : 6.h,
               child: AnimatedOpacity(
                 duration: const Duration(milliseconds: 180),
                 opacity: _isSideRailVisible ? 0 : 1,
                 child: IgnorePointer(
                   ignoring: _isSideRailVisible,
-                  child: _buildAssistiveTouch(isCompact),
+                  child: Align(
+                    alignment: Alignment.bottomLeft,
+                    child: Padding(
+                      padding: EdgeInsets.only(left: isCompact ? 4.w : 5.w),
+                      child: _buildAssistiveTouch(isCompact),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -128,7 +148,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: TextStyle(
                   fontFamily: 'Georgia',
                   fontSize: isCompact ? 14.5.sp : 17.sp,
-                  color: const Color(0xFF7C7B7A),
+                  color: _mutedText,
                 ),
               ),
               SizedBox(height: isCompact ? 0.4.h : 0.8.h),
@@ -137,7 +157,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: TextStyle(
                   fontSize: isCompact ? 20.sp : 24.sp,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF6A6A6E),
+                  color: _text,
                 ),
               ),
               SizedBox(height: isCompact ? 0.7.h : 1.h),
@@ -145,7 +165,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 'Australia | Age 23',
                 style: TextStyle(
                   fontSize: isCompact ? 12.5.sp : 15.sp,
-                  color: const Color(0xFF747D93),
+                  color: _mutedText,
                 ),
               ),
             ],
@@ -163,12 +183,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 height: isCompact ? 24.w : 27.w,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFE7EAF0)),
+                  border: Border.all(color: _border),
                 ),
                 child: Center(
                   child: CircleAvatar(
                     radius: isCompact ? 9.7.w : 11.w,
-                    backgroundColor: const Color(0xFFA9A6A8),
+                    backgroundColor: _accent.withOpacity(0.7),
                     backgroundImage: avatarImage,
                     child: avatarImage == null
                         ? Text(
@@ -189,7 +209,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   width: isCompact ? 7.2.w : 8.w,
                   height: isCompact ? 7.2.w : 8.w,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFAEAAAA),
+                    color: _chipFill,
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
@@ -209,26 +229,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
         vertical: isCompact ? 2.2.h : 2.8.h,
       ),
       decoration: BoxDecoration(
-        color: _ink,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF4FA3D1),
+            AppTheme.secondaryLight,
+          ],
+        ),
         borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.secondaryLight.withOpacity(0.18),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Mountain Explorer',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: isCompact ? 18.sp : 21.sp,
-              fontWeight: FontWeight.w700,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Mountain Explorer',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isCompact ? 18.sp : 21.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: isCompact ? 0.8.h : 1.2.h),
+                Text(
+                  'You mostly visit mountain and nature destinations.',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.94),
+                    fontSize: isCompact ? 12.6.sp : 15.sp,
+                  ),
+                ),
+              ],
             ),
           ),
-          SizedBox(height: isCompact ? 0.8.h : 1.2.h),
-          Text(
-            'You mostly visit mountain and nature destinations.',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.92),
-              fontSize: isCompact ? 12.6.sp : 15.sp,
+          SizedBox(width: isCompact ? 3.w : 4.w),
+          Container(
+            width: isCompact ? 12.w : 11.w,
+            height: isCompact ? 12.w : 11.w,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.16),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.terrain_rounded,
+              color: Colors.white,
+              size: isCompact ? 6.w : 5.2.w,
             ),
           ),
         ],
@@ -244,16 +299,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           width: isCompact ? 22.5.w : 24.5.w,
           padding: EdgeInsets.symmetric(vertical: isCompact ? 1.05.h : 1.35.h),
           decoration: BoxDecoration(
-            color: chip.selected ? const Color(0xFFCDDDF5) : Colors.white,
+            color: chip.selected ? _chipFill : Colors.white,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFD9E8FC)),
+            border: Border.all(color: _border),
           ),
           child: Center(
             child: Text(
               chip.label,
               style: TextStyle(
                 fontSize: isCompact ? 11.5.sp : 14.5.sp,
-                color: const Color(0xFF1E2436),
+                color: _text,
               ),
             ),
           ),
@@ -272,7 +327,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         isCompact ? 1.8.h : 2.2.h,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _surface,
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
@@ -289,7 +344,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: TextStyle(
               fontSize: isCompact ? 15.5.sp : 17.sp,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF1B2132),
+              color: _text,
             ),
           ),
           SizedBox(height: isCompact ? 1.6.h : 2.2.h),
@@ -317,7 +372,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         isCompact ? 1.8.h : 2.2.h,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _surface,
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
@@ -334,7 +389,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: TextStyle(
               fontSize: isCompact ? 15.5.sp : 17.sp,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF1B2132),
+              color: _text,
             ),
           ),
           SizedBox(height: isCompact ? 1.5.h : 2.1.h),
@@ -352,7 +407,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE4E8EF)),
+                  border: Border.all(color: _border),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -372,7 +427,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       style: TextStyle(
                         fontSize: isCompact ? 11.5.sp : 13.7.sp,
                         height: 1.25,
-                        color: const Color(0xFF23283A),
+                        color: _text,
                       ),
                     ),
                   ],
@@ -391,7 +446,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: const Color(0xFFD8DCE3)),
+        border: Border.all(color: _border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -423,7 +478,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         label,
         style: TextStyle(
           fontSize: isCompact ? 12.sp : 13.3.sp,
-          color: selected ? Colors.white : const Color(0xFF272B39),
+          color: selected ? Colors.white : _text,
         ),
       ),
     );
@@ -437,14 +492,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ];
 
     return Container(
-      width: isCompact ? 15.w : 16.w,
-      padding: EdgeInsets.symmetric(vertical: isCompact ? 1.6.h : 2.h),
+      width: isCompact ? 42.w : 34.w,
+      padding: EdgeInsets.fromLTRB(
+        isCompact ? 4.w : 3.2.w,
+        isCompact ? 1.8.h : 2.2.h,
+        isCompact ? 4.w : 3.2.w,
+        isCompact ? 1.8.h : 2.2.h,
+      ),
       decoration: BoxDecoration(
         color: _ink,
-        borderRadius: const BorderRadius.only(
-          topRight: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.18),
@@ -455,20 +512,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Align(
             alignment: Alignment.centerRight,
             child: GestureDetector(
               onTap: () => setState(() => _isSideRailVisible = false),
               child: Padding(
-                padding: EdgeInsets.only(
-                  right: isCompact ? 1.8.w : 1.4.w,
-                  bottom: isCompact ? 0.8.h : 0.9.h,
-                ),
+                padding: EdgeInsets.only(bottom: isCompact ? 0.8.h : 0.9.h),
                 child: Icon(
                   Icons.close_rounded,
-                  color: const Color(0xFFF6CBAE),
-                  size: isCompact ? 4.3.w : 3.6.w,
+                  color: Colors.white,
+                  size: isCompact ? 5.2.w : 4.2.w,
                 ),
               ),
             ),
@@ -478,17 +533,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onTap: item.$2,
               child: Padding(
                 padding: EdgeInsets.symmetric(
-                  vertical: isCompact ? 1.1.h : 1.4.h,
+                  vertical: isCompact ? 0.95.h : 1.15.h,
                 ),
-                child: RotatedBox(
-                  quarterTurns: 3,
-                  child: Text(
-                    '- ${item.$1}',
-                    style: TextStyle(
-                      color: const Color(0xFFF6CBAE),
-                      fontSize: isCompact ? 10.3.sp : 12.4.sp,
-                      fontWeight: FontWeight.w700,
-                    ),
+                child: Text(
+                  '- ${item.$1}',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isCompact ? 13.sp : 15.sp,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -503,8 +555,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return GestureDetector(
       onTap: () => setState(() => _isSideRailVisible = true),
       child: Container(
-        width: isCompact ? 11.w : 9.w,
-        height: isCompact ? 11.w : 9.w,
+        width: isCompact ? 12.w : 10.w,
+        height: isCompact ? 12.w : 10.w,
         decoration: BoxDecoration(
           color: _ink.withOpacity(0.92),
           shape: BoxShape.circle,
@@ -518,8 +570,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         child: Icon(
           Icons.more_horiz_rounded,
-          color: const Color(0xFFF6CBAE),
-          size: isCompact ? 5.w : 4.2.w,
+          color: Colors.white,
+          size: isCompact ? 5.4.w : 4.6.w,
         ),
       ),
     );
@@ -543,9 +595,9 @@ class _StatTile extends StatelessWidget {
       width: compact ? 14.5.w : 15.8.w,
       padding: EdgeInsets.symmetric(vertical: compact ? 1.5.h : 2.1.h),
       decoration: BoxDecoration(
-        color: const Color(0xFFFBFBFC),
+        color: AppTheme.surfaceLight,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFD8E6FB)),
+        border: Border.all(color: AppTheme.dividerLight),
       ),
       child: Column(
         children: [
@@ -554,7 +606,7 @@ class _StatTile extends StatelessWidget {
             style: TextStyle(
               fontSize: compact ? 15.5.sp : 18.sp,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF1F2538),
+              color: AppTheme.tertiaryLight,
             ),
           ),
           SizedBox(height: compact ? 0.8.h : 1.2.h),
@@ -562,7 +614,7 @@ class _StatTile extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: compact ? 9.2.sp : 11.5.sp,
-              color: const Color(0xFF7A7E88),
+              color: AppTheme.neutralLight,
             ),
           ),
         ],
