@@ -50,3 +50,32 @@ class _TripSummaryPageState extends State<TripSummaryPage> {
       ),
     );
   }
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[100],
+
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+
+        centerTitle: true,
+        title: const Text(
+          "Trip Summary",
+          style: TextStyle(color: Colors.black),
+        ),
+
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share, color: Colors.black),
+            onPressed: shareTrip,
+          ),
+        ],
+      )
