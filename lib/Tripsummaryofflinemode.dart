@@ -159,7 +159,43 @@ class _TripSummaryPageState extends State<TripSummaryPage> {
                   ),
                 ),
               ),
-            
+              const SizedBox(height: 20),
+
+              /// INFO CARDS
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: const [
+                  InfoCard(Icons.directions_car, "Transport", "Car"),
+                  InfoCard(Icons.access_time, "Travel Time", "6h 45m"),
+                  InfoCard(Icons.location_on, "Stops", "4 places"),
+                ],
+              ),
+
+              const SizedBox(height: 25),
+
+              /// SAFETY SECTION
+              Container(
+                padding: const EdgeInsets.all(16),
+
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+
+                  children: [
+                    const Text(
+                      "Safety & Preparation",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 15),
+
             
                 
                     
