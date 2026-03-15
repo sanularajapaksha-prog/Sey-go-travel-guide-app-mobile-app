@@ -7,6 +7,7 @@ import '../presentation/feature_intro_page/feature_intro_page.dart';
 import '../presentation/signup_page/signup_page.dart';
 import '../presentation/login_page/login_page.dart';
 import '../presentation/register_page/register_page.dart';
+import '../presentation/otp_page/otp_page.dart';
 import '../presentation/splash_screen/splash_screen.dart';
 import '../presentation/welcome_home_screen/welcome_home_screen.dart';
 import '../presentation/profile_screen/profile_screen.dart';
@@ -45,8 +46,7 @@ class AppRoutes {
     signupPage: (context) => const SignupPage(),
     loginPage: (context) => const LoginPage(),
     registerPage: (context) => const RegisterPage(),
-    // OTP screen is intentionally disabled for now.
-    otpPage: (context) => const WelcomeHomeScreen(),
+    otpPage: (context) => const OtpPage(),
     splash: (context) => const SplashScreen(),
     welcomeHome: (context) => const WelcomeHomeScreen(),
     profile: (context) => const ProfileScreen(),

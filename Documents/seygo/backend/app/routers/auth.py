@@ -17,6 +17,15 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=6, max_length=128)
 
 
+class LoginOtpRequest(BaseModel):
+    email: EmailStr
+
+
+class VerifyLoginOtpRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=6, max_length=6)
+
+
 class ResendVerificationRequest(BaseModel):
     email: EmailStr
 
@@ -112,6 +121,61 @@ async def login(payload: LoginRequest):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f'Failed to login: {exc}',
+        ) from exc
+
+
+@router.post('/login/send-otp')
+async def send_login_otp(payload: LoginOtpRequest):
+    try:
+        supabase = get_supabase_client()
+        supabase.auth.sign_in_with_otp(
+            {
+                'email': payload.email.lower().strip(),
+                'create_user': False,
+            }
+        )
+        return {'message': 'Login code sent.'}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Failed to send login code: {exc}',
+        ) from exc
+
+
+@router.post('/login/verify-otp')
+async def verify_login_otp(payload: VerifyLoginOtpRequest):
+    try:
+        supabase = get_supabase_client()
+        result = supabase.auth.verify_otp(
+            {
+                'type': 'email',
+                'email': payload.email.lower().strip(),
+                'token': payload.code.strip(),
+            }
+        )
+        user = getattr(result, 'user', None)
+        session = getattr(result, 'session', None)
+        if not user or not session:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail='Invalid code.',
+            )
+
+        return {
+            'message': 'Login successful.',
+            'user_id': str(getattr(user, 'id', '')),
+            'email': str(getattr(user, 'email', payload.email)),
+            'access_token': getattr(session, 'access_token', None),
+            'refresh_token': getattr(session, 'refresh_token', None),
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f'Failed to verify login code: {exc}',
         ) from exc
 
 

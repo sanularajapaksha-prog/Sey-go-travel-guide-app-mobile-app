@@ -309,72 +309,12 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<void> _submitRegister() async {
-    final name = _nameController.text.trim();
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
-    final confirm = _confirmController.text;
-
-    setState(() {
-      _emailError = _validateEmail(email);
-      _passwordError = password.length < 6
-          ? 'Password must be at least 6 characters'
-          : null;
-      _confirmError = confirm != password ? 'Passwords do not match' : null;
-    });
-
-    if (name.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please enter your name')));
-      return;
-    }
-
-    if (_emailError != null ||
-        _passwordError != null ||
-        _confirmError != null) {
-      return;
-    }
-
-    setState(() {
-      _isSubmitting = true;
-    });
-
-    try {
-      final result = await ApiService.register(
-        fullName: name,
-        email: email,
-        password: password,
-      );
-      if (!mounted) return;
-      final verificationSent =
-          result['verification_email_sent'] == true ||
-          result['requires_email_confirmation'] == true;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            verificationSent
-                ? 'Account created successfully.'
-                : 'Account created successfully.',
-          ),
-        ),
-      );
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        AppRoutes.welcomeHomeScreen,
-        (route) => false,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
-      }
-    }
+    // Temporary bypass: go straight into the app without auth.
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      AppRoutes.welcomeHomeScreen,
+      (route) => false,
+    );
   }
 
   Future<void> _signInWithGoogle() async {

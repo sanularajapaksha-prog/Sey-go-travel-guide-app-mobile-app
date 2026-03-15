@@ -69,7 +69,7 @@ class TripSummaryOverviewScreen extends StatelessWidget {
                   height: 35.h,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
+                  errorBuilder: (_, _, _) => Container(
                     height: 35.h,
                     color: theme.colorScheme.surfaceVariant,
                     child: const Center(child: Icon(Icons.image_not_supported)),

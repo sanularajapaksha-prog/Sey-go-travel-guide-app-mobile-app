@@ -36,8 +36,15 @@ class _OtpPageState extends State<OtpPage> {
   Widget build(BuildContext context) {
     const brandBlue = Color(0xFF2B84B4);
     final double height = MediaQuery.of(context).size.height;
-    final emailArg = ModalRoute.of(context)?.settings.arguments;
-    final email = emailArg is String ? emailArg : '';
+    final args = ModalRoute.of(context)?.settings.arguments;
+    String email = '';
+    bool isLoginFlow = false;
+    if (args is Map<String, dynamic>) {
+      email = (args['email'] as String?)?.trim() ?? '';
+      isLoginFlow = (args['mode'] as String?) == 'login';
+    } else if (args is String) {
+      email = args.trim();
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FB),
@@ -62,7 +69,7 @@ class _OtpPageState extends State<OtpPage> {
               ),
               const SizedBox(height: 6),
               Text(
-                'A code has been sent to your email',
+                'A 6-digit code was sent to $email',
                 style: GoogleFonts.poppins(
                   fontSize: 13,
                   color: const Color(0xFF7B8794),
@@ -97,7 +104,7 @@ class _OtpPageState extends State<OtpPage> {
                 child: GestureDetector(
                   onTap: _isResending
                       ? null
-                      : () => _resendVerificationCode(email),
+                      : () => _resendCode(email: email, isLogin: isLoginFlow),
                   child: Text(
                     _isResending ? 'Sending...' : 'Request again',
                     style: GoogleFonts.poppins(
@@ -113,7 +120,8 @@ class _OtpPageState extends State<OtpPage> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: _isVerifying ? null : () => _verifyOtp(email),
+                  onPressed:
+                      _isVerifying ? null : () => _verifyOtp(email, isLoginFlow),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: brandBlue,
                     foregroundColor: Colors.white,
@@ -148,7 +156,10 @@ class _OtpPageState extends State<OtpPage> {
     );
   }
 
-  Future<void> _resendVerificationCode(String email) async {
+  Future<void> _resendCode({
+    required String email,
+    required bool isLogin,
+  }) async {
     if (email.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -163,10 +174,20 @@ class _OtpPageState extends State<OtpPage> {
     });
 
     try {
-      await ApiService.resendVerificationCode(email: email);
+      if (isLogin) {
+        await ApiService.sendLoginOtp(email: email);
+      } else {
+        await ApiService.resendVerificationCode(email: email);
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Verification code sent again.')),
+        SnackBar(
+          content: Text(
+            isLogin
+                ? 'Login code sent again.'
+                : 'Verification code sent again.',
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -182,7 +203,7 @@ class _OtpPageState extends State<OtpPage> {
     }
   }
 
-  Future<void> _verifyOtp(String email) async {
+  Future<void> _verifyOtp(String email, bool isLogin) async {
     if (email.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -205,10 +226,18 @@ class _OtpPageState extends State<OtpPage> {
     });
 
     try {
-      await ApiService.verifyOtp(email: email, code: code);
+      if (isLogin) {
+        await ApiService.verifyLoginOtp(email: email, code: code);
+      } else {
+        await ApiService.verifyOtp(email: email, code: code);
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email verified successfully.')),
+        SnackBar(
+          content: Text(
+            isLogin ? 'Login successful.' : 'Email verified successfully.',
+          ),
+        ),
       );
       Navigator.pushNamedAndRemoveUntil(
         context,

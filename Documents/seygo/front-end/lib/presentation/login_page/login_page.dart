@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../data/services/api_service.dart';
 import '../../routes/app_routes.dart';
 import '../onboarding_widgets/onboarding_widgets.dart';
 
@@ -16,7 +17,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _passwordController = TextEditingController();
   String? _emailError;
   String? _passwordError;
-  final bool _isSubmitting = false;
+  bool _isSubmitting = false;
   bool _isPasswordVisible = false;
 
   String? _validateEmail(String value) {
@@ -153,6 +154,17 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                 ),
               ),
+              if (_emailError != null || _passwordError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    _emailError ?? _passwordError ?? '',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.red.shade600,
+                    ),
+                  ),
+                ),
               const SizedBox(height: 18),
               Row(
                 children: [
@@ -236,52 +248,13 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _submitLogin() async {
-    // Temporary bypass for frontend-only development: skip validation/API and go straight home.
+    // Temporary bypass: go straight into the app without auth.
+    if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(
       context,
       AppRoutes.welcomeHomeScreen,
       (route) => false,
     );
-    return;
-
-    /*
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
-
-    setState(() {
-      _emailError = _validateEmail(email);
-      _passwordError = password.isEmpty ? 'Password is required' : null;
-    });
-
-    if (_emailError != null || _passwordError != null) {
-      return;
-    }
-
-    setState(() {
-      _isSubmitting = true;
-    });
-
-    try {
-      await ApiService.login(email: email, password: password);
-      if (!mounted) return;
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        AppRoutes.welcomeHomeScreen,
-        (route) => false,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
-      }
-    }
-    */
   }
 }
 

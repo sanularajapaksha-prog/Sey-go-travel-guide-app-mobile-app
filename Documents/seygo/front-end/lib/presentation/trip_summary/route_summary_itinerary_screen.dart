@@ -181,7 +181,7 @@ class RouteSummaryItineraryScreen extends StatelessWidget {
                                 height: 18.h,
                                 width: double.infinity,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
+                                errorBuilder: (_, _, _) => Container(
                                   height: 18.h,
                                   color: theme.colorScheme.surfaceVariant,
                                   child: const Center(child: Icon(Icons.image_not_supported)),
@@ -204,6 +204,6 @@ class RouteSummaryItineraryScreen extends StatelessWidget {
   // Placeholder for leg distance
   String _estimateLegDistance(int index) {
     if (index == 0) return "Start";
-    return "${(Random().nextDouble() * 10 + 2).toStringAsFixed(1)}";
+    return (Random().nextDouble() * 10 + 2).toStringAsFixed(1);
   }
 }

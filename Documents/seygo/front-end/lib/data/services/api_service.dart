@@ -198,6 +198,53 @@ class ApiService {
     throw Exception('Login failed: ${response.statusCode}');
   }
 
+  static Future<void> sendLoginOtp({required String email}) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/login/send-otp'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email.trim().toLowerCase()}),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return;
+    }
+
+    final bodyText = response.body.isEmpty ? '{}' : response.body;
+    final decoded = jsonDecode(bodyText);
+    if (decoded is Map<String, dynamic> && decoded['detail'] != null) {
+      throw Exception(decoded['detail'].toString());
+    }
+    throw Exception('Failed to send login code: ${response.statusCode}');
+  }
+
+  static Future<Map<String, dynamic>> verifyLoginOtp({
+    required String email,
+    required String code,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/login/verify-otp'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email.trim().toLowerCase(),
+        'code': code.trim(),
+      }),
+    );
+
+    final bodyText = response.body.isEmpty ? '{}' : response.body;
+    final decoded = jsonDecode(bodyText);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+      return <String, dynamic>{};
+    }
+
+    if (decoded is Map<String, dynamic> && decoded['detail'] != null) {
+      throw Exception(decoded['detail'].toString());
+    }
+    throw Exception('Failed to verify login code: ${response.statusCode}');
+  }
+
   static Future<void> resendVerificationCode({required String email}) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/resend-verification'),

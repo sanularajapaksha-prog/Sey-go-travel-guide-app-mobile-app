@@ -9,6 +9,12 @@ Base URL: `http://localhost:8000` (dev) or configured deployment URL.
 - `POST /auth/login`  
   Body: `email`, `password`  
   Response: tokens and user info.
+- `POST /auth/login/send-otp`  
+  Body: `email`  
+  Response: message confirming a 6-digit code was sent to the email on file.
+- `POST /auth/login/verify-otp`  
+  Body: `email`, `code` (6 digits)
+  Response: tokens and user info after successful OTP verification.
 - `POST /auth/resend-verification`  
   Body: `email`
 - `POST /auth/verify-otp`  
@@ -54,4 +60,3 @@ Base URL: `http://localhost:8000` (dev) or configured deployment URL.
 ## Auth & env notes
 - Requires `Authorization: Bearer <token>` for protected routes (see `app/dependencies.py`).
 - Environment configured via `.env` (copy `.env.example`): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, optional overrides for table/bucket names.
-
