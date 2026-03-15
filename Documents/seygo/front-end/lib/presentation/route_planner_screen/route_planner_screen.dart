@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../data/services/api_service.dart';
+import '../trip_summary/route_summary_itinerary_screen.dart';
 import '../trip_summary/trip_summary_overview_screen.dart';
 
 class RoutePlannerScreen extends StatefulWidget {
@@ -363,6 +364,22 @@ class _RoutePlannerScreenState extends State<RoutePlannerScreen> {
     );
   }
 
+  void _openItinerary() {
+    if (_optimizedStops.isEmpty) return;
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RouteSummaryItineraryScreen(
+          optimizedStops: _optimizedStops,
+          totalDistanceKm: _routeDistanceKm,
+          totalDurationMin: _routeDurationMin,
+          origin: _origin,
+          routePoints: _routePoints.isNotEmpty ? _routePoints : [_origin],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -381,15 +398,86 @@ class _RoutePlannerScreenState extends State<RoutePlannerScreen> {
           ),
           title: const Text('Trip Cart & Route'),
         ),
+        bottomNavigationBar: SafeArea(
+          top: false,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            decoration: BoxDecoration(
+              color: theme.scaffoldBackgroundColor,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 12,
+                  offset: const Offset(0, -4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _cartDestinations.isEmpty || _isOptimizingRoute
+                        ? null
+                        : _optimizeRouteManually,
+                    icon: const Icon(Icons.alt_route, size: 18),
+                    label: Text(
+                      _isOptimizingRoute ? 'Optimizing...' : 'Optimize Route',
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _optimizedStops.isEmpty || _isOptimizingRoute
+                        ? null
+                        : _openItinerary,
+                    icon: const Icon(Icons.route_outlined, size: 18),
+                    label: const Text('View Itinerary'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _optimizedStops.isEmpty || _isOptimizingRoute
+                        ? null
+                        : _openTripOverview,
+                    icon: const Icon(Icons.receipt_long, size: 18),
+                    label: const Text('Trip Overview'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
         body: Column(
           children: [
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withValues(
-                alpha: 0.5,
-              ),
+              color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -399,31 +487,6 @@ class _RoutePlannerScreenState extends State<RoutePlannerScreen> {
                   style: theme.textTheme.titleSmall,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 8,
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed:
-                          _cartDestinations.isEmpty || _isOptimizingRoute
-                              ? null
-                              : _optimizeRouteManually,
-                      icon: const Icon(Icons.alt_route, size: 18),
-                      label: Text(
-                        _isOptimizingRoute ? 'Optimizing...' : 'Optimize Route',
-                      ),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed:
-                          _optimizedStops.isEmpty || _isOptimizingRoute
-                              ? null
-                              : _openTripOverview,
-                      icon: const Icon(Icons.receipt_long, size: 18),
-                      label: const Text('Trip Overview'),
-                    ),
-                  ],
                 ),
               ],
             ),

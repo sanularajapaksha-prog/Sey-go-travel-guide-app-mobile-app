@@ -3,8 +3,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:sizer/sizer.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class TripSummaryOverviewScreen extends StatefulWidget {
+class TripSummaryOverviewScreen extends StatelessWidget {
+  // Pass these from RoutePlannerScreen
   final String tripName;
   final String tripImageUrl;
   final String dateRange;
@@ -37,13 +39,6 @@ class TripSummaryOverviewScreen extends StatefulWidget {
   });
 
   @override
-  State<TripSummaryOverviewScreen> createState() => _TripSummaryOverviewScreenState();
-}
-
-class _TripSummaryOverviewScreenState extends State<TripSummaryOverviewScreen> {
-  bool _offlineModeEnabled = false;
-
-  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
@@ -53,7 +48,7 @@ class _TripSummaryOverviewScreenState extends State<TripSummaryOverviewScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text("Trip Summary"),
+        title: const Text('Trip Summary'),
         centerTitle: true,
         actions: [
           IconButton(
@@ -70,7 +65,7 @@ class _TripSummaryOverviewScreenState extends State<TripSummaryOverviewScreen> {
             Stack(
               children: [
                 Image.network(
-                  widget.tripImageUrl,
+                  tripImageUrl,
                   height: 35.h,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -99,7 +94,7 @@ class _TripSummaryOverviewScreenState extends State<TripSummaryOverviewScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.tripName,
+                        tripName,
                         style: theme.textTheme.headlineMedium?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -107,15 +102,16 @@ class _TripSummaryOverviewScreenState extends State<TripSummaryOverviewScreen> {
                       ),
                       SizedBox(height: 0.5.h),
                       Text(
-                        "${widget.dateRange} • ${widget.days} days",
-                        style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white.withOpacity(0.9)),
+                        '$dateRange - $days days',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Colors.white.withOpacity(0.9),
+                        ),
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-
             Padding(
               padding: EdgeInsets.all(5.w),
               child: Column(
@@ -127,21 +123,19 @@ class _TripSummaryOverviewScreenState extends State<TripSummaryOverviewScreen> {
                     children: [
                       _buildStatCard(
                         context,
-                        "Total Budget",
-                        "LKR ${widget.totalBudgetLKR.toStringAsFixed(0)}",
+                        'Total Budget',
+                        'LKR ${totalBudgetLKR.toStringAsFixed(0)}',
                         Icons.attach_money,
                       ),
                       _buildStatCard(
                         context,
-                        "Total Distance",
-                        "${widget.totalDistanceKm.toStringAsFixed(0)} km",
+                        'Total Distance',
+                        '${totalDistanceKm.toStringAsFixed(0)} km',
                         Icons.straighten,
                       ),
                     ],
                   ),
-
                   SizedBox(height: 3.h),
-
                   // Transport / Time / Stops Chips
                   Wrap(
                     spacing: 3.w,
@@ -150,55 +144,53 @@ class _TripSummaryOverviewScreenState extends State<TripSummaryOverviewScreen> {
                       _buildStatChip(
                         context,
                         Icons.directions_car,
-                        "Transport",
-                        widget.transportMode,
+                        'Transport',
+                        transportMode,
                       ),
                       _buildStatChip(
                         context,
                         Icons.timer_outlined,
-                        "Travel Time",
-                        widget.travelTime,
+                        'Travel Time',
+                        travelTime,
                       ),
                       _buildStatChip(
                         context,
                         Icons.place_outlined,
-                        "Stops",
-                        "${widget.stops} places",
+                        'Stops',
+                        '$stops places',
                       ),
                     ],
                   ),
-
                   SizedBox(height: 4.h),
-
                   // Safety & Preparation Card
                   Card(
                     elevation: 2,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     child: Padding(
                       padding: EdgeInsets.all(5.w),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Safety & Preparation",
-                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                            'Safety & Preparation',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           SizedBox(height: 2.h),
                           SwitchListTile(
-                            title: const Text("Offline Mode"),
-                            subtitle: const Text("Download maps & details"),
-                            value: _offlineModeEnabled,
-                            onChanged: (val) {
-                              setState(() {
-                                _offlineModeEnabled = val;
-                              });
-                            },
+                            title: const Text('Offline Mode'),
+                            subtitle: const Text('Download maps & details'),
+                            value: false, // TODO: connect to real state
+                            onChanged: (val) {}, // TODO: toggle download
                             activeColor: theme.colorScheme.primary,
                           ),
                           ListTile(
                             leading: const Icon(Icons.phone_outlined),
-                            title: const Text("Emergency Contact"),
-                            subtitle: Text(widget.emergencyContact),
+                            title: const Text('Emergency Contact'),
+                            subtitle: Text(emergencyContact),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               // TODO: launch tel://
@@ -208,33 +200,112 @@ class _TripSummaryOverviewScreenState extends State<TripSummaryOverviewScreen> {
                       ),
                     ),
                   ),
-
                   SizedBox(height: 6.h),
-
-                  // Start Journey Button
+                  // Start Journey Button with Confirmation Dialog
                   SizedBox(
                     width: double.infinity,
                     height: 7.h,
                     child: ElevatedButton.icon(
-                      onPressed: () {
-                        // TODO: Start navigation / journey
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Journey started!")),
+                      onPressed: () async {
+                        final choice = await showDialog<String>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Start Journey'),
+                            content:
+                                const Text('Open this route in external maps?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.pop(context, 'google'),
+                                child: const Text('Google Maps'),
+                              ),
+                              if (Theme.of(context).platform ==
+                                  TargetPlatform.iOS)
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(context, 'apple'),
+                                  child: const Text('Apple Maps'),
+                                ),
+                            ],
+                          ),
                         );
+
+                        if (choice == null) return;
+
+                        final originStr =
+                            '${origin.latitude},${origin.longitude}';
+                        final destinationStr = optimizedStops.isNotEmpty
+                            ? '${optimizedStops.last['latitude'] as num},${optimizedStops.last['longitude'] as num}'
+                            : originStr;
+                        final waypoints = optimizedStops.length > 1
+                            ? optimizedStops
+                                .sublist(0, optimizedStops.length - 1)
+                                .map(
+                                  (stop) =>
+                                      '${stop['latitude'] as num},${stop['longitude'] as num}',
+                                )
+                                .join('|')
+                            : '';
+
+                        if (choice == 'google') {
+                          final googleUrl = Uri.parse(
+                            'https://www.google.com/maps/dir/?api=1'
+                            '&origin=$originStr'
+                            '&destination=$destinationStr'
+                            '${waypoints.isNotEmpty ? '&waypoints=$waypoints' : ''}'
+                            '&travelmode=driving',
+                          );
+                          if (await canLaunchUrl(googleUrl)) {
+                            await launchUrl(
+                              googleUrl,
+                              mode: LaunchMode.externalApplication,
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Could not open Google Maps'),
+                              ),
+                            );
+                          }
+                        } else if (choice == 'apple') {
+                          final appleUrl = Uri.parse(
+                            'maps://?saddr=$originStr&daddr=$destinationStr&dirflg=d',
+                          );
+                          if (await canLaunchUrl(appleUrl)) {
+                            await launchUrl(
+                              appleUrl,
+                              mode: LaunchMode.externalApplication,
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Could not open Apple Maps'),
+                              ),
+                            );
+                          }
+                        }
                       },
                       icon: const Icon(Icons.play_arrow_rounded, size: 28),
                       label: Text(
-                        "Start Journey",
-                        style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.w600),
+                        'Start Journey',
+                        style: TextStyle(
+                          fontSize: 17.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: theme.colorScheme.primary,
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
                       ),
                     ),
                   ),
-
                   SizedBox(height: 4.h),
                 ],
               ),
@@ -263,7 +334,11 @@ class _TripSummaryOverviewScreenState extends State<TripSummaryOverviewScreen> {
             SizedBox(height: 1.h),
             Text(title, style: theme.textTheme.bodySmall),
             SizedBox(height: 0.5.h),
-            Text(value, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+            Text(
+              value,
+              style:
+                  theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
           ],
         ),
       ),
@@ -290,7 +365,10 @@ class _TripSummaryOverviewScreenState extends State<TripSummaryOverviewScreen> {
           SizedBox(width: 2.w),
           Text(label, style: theme.textTheme.bodySmall),
           SizedBox(width: 2.w),
-          Text(value, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
         ],
       ),
     );
