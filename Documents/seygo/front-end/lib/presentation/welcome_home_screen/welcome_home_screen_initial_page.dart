@@ -400,9 +400,11 @@ class _WelcomeHomeScreenInitialPageState
                 delegate: SliverChildBuilderDelegate((context, index) {
                   final destination = _filteredDestinations[index];
                   return DestinationCardWidget(
+                    id: destination['id'] as int,
                     name: destination['name'] as String,
                     imageUrl: destination['image'] as String,
                     semanticLabel: destination['semanticLabel'] as String,
+                    category: destination['category'] as String,
                     onTap: () {
                       Navigator.of(context, rootNavigator: true).pushNamed(
                         '/destination-detail-screen',
