@@ -6,8 +6,8 @@ from ..dependencies import get_current_user, get_supabase_client
 router = APIRouter(prefix='/playlists', tags=['playlists'])
 
 PLAYLISTS_TABLE = 'playlists'
-PLAYLIST_DEST_TABLE = 'playlist_places'
-SAVED_TABLE = 'saved_destinations'
+PLAYLIST_PLACES_TABLE = 'playlist_places'
+PLACES_TABLE = 'placses'
 
 class PlaylistCreate(BaseModel):
     name: str
@@ -19,13 +19,14 @@ class PlaylistUpdate(BaseModel):
     description: str | None = None
 
 
-class AddDestinationRequest(BaseModel):
-    saved_destination_id: int
+class AddPlaceRequest(BaseModel):
+    place_id: str        
     position: int = 0
 
 
 class ReorderRequest(BaseModel):
-    ordered_destination_ids: list[int]
+
+    ordered_place_ids: list[str]
 
 def _get_playlist_or_404(supabase, playlist_id: int, user_id: str) -> dict:
     response = (
@@ -48,17 +49,14 @@ async def create_playlist(
     user=Depends(get_current_user),
 ):
     supabase = get_supabase_client()
-    payload = {
+    response = supabase.table(PLAYLISTS_TABLE).insert({
         'user_id': str(user.id),
         'name': body.name,
         'description': body.description,
-    }
-    response = supabase.table(PLAYLISTS_TABLE).insert(payload).execute()
+    }).execute()
+
     if not response.data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='Failed to create playlist.',
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Failed to create playlist.')
     return response.data[0]
 
 
@@ -76,7 +74,7 @@ async def get_my_playlists(user=Depends(get_current_user)):
 
 
 @router.get('/{playlist_id}')
-async def get_playlist_with_destinations(
+async def get_playlist_with_places(
     playlist_id: int,
     user=Depends(get_current_user),
 ):
@@ -84,8 +82,8 @@ async def get_playlist_with_destinations(
     playlist = _get_playlist_or_404(supabase, playlist_id, str(user.id))
 
     entries = (
-        supabase.table(PLAYLIST_DEST_TABLE)
-        .select('position, added_at, saved_destinations(*)')
+        supabase.table(PLAYLIST_PLACES_TABLE)
+        .select(f'position, created_at, {PLACES_TABLE}(*)')
         .eq('playlist_id', playlist_id)
         .order('position')
         .execute()
@@ -93,7 +91,7 @@ async def get_playlist_with_destinations(
 
     return {
         'playlist': playlist,
-        'destinations': entries.data,
+        'places': entries.data,
     }
 
 
@@ -108,12 +106,8 @@ async def update_playlist(
 
     fields = {k: v for k, v in body.model_dump().items() if v is not None}
     if not fields:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='No fields provided to update.',
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='No fields provided to update.')
 
-    fields['updated_at'] = 'now()'
     response = (
         supabase.table(PLAYLISTS_TABLE)
         .update(fields)
@@ -124,7 +118,7 @@ async def update_playlist(
     return {'message': 'Playlist updated.', 'data': response.data}
 
 
-@router.delete('/{playlist_id}', status_code=status.HTTP_200_OK)
+@router.delete('/{playlist_id}')
 async def delete_playlist(
     playlist_id: int,
     user=Depends(get_current_user),
@@ -135,78 +129,72 @@ async def delete_playlist(
     supabase.table(PLAYLISTS_TABLE).delete().eq('id', playlist_id).eq('user_id', str(user.id)).execute()
     return {'message': 'Playlist deleted.'}
 
-@router.post('/{playlist_id}/destinations', status_code=status.HTTP_201_CREATED)
-async def add_destination_to_playlist(
+
+@router.post('/{playlist_id}/places', status_code=status.HTTP_201_CREATED)
+async def add_place_to_playlist(
     playlist_id: int,
-    body: AddDestinationRequest,
+    body: AddPlaceRequest,
     user=Depends(get_current_user),
 ):
     supabase = get_supabase_client()
     _get_playlist_or_404(supabase, playlist_id, str(user.id))
 
-    dest_check = (
-        supabase.table(SAVED_TABLE)
+    place_check = (
+        supabase.table(PLACES_TABLE)
         .select('id')
-        .eq('id', body.saved_destination_id)
-        .eq('user_id', str(user.id))
+        .eq('id', body.place_id)
         .execute()
     )
-    if not dest_check.data:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='Saved destination not found or does not belong to you.',
-        )
-
+    if not place_check.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Place not found.')
+        
     duplicate = (
-        supabase.table(PLAYLIST_DEST_TABLE)
+        supabase.table(PLAYLIST_PLACES_TABLE)
         .select('id')
         .eq('playlist_id', playlist_id)
-        .eq('saved_destination_id', body.saved_destination_id)
+        .eq('place_id', body.place_id)
         .execute()
     )
     if duplicate.data:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail='This destination is already in the playlist.',
-        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='This place is already in the playlist.')
 
-    response = supabase.table(PLAYLIST_DEST_TABLE).insert({
+    response = supabase.table(PLAYLIST_PLACES_TABLE).insert({
         'playlist_id': playlist_id,
-        'saved_destination_id': body.saved_destination_id,
+        'place_id': body.place_id,
         'position': body.position,
     }).execute()
 
     return {'added': True, 'data': response.data[0]}
 
-@router.delete('/{playlist_id}/destinations/{saved_destination_id}')
-async def remove_destination_from_playlist(
+
+@router.delete('/{playlist_id}/places/{place_id}')
+async def remove_place_from_playlist(
     playlist_id: int,
-    saved_destination_id: int,
+    place_id: str,
     user=Depends(get_current_user),
 ):
     supabase = get_supabase_client()
     _get_playlist_or_404(supabase, playlist_id, str(user.id))
 
-    supabase.table(PLAYLIST_DEST_TABLE).delete().eq('playlist_id', playlist_id).eq(
-        'saved_destination_id', saved_destination_id
+    supabase.table(PLAYLIST_PLACES_TABLE).delete().eq('playlist_id', playlist_id).eq(
+        'place_id', place_id
     ).execute()
+    return {'message': 'Place removed from playlist.'}
 
-    return {'message': 'Destination removed from playlist.'}
 
-
-@router.put('/{playlist_id}/destinations/reorder')
-async def reorder_playlist_destinations(
+@router.put('/{playlist_id}/places/reorder')
+async def reorder_playlist_places(
     playlist_id: int,
     body: ReorderRequest,
     user=Depends(get_current_user),
 ):
-
     supabase = get_supabase_client()
     _get_playlist_or_404(supabase, playlist_id, str(user.id))
 
-    for index, dest_id in enumerate(body.ordered_destination_ids):
-        supabase.table(PLAYLIST_DEST_TABLE).update({'position': index}).eq(
+    for index, place_id in enumerate(body.ordered_place_ids):
+        supabase.table(PLAYLIST_PLACES_TABLE).update({'position': index}).eq(
             'playlist_id', playlist_id
-        ).eq('saved_destination_id', dest_id).execute()
+        ).eq('place_id', place_id).execute()
 
-    return {'message': 'Playlist reordered.', 'order': body.ordered_destination_ids}
+    return {'message': 'Playlist reordered.', 'order': body.ordered_place_ids}
+```
