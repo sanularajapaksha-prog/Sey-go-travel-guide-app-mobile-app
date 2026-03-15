@@ -1,16 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:sizer/sizer.dart';
 
-import '../../core/app_export.dart';
-import '../../widgets/custom_app_bar.dart';
-import '../../widgets/custom_icon_widget.dart';
-import './widgets/profile_header_widget.dart';
-import './widgets/settings_section_widget.dart';
-import './widgets/toggle_settings_item_widget.dart';
+import 'profile_modals.dart';
 
-/// Profile screen for user account management and app preferences
-/// Accessed via bottom tab navigation with Profile tab active
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -19,553 +13,574 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // User data
-  final String _userName = "Sarah Johnson";
-  final String _userEmail = "sarah.johnson@example.com";
-  String _avatarUrl =
-      "https://cdn.pixabay.com/photo/2015/03/04/22/35/avatar-659652_640.png";
+  String _avatarPath = '';
+  bool _isPrivatePlaylist = true;
+  bool _isSideRailVisible = false;
 
-  // Settings states
-  bool _pushNotifications = true;
-  bool _emailNotifications = false;
-  bool _offlineDownloads = true;
-  bool _wifiOnlyDownloads = true;
-  bool _locationSharing = true;
-  bool _profileVisibility = false;
-  bool _darkMode = false;
-  String _distanceUnit = 'km';
+  static const Color _ink = Color(0xFF272121);
+  static const Color _accent = Color(0xFF2F86C9);
 
-  final ImagePicker _imagePicker = ImagePicker();
+  final List<_ProfileChip> _chips = const [
+    _ProfileChip('Camping'),
+    _ProfileChip('Mountains', selected: true),
+    _ProfileChip('Beachside'),
+  ];
+
+  final List<_PlaylistItem> _playlists = const [
+    _PlaylistItem(
+      title: 'Hill Country\nAdventures',
+      imageUrl: 'https://images.unsplash.com/photo-1577717903315-1691ae25ab3f',
+    ),
+    _PlaylistItem(
+      title: 'Beach Relax\nTrip',
+      imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e',
+    ),
+    _PlaylistItem(
+      title: 'Weekend Short\nTrip',
+      imageUrl: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee',
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isCompact = screenWidth < 380;
 
-    return Column(
-      children: [
-        // Custom app bar
-        CustomAppBar(
-          title: 'Profile',
-          centerTitle: true,
-          actions: [
-            IconButton(
-              icon: CustomIconWidget(
-                iconName: 'settings',
-                color: theme.colorScheme.onSurface,
-                size: 6.w,
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(
+                isCompact ? 8.w : 7.w,
+                2.h,
+                isCompact ? 6.w : 7.w,
+                6.h,
               ),
-              onPressed: () {
-                _showSettingsInfo(context);
-              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: isCompact ? 1.2.h : 1.8.h),
+                  _buildProfileHero(isCompact),
+                  SizedBox(height: isCompact ? 2.2.h : 3.h),
+                  _buildBadgeCard(isCompact),
+                  SizedBox(height: isCompact ? 2.2.h : 3.h),
+                  _buildInterestChips(isCompact),
+                  SizedBox(height: isCompact ? 2.4.h : 3.h),
+                  _buildSummaryCard(isCompact),
+                  SizedBox(height: isCompact ? 2.4.h : 3.h),
+                  _buildPlaylistsCard(isCompact),
+                  SizedBox(height: isCompact ? 2.4.h : 3.h),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: _buildPrivacyToggle(isCompact),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              left: 0,
+              top: isCompact ? 36.h : 31.h,
+              child: AnimatedSlide(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                offset: _isSideRailVisible
+                    ? Offset.zero
+                    : const Offset(-1.15, 0),
+                child: _buildSideRail(isCompact),
+              ),
+            ),
+            Positioned(
+              left: isCompact ? 3.w : 3.5.w,
+              bottom: isCompact ? 8.h : 7.h,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 180),
+                opacity: _isSideRailVisible ? 0 : 1,
+                child: IgnorePointer(
+                  ignoring: _isSideRailVisible,
+                  child: _buildAssistiveTouch(isCompact),
+                ),
+              ),
             ),
           ],
         ),
-        // Scrollable content
+      ),
+    );
+  }
+
+  Widget _buildProfileHero(bool isCompact) {
+    final ImageProvider? avatarImage = _avatarPath.isEmpty
+        ? null
+        : _avatarPath.startsWith('http')
+            ? NetworkImage(_avatarPath)
+            : FileImage(File(_avatarPath));
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                SizedBox(height: 2.h),
-                // Profile header
-                ProfileHeaderWidget(
-                  userName: _userName,
-                  userEmail: _userEmail,
-                  avatarUrl: _avatarUrl,
-                  onEditProfile: () => _navigateToEditProfile(context),
-                  onAvatarTap: () => _changeProfilePicture(context),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Welcome',
+                style: TextStyle(
+                  fontFamily: 'Georgia',
+                  fontSize: isCompact ? 14.5.sp : 17.sp,
+                  color: const Color(0xFF7C7B7A),
                 ),
-                SizedBox(height: 2.h),
-                // Account section
-                SettingsSectionWidget(
-                  title: 'Account',
-                  items: [
-                    SettingsItemData(
-                      iconName: 'person',
-                      title: 'Edit Profile',
-                      subtitle: 'Update your personal information',
-                      onTap: () => _navigateToEditProfile(context),
-                    ),
-                    SettingsItemData(
-                      iconName: 'lock',
-                      title: 'Change Password',
-                      subtitle: 'Update your password',
-                      onTap: () => _showChangePassword(context),
-                    ),
-                    SettingsItemData(
-                      iconName: 'email',
-                      title: 'Email Preferences',
-                      subtitle: 'Manage email communications',
-                      onTap: () => _showEmailPreferences(context),
-                    ),
-                  ],
+              ),
+              SizedBox(height: isCompact ? 0.4.h : 0.8.h),
+              Text(
+                'Amanda Smith',
+                style: TextStyle(
+                  fontSize: isCompact ? 20.sp : 24.sp,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF6A6A6E),
                 ),
-                SizedBox(height: 2.h),
-                // Notifications section
-                Container(
-                  margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+              ),
+              SizedBox(height: isCompact ? 0.7.h : 1.h),
+              Text(
+                'Australia | Age 23',
+                style: TextStyle(
+                  fontSize: isCompact ? 12.5.sp : 15.sp,
+                  color: const Color(0xFF747D93),
+                ),
+              ),
+            ],
+          ),
+        ),
+        GestureDetector(
+          onTap: () => showAvatarPicker(context, (path) {
+            setState(() => _avatarPath = path);
+          }),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: isCompact ? 24.w : 27.w,
+                height: isCompact ? 24.w : 27.w,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFE7EAF0)),
+                ),
+                child: Center(
+                  child: CircleAvatar(
+                    radius: isCompact ? 9.7.w : 11.w,
+                    backgroundColor: const Color(0xFFA9A6A8),
+                    backgroundImage: avatarImage,
+                    child: avatarImage == null
+                        ? Text(
+                            'Photo',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: isCompact ? 11.sp : 14.sp,
+                            ),
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+              Positioned(
+                right: -1.w,
+                bottom: 2.w,
+                child: Container(
+                  width: isCompact ? 7.2.w : 8.w,
+                  height: isCompact ? 7.2.w : 8.w,
                   decoration: BoxDecoration(
-                    color: theme.cardColor,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: theme.colorScheme.shadow,
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.fromLTRB(4.w, 2.h, 4.w, 1.h),
-                        child: Text(
-                          'Notifications',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      ToggleSettingsItemWidget(
-                        iconName: 'notifications',
-                        title: 'Push Notifications',
-                        subtitle: 'Receive app notifications',
-                        value: _pushNotifications,
-                        onChanged: (value) {
-                          setState(() => _pushNotifications = value);
-                        },
-                      ),
-                      Divider(height: 1, indent: 4.w, endIndent: 4.w),
-                      ToggleSettingsItemWidget(
-                        iconName: 'email',
-                        title: 'Email Notifications',
-                        subtitle: 'Receive email updates',
-                        value: _emailNotifications,
-                        onChanged: (value) {
-                          setState(() => _emailNotifications = value);
-                        },
-                      ),
-                    ],
+                    color: const Color(0xFFAEAAAA),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                SizedBox(height: 2.h),
-                // App preferences section
-                Container(
-                  margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
-                  decoration: BoxDecoration(
-                    color: theme.cardColor,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: theme.colorScheme.shadow,
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.fromLTRB(4.w, 2.h, 4.w, 1.h),
-                        child: Text(
-                          'App Preferences',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      ToggleSettingsItemWidget(
-                        iconName: 'download',
-                        title: 'Offline Downloads',
-                        subtitle: 'Save destinations for offline viewing',
-                        value: _offlineDownloads,
-                        onChanged: (value) {
-                          setState(() => _offlineDownloads = value);
-                        },
-                      ),
-                      Divider(height: 1, indent: 4.w, endIndent: 4.w),
-                      ToggleSettingsItemWidget(
-                        iconName: 'wifi',
-                        title: 'WiFi Only Downloads',
-                        subtitle: 'Download only on WiFi',
-                        value: _wifiOnlyDownloads,
-                        onChanged: (value) {
-                          setState(() => _wifiOnlyDownloads = value);
-                        },
-                      ),
-                      Divider(height: 1, indent: 4.w, endIndent: 4.w),
-                      ToggleSettingsItemWidget(
-                        iconName: 'dark_mode',
-                        title: 'Dark Mode',
-                        subtitle: 'Use dark theme',
-                        value: _darkMode,
-                        onChanged: (value) {
-                          setState(() => _darkMode = value);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 2.h),
-                // Travel preferences section
-                SettingsSectionWidget(
-                  title: 'Travel Preferences',
-                  items: [
-                    SettingsItemData(
-                      iconName: 'explore',
-                      title: 'Destination Recommendations',
-                      subtitle: 'Customize your discovery feed',
-                      onTap: () => _showRecommendations(context),
-                    ),
-                    SettingsItemData(
-                      iconName: 'category',
-                      title: 'Preferred Categories',
-                      subtitle: 'Beach Side, Mountains, Temples',
-                      onTap: () => _showCategories(context),
-                    ),
-                    SettingsItemData(
-                      iconName: 'straighten',
-                      title: 'Distance Units',
-                      subtitle: 'Kilometers',
-                      onTap: () => _showDistanceUnits(context),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 2.h),
-                // Privacy section
-                Container(
-                  margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
-                  decoration: BoxDecoration(
-                    color: theme.cardColor,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: theme.colorScheme.shadow,
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.fromLTRB(4.w, 2.h, 4.w, 1.h),
-                        child: Text(
-                          'Privacy',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      ToggleSettingsItemWidget(
-                        iconName: 'location_on',
-                        title: 'Location Sharing',
-                        subtitle: 'Share location for recommendations',
-                        value: _locationSharing,
-                        onChanged: (value) {
-                          setState(() => _locationSharing = value);
-                        },
-                      ),
-                      Divider(height: 1, indent: 4.w, endIndent: 4.w),
-                      ToggleSettingsItemWidget(
-                        iconName: 'visibility',
-                        title: 'Profile Visibility',
-                        subtitle: 'Make profile public',
-                        value: _profileVisibility,
-                        onChanged: (value) {
-                          setState(() => _profileVisibility = value);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 2.h),
-                // Support section
-                SettingsSectionWidget(
-                  title: 'Support',
-                  items: [
-                    SettingsItemData(
-                      iconName: 'help',
-                      title: 'Help Center',
-                      subtitle: 'Get help and support',
-                      onTap: () => _showHelpCenter(context),
-                    ),
-                    SettingsItemData(
-                      iconName: 'feedback',
-                      title: 'Send Feedback',
-                      subtitle: 'Share your thoughts',
-                      onTap: () => _showFeedback(context),
-                    ),
-                    SettingsItemData(
-                      iconName: 'info',
-                      title: 'App Version',
-                      subtitle: 'Version 1.0.0 (Build 100)',
-                      onTap: null,
-                    ),
-                  ],
-                ),
-                SizedBox(height: 2.h),
-                // Logout button
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4.w),
-                  child: ElevatedButton(
-                    onPressed: () => _showLogoutDialog(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colorScheme.error,
-                      foregroundColor: theme.colorScheme.onError,
-                      minimumSize: Size(double.infinity, 6.h),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CustomIconWidget(
-                          iconName: 'logout',
-                          color: theme.colorScheme.onError,
-                          size: 5.w,
-                        ),
-                        SizedBox(width: 2.w),
-                        Text('Logout'),
-                      ],
-                    ),
-                  ),
-                ),
-                SizedBox(height: 2.h),
-                // Delete account button
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4.w),
-                  child: TextButton(
-                    onPressed: () => _showDeleteAccountDialog(context),
-                    child: Text(
-                      'Delete Account',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.error,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 4.h),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  void _changeProfilePicture(BuildContext context) async {
-    final theme = Theme.of(context);
-
-    showModalBottomSheet(
-      context: context,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  Widget _buildBadgeCard(bool isCompact) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: isCompact ? 5.w : 6.w,
+        vertical: isCompact ? 2.2.h : 2.8.h,
       ),
-      builder: (context) => Container(
-        padding: EdgeInsets.all(4.w),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Change Profile Picture',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+      decoration: BoxDecoration(
+        color: _ink,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Mountain Explorer',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: isCompact ? 18.sp : 21.sp,
+              fontWeight: FontWeight.w700,
             ),
-            SizedBox(height: 2.h),
-            ListTile(
-              leading: CustomIconWidget(
-                iconName: 'camera_alt',
-                color: theme.colorScheme.primary,
-                size: 6.w,
-              ),
-              title: Text('Take Photo'),
-              onTap: () async {
-                Navigator.pop(context);
-                final XFile? photo = await _imagePicker.pickImage(
-                  source: ImageSource.camera,
-                );
-                if (photo != null) {
-                  setState(() => _avatarUrl = photo.path);
-                }
-              },
+          ),
+          SizedBox(height: isCompact ? 0.8.h : 1.2.h),
+          Text(
+            'You mostly visit mountain and nature destinations.',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.92),
+              fontSize: isCompact ? 12.6.sp : 15.sp,
             ),
-            ListTile(
-              leading: CustomIconWidget(
-                iconName: 'photo_library',
-                color: theme.colorScheme.primary,
-                size: 6.w,
-              ),
-              title: Text('Choose from Gallery'),
-              onTap: () async {
-                Navigator.pop(context);
-                final XFile? photo = await _imagePicker.pickImage(
-                  source: ImageSource.gallery,
-                );
-                if (photo != null) {
-                  setState(() => _avatarUrl = photo.path);
-                }
-              },
-            ),
-            SizedBox(height: 2.h),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  void _navigateToEditProfile(BuildContext context) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Edit profile feature coming soon')));
-  }
-
-  void _showChangePassword(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Change password feature coming soon')),
+  Widget _buildInterestChips(bool isCompact) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: _chips.map((chip) {
+        return Container(
+          width: isCompact ? 22.5.w : 24.5.w,
+          padding: EdgeInsets.symmetric(vertical: isCompact ? 1.05.h : 1.35.h),
+          decoration: BoxDecoration(
+            color: chip.selected ? const Color(0xFFCDDDF5) : Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFFD9E8FC)),
+          ),
+          child: Center(
+            child: Text(
+              chip.label,
+              style: TextStyle(
+                fontSize: isCompact ? 11.5.sp : 14.5.sp,
+                color: const Color(0xFF1E2436),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
-  void _showEmailPreferences(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Email preferences feature coming soon')),
-    );
-  }
-
-  void _showRecommendations(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Recommendations settings coming soon')),
-    );
-  }
-
-  void _showCategories(BuildContext context) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Category preferences coming soon')));
-  }
-
-  void _showDistanceUnits(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Distance Units'),
-        content: RadioGroup<String>(
-          groupValue: _distanceUnit,
-          onChanged: (value) {
-            if (value == null) return;
-            setState(() => _distanceUnit = value);
-            Navigator.pop(context);
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+  Widget _buildSummaryCard(bool isCompact) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(
+        isCompact ? 4.w : 5.w,
+        isCompact ? 1.8.h : 2.2.h,
+        isCompact ? 4.w : 5.w,
+        isCompact ? 1.8.h : 2.2.h,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            'Activity Summary',
+            style: TextStyle(
+              fontSize: isCompact ? 15.5.sp : 17.sp,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1B2132),
+            ),
+          ),
+          SizedBox(height: isCompact ? 1.6.h : 2.2.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              RadioListTile<String>(title: Text('Kilometers'), value: 'km'),
-              RadioListTile<String>(title: Text('Miles'), value: 'mi'),
+              _StatTile(value: '42', label: 'Places', compact: isCompact),
+              _StatTile(value: '12', label: 'Reviews', compact: isCompact),
+              _StatTile(value: '89', label: 'Photos', compact: isCompact),
+              _StatTile(value: '9', label: 'Journeys', compact: isCompact),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
 
-  void _showHelpCenter(BuildContext context) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Help center feature coming soon')));
-  }
-
-  void _showFeedback(BuildContext context) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Feedback feature coming soon')));
-  }
-
-  void _showSettingsInfo(BuildContext context) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Additional settings coming soon')));
-  }
-
-  void _showLogoutDialog(BuildContext context) {
-    final theme = Theme.of(context);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Logout'),
-        content: Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
+  Widget _buildPlaylistsCard(bool isCompact) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(
+        isCompact ? 3.2.w : 4.w,
+        isCompact ? 1.8.h : 2.2.h,
+        isCompact ? 3.2.w : 4.w,
+        isCompact ? 1.8.h : 2.2.h,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.of(
-                context,
-                rootNavigator: true,
-              ).pushNamedAndRemoveUntil('/splash-screen', (route) => false);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.colorScheme.error,
-              foregroundColor: theme.colorScheme.onError,
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            'Your Playlists',
+            style: TextStyle(
+              fontSize: isCompact ? 15.5.sp : 17.sp,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1B2132),
             ),
-            child: Text('Logout'),
+          ),
+          SizedBox(height: isCompact ? 1.5.h : 2.1.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: _playlists.map((playlist) {
+              return Container(
+                width: isCompact ? 25.w : 25.5.w,
+                padding: EdgeInsets.fromLTRB(
+                  1.5.w,
+                  isCompact ? 0.9.h : 1.1.h,
+                  1.5.w,
+                  isCompact ? 1.h : 1.3.h,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE4E8EF)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        playlist.imageUrl,
+                        height: isCompact ? 7.4.h : 8.6.h,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    SizedBox(height: isCompact ? 0.9.h : 1.2.h),
+                    Text(
+                      playlist.title,
+                      style: TextStyle(
+                        fontSize: isCompact ? 11.5.sp : 13.7.sp,
+                        height: 1.25,
+                        color: const Color(0xFF23283A),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
           ),
         ],
       ),
     );
   }
 
-  void _showDeleteAccountDialog(BuildContext context) {
-    final theme = Theme.of(context);
+  Widget _buildPrivacyToggle(bool isCompact) {
+    return Container(
+      padding: EdgeInsets.all(0.5.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: const Color(0xFFD8DCE3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: () => setState(() => _isPrivatePlaylist = false),
+            child: _privacyPill('Public', !_isPrivatePlaylist, isCompact),
+          ),
+          GestureDetector(
+            onTap: () => setState(() => _isPrivatePlaylist = true),
+            child: _privacyPill('Private', _isPrivatePlaylist, isCompact),
+          ),
+        ],
+      ),
+    );
+  }
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Delete Account'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'This action cannot be undone. All your data will be permanently deleted.',
-            ),
-            SizedBox(height: 2.h),
-            Text(
-              'Are you sure you want to delete your account?',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+  Widget _privacyPill(String label, bool selected, bool isCompact) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isCompact ? 4.w : 4.5.w,
+        vertical: isCompact ? 0.65.h : 0.8.h,
+      ),
+      decoration: BoxDecoration(
+        color: selected ? _accent : Colors.transparent,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: isCompact ? 12.sp : 13.3.sp,
+          color: selected ? Colors.white : const Color(0xFF272B39),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSideRail(bool isCompact) {
+    final items = <(String, VoidCallback)>[
+      ('Saved', () => showSavedRoutesModal(context)),
+      ('Achievement', () => showAchievementsModal(context)),
+      ('Reviews', () => showMyReviewsModal(context)),
+    ];
+
+    return Container(
+      width: isCompact ? 15.w : 16.w,
+      padding: EdgeInsets.symmetric(vertical: isCompact ? 1.6.h : 2.h),
+      decoration: BoxDecoration(
+        color: _ink,
+        borderRadius: const BorderRadius.only(
+          topRight: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.18),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: GestureDetector(
+              onTap: () => setState(() => _isSideRailVisible = false),
+              child: Padding(
+                padding: EdgeInsets.only(
+                  right: isCompact ? 1.8.w : 1.4.w,
+                  bottom: isCompact ? 0.8.h : 0.9.h,
+                ),
+                child: Icon(
+                  Icons.close_rounded,
+                  color: const Color(0xFFF6CBAE),
+                  size: isCompact ? 4.3.w : 3.6.w,
+                ),
               ),
+            ),
+          ),
+          ...items.map((item) {
+            return GestureDetector(
+              onTap: item.$2,
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  vertical: isCompact ? 1.1.h : 1.4.h,
+                ),
+                child: RotatedBox(
+                  quarterTurns: 3,
+                  child: Text(
+                    '- ${item.$1}',
+                    style: TextStyle(
+                      color: const Color(0xFFF6CBAE),
+                      fontSize: isCompact ? 10.3.sp : 12.4.sp,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAssistiveTouch(bool isCompact) {
+    return GestureDetector(
+      onTap: () => setState(() => _isSideRailVisible = true),
+      child: Container(
+        width: isCompact ? 11.w : 9.w,
+        height: isCompact ? 11.w : 9.w,
+        decoration: BoxDecoration(
+          color: _ink.withOpacity(0.92),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.18),
+              blurRadius: 14,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Account deletion requires email verification'),
-                  backgroundColor: theme.colorScheme.error,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.colorScheme.error,
-              foregroundColor: theme.colorScheme.onError,
+        child: Icon(
+          Icons.more_horiz_rounded,
+          color: const Color(0xFFF6CBAE),
+          size: isCompact ? 5.w : 4.2.w,
+        ),
+      ),
+    );
+  }
+}
+
+class _StatTile extends StatelessWidget {
+  final String value;
+  final String label;
+  final bool compact;
+
+  const _StatTile({
+    required this.value,
+    required this.label,
+    this.compact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: compact ? 14.5.w : 15.8.w,
+      padding: EdgeInsets.symmetric(vertical: compact ? 1.5.h : 2.1.h),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFBFBFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFD8E6FB)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: compact ? 15.5.sp : 18.sp,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1F2538),
             ),
-            child: Text('Delete'),
+          ),
+          SizedBox(height: compact ? 0.8.h : 1.2.h),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: compact ? 9.2.sp : 11.5.sp,
+              color: const Color(0xFF7A7E88),
+            ),
           ),
         ],
       ),
     );
   }
+}
+
+class _ProfileChip {
+  final String label;
+  final bool selected;
+
+  const _ProfileChip(this.label, {this.selected = false});
+}
+
+class _PlaylistItem {
+  final String title;
+  final String imageUrl;
+
+  const _PlaylistItem({required this.title, required this.imageUrl});
 }
