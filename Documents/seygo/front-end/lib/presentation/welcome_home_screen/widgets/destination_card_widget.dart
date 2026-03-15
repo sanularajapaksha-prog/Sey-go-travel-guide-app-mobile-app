@@ -1,45 +1,19 @@
-<<<<<<< HEAD
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
-import '../../../data/models/place.dart';
 import '../../../core/app_export.dart';
+import '../../../data/models/place.dart';
+import '../../../widgets/favorite_button.dart';
 
 class DestinationCardWidget extends StatelessWidget {
-  final Place place;
-  final VoidCallback onTap;
-
   const DestinationCardWidget({
     super.key,
     required this.place,
     required this.onTap,
   });
-=======
-import 'package:flutter/material.dart';
-import 'package:sizer/sizer.dart';
 
-import '../../../core/app_export.dart';
-import '../../../widgets/custom_image_widget.dart';
-import '../../../widgets/favorite_button.dart';
-
-class DestinationCardWidget extends StatelessWidget {
-  final int id;
-  final String name;
-  final String imageUrl;
-  final String semanticLabel;
-  final String category;
+  final Place place;
   final VoidCallback onTap;
-
-  const DestinationCardWidget({
-    super.key,
-    required this.id,
-    required this.name,
-    required this.imageUrl,
-    required this.semanticLabel,
-    required this.category,
-    required this.onTap,
-  });
->>>>>>> favourite-screen
 
   @override
   Widget build(BuildContext context) {
@@ -49,51 +23,30 @@ class DestinationCardWidget extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12.0),
+          borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
               color: theme.colorScheme.shadow,
-              blurRadius: 6.0,
+              blurRadius: 6,
               offset: const Offset(0, 2),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(12.0),
+          borderRadius: BorderRadius.circular(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-<<<<<<< HEAD
-              Expanded(
-                child: PlacePhotoWidget(
-                  place: place,
-                  width: double.infinity,
-                  height: double.infinity,
-                  fit: BoxFit.cover,
-                  semanticLabel: place.semanticLabel,
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.5.h),
-                color: theme.colorScheme.surface,
-                child: Text(
-                  place.name,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-=======
               Expanded(
                 child: Stack(
                   children: [
                     Positioned.fill(
-                      child: CustomImageWidget(
-                        imageUrl: imageUrl,
+                      child: PlacePhotoWidget(
+                        place: place,
                         width: double.infinity,
                         height: double.infinity,
                         fit: BoxFit.cover,
-                        semanticLabel: semanticLabel,
+                        semanticLabel: place.semanticLabel,
                       ),
                     ),
                     Positioned(
@@ -111,11 +64,14 @@ class DestinationCardWidget extends StatelessWidget {
                           ],
                         ),
                         child: FavoriteButton(
-                          placeId: id,
-                          placeName: name,
-                          imageUrl: imageUrl,
-                          location: category,
-                          semanticLabel: semanticLabel,
+                          placeId: place.id,
+                          placeName: place.name,
+                          imageUrl:
+                              place.cachedImageUrl ??
+                              place.googlePhotoUrl ??
+                              '',
+                          location: place.location,
+                          semanticLabel: place.semanticLabel,
                           size: 24,
                         ),
                       ),
@@ -130,7 +86,7 @@ class DestinationCardWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      name,
+                      place.name,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -139,7 +95,7 @@ class DestinationCardWidget extends StatelessWidget {
                     ),
                     SizedBox(height: 0.6.h),
                     Text(
-                      category,
+                      place.category,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -147,7 +103,6 @@ class DestinationCardWidget extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
->>>>>>> favourite-screen
                 ),
               ),
             ],

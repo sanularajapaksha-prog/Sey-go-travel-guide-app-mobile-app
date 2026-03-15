@@ -399,25 +399,12 @@ class _WelcomeHomeScreenInitialPageState
                   mainAxisSpacing: 2.h,
                 ),
                 delegate: SliverChildBuilderDelegate((context, index) {
-<<<<<<< HEAD
                   final destination = _filteredDestinations[index];
                   return DestinationCardWidget(
                     place: Place.fromMap(destination),
                     onTap: () {
                       Navigator.of(context, rootNavigator: true).pushNamed(
                         '/destination-detail-screen',
-=======
-                  final destination = _filteredDestinations[index];
-                  return DestinationCardWidget(
-                    id: destination['id'] as int,
-                    name: destination['name'] as String,
-                    imageUrl: destination['image'] as String,
-                    semanticLabel: destination['semanticLabel'] as String,
-                    category: destination['category'] as String,
-                    onTap: () {
-                      Navigator.of(context, rootNavigator: true).pushNamed(
-                        '/destination-detail-screen',
->>>>>>> favourite-screen
                         arguments: destination,
                       );
                     },

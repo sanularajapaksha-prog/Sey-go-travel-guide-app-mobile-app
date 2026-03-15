@@ -283,7 +283,7 @@ class PlaceCard extends StatelessWidget {
           const SizedBox(width: 10),
 
           FavoriteButton(
-            placeId: title.hashCode,
+            placeId: title,
             placeName: title,
             imageUrl: 'https://picsum.photos/300',
             location: 'Ella, Badulla District',

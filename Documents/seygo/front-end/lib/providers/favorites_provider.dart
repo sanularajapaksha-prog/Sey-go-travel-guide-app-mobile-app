@@ -3,8 +3,9 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 
 class FavoritePlace {
-  final int id;
+  final String id;
   final String name;
+  final String? imageUrl;
   final String? googleUrl;
   final String location;
   final String semanticLabel;
@@ -12,6 +13,7 @@ class FavoritePlace {
   const FavoritePlace({
     required this.id,
     required this.name,
+    required this.imageUrl,
     required this.googleUrl,
     required this.location,
     required this.semanticLabel,
@@ -26,7 +28,7 @@ class FavoritesProvider extends ChangeNotifier {
 
   int get count => _favorites.length;
 
-  bool isFavorite(int id) {
+  bool isFavorite(String id) {
     return _favorites.any((place) => place.id == id);
   }
 
@@ -41,7 +43,7 @@ class FavoritesProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void removeFavorite(int id) {
+  void removeFavorite(String id) {
     _favorites.removeWhere((place) => place.id == id);
     notifyListeners();
   }

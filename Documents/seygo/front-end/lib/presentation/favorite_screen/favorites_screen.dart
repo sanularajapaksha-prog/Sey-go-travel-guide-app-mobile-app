@@ -454,7 +454,7 @@ class _FavoritePlaceCard extends StatelessWidget {
               bottomLeft: Radius.circular(18),
             ),
             child: CustomImageWidget(
-              imageUrl: place.imageUrl,
+              imageUrl: place.imageUrl ?? place.googleUrl ?? '',
               width: 28.w,
               height: 12.h,
               fit: BoxFit.cover,
@@ -506,7 +506,9 @@ class _FavoritePlaceCard extends StatelessWidget {
               Icons.delete_outline,
               color: theme.colorScheme.onSurfaceVariant,
             ),
-            onPressed: onRemove,
+            onPressed: () {
+              context.read<FavoritesProvider>().removeFavorite(place.id);
+            },
           ),
         ],
       ),

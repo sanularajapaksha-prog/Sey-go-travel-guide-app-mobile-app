@@ -53,11 +53,8 @@ class AppRoutes {
     welcomeHome: (context) => const WelcomeHomeScreen(),
     profile: (context) => const ProfileScreen(),
     playlists: (context) => const PlaylistsScreen(),
-<<<<<<< HEAD
     mapView: (context) => const MapViewScreen(),
-=======
     favorites: (context) => const FavoritesScreen(),
->>>>>>> favourite-screen
     destinationDetail: (context) => const DestinationDetailScreen(),
     routePlanner: (context) => const RoutePlannerScreen(),
   };

@@ -6,21 +6,11 @@ import '../providers/favorites_provider.dart';
 
 
 class FavoriteButton extends StatelessWidget {
-  
-  final int placeId;
-
-  
+  final String placeId;
   final String placeName;
-
   final String imageUrl;
-
-  
   final String location;
-
-  
   final String semanticLabel;
-
-
   final double size;
 
   const FavoriteButton({
@@ -54,6 +44,7 @@ class FavoriteButton extends StatelessWidget {
                     id: placeId,
                     name: placeName,
                     imageUrl: imageUrl,
+                    googleUrl: imageUrl,
                     location: location,
                     semanticLabel: semanticLabel,
                   ),
