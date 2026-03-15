@@ -9,6 +9,7 @@ import '../presentation/login_page/login_page.dart';
 import '../presentation/register_page/register_page.dart';
 import '../presentation/splash_screen/splash_screen.dart';
 import '../presentation/welcome_home_screen/welcome_home_screen.dart';
+import '../presentation/favorite_screen/favorites_screen.dart';
 import '../presentation/profile_screen/profile_screen.dart';
 import '../presentation/playlists_screen/playlists_screen.dart';
 import '../presentation/destination_detail_screen/destination_detail_screen.dart';
@@ -32,6 +33,7 @@ class AppRoutes {
   static const String welcomeHomeScreen = welcomeHome;
   static const String profile = '/profile-screen';
   static const String playlists = '/playlists-screen';
+  static const String favorites = '/favorites-screen';
   static const String mapView = '/map-view-screen';
   static const String destinationDetail = '/destination-detail-screen';
   static const String routePlanner = '/route-planner-screen';
@@ -50,6 +52,7 @@ class AppRoutes {
     welcomeHome: (context) => const WelcomeHomeScreen(),
     profile: (context) => const ProfileScreen(),
     playlists: (context) => const PlaylistsScreen(),
+    favorites: (context) => const FavoritesScreen(),
     destinationDetail: (context) => const DestinationDetailScreen(),
     routePlanner: (context) => const RoutePlannerScreen(),
   };
