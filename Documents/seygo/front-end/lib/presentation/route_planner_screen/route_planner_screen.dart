@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../data/services/api_service.dart';
+import '../trip_summary/trip_summary_overview_screen.dart';
 
 class RoutePlannerScreen extends StatefulWidget {
   const RoutePlannerScreen({super.key});
@@ -24,6 +25,7 @@ class _RoutePlannerScreenState extends State<RoutePlannerScreen> {
   List<Map<String, dynamic>> _optimizedStops = [];
   Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
+  List<LatLng> _routePoints = [];
   double _routeDistanceKm = 0.0;
   double _routeDurationMin = 0.0;
   bool _isOptimizingRoute = false;
@@ -218,6 +220,7 @@ class _RoutePlannerScreenState extends State<RoutePlannerScreen> {
       _optimizedStops = optimized;
       _markers = markers;
       _polylines = polylines;
+      _routePoints = routePoints;
       _routeDistanceKm =
           totalDistanceKm ?? _calculateRouteDistanceKm(routePoints);
       _routeDurationMin = totalDurationMin;
@@ -327,6 +330,39 @@ class _RoutePlannerScreenState extends State<RoutePlannerScreen> {
     );
   }
 
+  void _openTripOverview() {
+    if (_optimizedStops.isEmpty) return;
+
+    final firstStop = _optimizedStops.first;
+    final imageUrl =
+        (firstStop['image'] ?? firstStop['photo_url'] ?? '').toString();
+    final resolvedImageUrl = imageUrl.isNotEmpty
+        ? imageUrl
+        : 'https://images.unsplash.com/photo-1501785888041-af3ef285b470';
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => TripSummaryOverviewScreen(
+          tripName: 'Your Trip',
+          tripImageUrl: resolvedImageUrl,
+          dateRange: 'Flexible dates',
+          days: _optimizedStops.length,
+          totalBudgetLKR: 0.0,
+          totalDistanceKm: _routeDistanceKm,
+          transportMode: 'Car',
+          travelTime: _routeDurationMin > 0
+              ? '${_routeDurationMin.toStringAsFixed(0)} min'
+              : 'Not available',
+          stops: _optimizedStops.length,
+          emergencyContact: '+94 112 345 678',
+          origin: _origin,
+          routePoints: _routePoints.isNotEmpty ? _routePoints : [_origin],
+          optimizedStops: _optimizedStops,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -355,24 +391,39 @@ class _RoutePlannerScreenState extends State<RoutePlannerScreen> {
                 alpha: 0.5,
               ),
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
-                    '${_optimizedStops.length} place(s) | ${_routeDistanceKm.toStringAsFixed(1)} km${_routeDurationMin > 0 ? ' | ${_routeDurationMin.toStringAsFixed(0)} min' : ''}',
-                    style: theme.textTheme.titleSmall,
-                  ),
+                Text(
+                  '${_optimizedStops.length} place(s) | ${_routeDistanceKm.toStringAsFixed(1)} km${_routeDurationMin > 0 ? ' | ${_routeDurationMin.toStringAsFixed(0)} min' : ''}',
+                  style: theme.textTheme.titleSmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  onPressed:
-                      _cartDestinations.isEmpty || _isOptimizingRoute
-                          ? null
-                          : _optimizeRouteManually,
-                  icon: const Icon(Icons.alt_route, size: 18),
-                  label: Text(
-                    _isOptimizingRoute ? 'Optimizing...' : 'Optimize Route',
-                  ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed:
+                          _cartDestinations.isEmpty || _isOptimizingRoute
+                              ? null
+                              : _optimizeRouteManually,
+                      icon: const Icon(Icons.alt_route, size: 18),
+                      label: Text(
+                        _isOptimizingRoute ? 'Optimizing...' : 'Optimize Route',
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed:
+                          _optimizedStops.isEmpty || _isOptimizingRoute
+                              ? null
+                              : _openTripOverview,
+                      icon: const Icon(Icons.receipt_long, size: 18),
+                      label: const Text('Trip Overview'),
+                    ),
+                  ],
                 ),
               ],
             ),
