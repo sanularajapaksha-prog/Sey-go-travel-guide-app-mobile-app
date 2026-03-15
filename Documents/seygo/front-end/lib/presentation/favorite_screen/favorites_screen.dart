@@ -386,7 +386,7 @@ class _FavoritePlaceCard extends StatelessWidget {
               bottomLeft: Radius.circular(18),
             ),
             child: CustomImageWidget(
-              imageUrl: place.imageUrl,
+              imageUrl: place.googleUrl,
               width: 28.w,
               height: 12.h,
               fit: BoxFit.cover,

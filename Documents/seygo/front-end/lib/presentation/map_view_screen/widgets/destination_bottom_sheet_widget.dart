@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../../core/app_export.dart';
+import '../../../../data/models/place.dart';
 
 class DestinationBottomSheetWidget extends StatelessWidget {
   final Map<String, dynamic> destination;
@@ -18,6 +19,12 @@ class DestinationBottomSheetWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final place = Place.fromMap(destination);
+    final rating = (destination['rating'] as num?)?.toDouble() ?? 0.0;
+    final seedArea =
+        ((destination['seedArea'] ?? destination['seed_area']) as String?)
+                ?.trim() ??
+            '';
 
     return Container(
       decoration: BoxDecoration(
@@ -49,12 +56,13 @@ class DestinationBottomSheetWidget extends StatelessWidget {
           SizedBox(height: 2.h),
           ClipRRect(
             borderRadius: BorderRadius.circular(20.0),
-            child: CustomImageWidget(
-              imageUrl: destination['image'] as String,
+            child: PlacePhotoWidget(
+              place: place,
               width: 90.w,
               height: 25.h,
               fit: BoxFit.cover,
-              semanticLabel: destination['semanticLabel'] as String,
+              semanticLabel: place.semanticLabel,
+              useSadFaceFallback: true,
             ),
           ),
           SizedBox(height: 2.h),
@@ -92,7 +100,7 @@ class DestinationBottomSheetWidget extends StatelessWidget {
                           ),
                           SizedBox(width: 1.w),
                           Text(
-                            '${destination['rating']}',
+                            rating > 0 ? rating.toStringAsFixed(1) : 'Unrated',
                             style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
@@ -119,7 +127,26 @@ class DestinationBottomSheetWidget extends StatelessWidget {
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    SizedBox(width: 4.w),
+                    if (seedArea.isNotEmpty) ...[
+                      SizedBox(width: 4.w),
+                      CustomIconWidget(
+                        iconName: 'location_city',
+                        color: theme.colorScheme.onSurfaceVariant,
+                        size: 20,
+                      ),
+                      SizedBox(width: 2.w),
+                      Expanded(
+                        child: Text(
+                          seedArea,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ] else
+                      SizedBox(width: 4.w),
                     CustomIconWidget(
                       iconName: 'rate_review',
                       color: theme.colorScheme.onSurfaceVariant,

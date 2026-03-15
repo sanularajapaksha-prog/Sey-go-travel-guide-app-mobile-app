@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
+import '../../data/models/place.dart';
 import './widgets/category_pill_widget.dart';
 import './widgets/destination_card_widget.dart';
 import './widgets/featured_carousel_widget.dart';
@@ -25,7 +26,7 @@ class _WelcomeHomeScreenInitialPageState
     {
       "id": 1,
       "name": "Mirissa Beach",
-      "image": "https://images.unsplash.com/photo-1667723385328-06489b979a88",
+      "googleUrl": "https://images.unsplash.com/photo-1667723385328-06489b979a88",
       "semanticLabel":
           "Aerial view of turquoise ocean waves meeting golden sandy beach with palm trees along the coastline",
       "category": "Beach Side",
@@ -33,7 +34,7 @@ class _WelcomeHomeScreenInitialPageState
     {
       "id": 2,
       "name": "Sigiriya Rock",
-      "image": "https://images.unsplash.com/photo-1683295657287-86c908b256f8",
+      "googleUrl": "https://images.unsplash.com/photo-1683295657287-86c908b256f8",
       "semanticLabel":
           "Ancient rock fortress rising dramatically from green jungle landscape under blue sky",
       "category": "Mountains",
@@ -41,7 +42,7 @@ class _WelcomeHomeScreenInitialPageState
     {
       "id": 3,
       "name": "Temple of Tooth",
-      "image": "https://images.unsplash.com/photo-1562777578-3e432ed38f03",
+      "googleUrl": "https://images.unsplash.com/photo-1562777578-3e432ed38f03",
       "semanticLabel":
           "Traditional Buddhist temple with white walls and ornate golden roof against clear sky",
       "category": "Temples",
@@ -60,7 +61,7 @@ class _WelcomeHomeScreenInitialPageState
     {
       "id": 1,
       "name": "Ella",
-      "image": "https://images.unsplash.com/photo-1677392988966-d730d8d506dc",
+      "googleUrl": "https://images.unsplash.com/photo-1677392988966-d730d8d506dc",
       "semanticLabel":
           "Lush green tea plantations covering rolling hills with misty mountain peaks in background",
       "category": "Mountains",
@@ -68,7 +69,7 @@ class _WelcomeHomeScreenInitialPageState
     {
       "id": 2,
       "name": "Kandy",
-      "image": "https://images.unsplash.com/photo-1614758285266-d385e31826ca",
+      "googleUrl": "https://images.unsplash.com/photo-1614758285266-d385e31826ca",
       "semanticLabel":
           "Sacred Buddhist temple complex with white buildings and golden roofs surrounded by tropical trees",
       "category": "Temples",
@@ -76,7 +77,7 @@ class _WelcomeHomeScreenInitialPageState
     {
       "id": 3,
       "name": "Jaffna",
-      "image": "https://images.unsplash.com/photo-1704380755697-338169070234",
+      "googleUrl": "https://images.unsplash.com/photo-1704380755697-338169070234",
       "semanticLabel":
           "Pristine beach with crystal clear turquoise water and white sand under bright sunny sky",
       "category": "Beach Side",
@@ -84,7 +85,7 @@ class _WelcomeHomeScreenInitialPageState
     {
       "id": 4,
       "name": "Yala National Park",
-      "image": "https://images.unsplash.com/photo-1595653413391-b8bb647b8fba",
+      "googleUrl": "https://images.unsplash.com/photo-1595653413391-b8bb647b8fba",
       "semanticLabel":
           "Wild safari landscape with acacia trees and grasslands under golden sunset light",
       "category": "Camping",
@@ -92,7 +93,7 @@ class _WelcomeHomeScreenInitialPageState
     {
       "id": 5,
       "name": "Arugam Bay",
-      "image": "https://images.unsplash.com/photo-1665581362630-cd036ac8f1a5",
+      "googleUrl": "https://images.unsplash.com/photo-1665581362630-cd036ac8f1a5",
       "semanticLabel":
           "Tropical beach with palm trees bending over turquoise waves perfect for surfing",
       "category": "Beach Side",
@@ -100,7 +101,7 @@ class _WelcomeHomeScreenInitialPageState
     {
       "id": 6,
       "name": "Adam's Peak",
-      "image": "https://images.unsplash.com/photo-1567336975218-31c977ee0a03",
+      "googleUrl": "https://images.unsplash.com/photo-1567336975218-31c977ee0a03",
       "semanticLabel":
           "Majestic mountain peak rising above clouds during sunrise with pilgrimage path visible",
       "category": "Mountains",
@@ -400,9 +401,7 @@ class _WelcomeHomeScreenInitialPageState
                 delegate: SliverChildBuilderDelegate((context, index) {
                   final destination = _filteredDestinations[index];
                   return DestinationCardWidget(
-                    name: destination['name'] as String,
-                    imageUrl: destination['image'] as String,
-                    semanticLabel: destination['semanticLabel'] as String,
+                    place: Place.fromMap(destination),
                     onTap: () {
                       Navigator.of(context, rootNavigator: true).pushNamed(
                         '/destination-detail-screen',

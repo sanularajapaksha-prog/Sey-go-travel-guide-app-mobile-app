@@ -5,14 +5,14 @@ import 'package:flutter/foundation.dart';
 class FavoritePlace {
   final int id;
   final String name;
-  final String imageUrl;
+  final String? googleUrl;
   final String location;
   final String semanticLabel;
 
   const FavoritePlace({
     required this.id,
     required this.name,
-    required this.imageUrl,
+    required this.googleUrl,
     required this.location,
     required this.semanticLabel,
   });

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
-
 /// Related destinations horizontal carousel
 class RelatedDestinationsWidget extends StatelessWidget {
   final List<Map<String, dynamic>> destinations;
@@ -60,12 +59,16 @@ class RelatedDestinationsWidget extends StatelessWidget {
                             topRight: Radius.circular(3.w),
                           ),
                           child: CustomImageWidget(
-                            imageUrl: destination["image"] as String,
+                            imageUrl:
+                                (destination['googleUrl'] ??
+                                        destination['image'] ??
+                                        destination['imageUrl'])
+                                    as String?,
                             width: 45.w,
                             height: 18.h,
                             fit: BoxFit.cover,
                             semanticLabel:
-                            destination["semanticLabel"] as String,
+                                destination["semanticLabel"] as String?,
                           ),
                         ),
 

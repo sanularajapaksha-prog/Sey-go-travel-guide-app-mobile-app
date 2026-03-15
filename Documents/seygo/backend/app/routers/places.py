@@ -1,15 +1,22 @@
 import os
-import html
 import json
-import re
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 import httpx
 
 from ..dependencies import get_current_user, get_supabase_client
 from ..schemas.google_places import GooglePlacesSearchRequest
 from ..schemas.place import PlaceCreate
 from ..schemas.recommendation import PlaceRecommendationRequest
+from ..services.google_photo_resolver import (
+    GOOGLE_IMAGE_HEADERS,
+    append_maxwidth,
+    is_direct_image_url,
+    is_missing_column_error,
+    is_valid_http_url,
+    resolve_photo_url_from_google_url,
+    update_place_photo_cache,
+)
 from ..services.google_places import GooglePlacesService
 from ..services.place_taxonomy import PLACE_TAXONOMY, infer_taxonomy
 from ..services.recommender import PlaceFeature, PlaceRecommender, _haversine_km
@@ -87,6 +94,25 @@ def _first_non_empty(row: dict, keys: list[str]):
 def _coerce_float(value, default: float | None = None) -> float | None:
     if value is None:
         return default
+
+
+def _coerce_list(value) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return []
+        try:
+            decoded = json.loads(text)
+            if isinstance(decoded, list):
+                return [str(item).strip() for item in decoded if str(item).strip()]
+        except Exception:
+            pass
+        return [item.strip() for item in text.split(',') if item.strip()]
+    return []
     try:
         return float(value)
     except Exception:
@@ -146,79 +172,31 @@ def _storage_public_url(supabase, path: str) -> str | None:
 
 def _normalize_place_row(supabase, row: dict) -> dict:
     normalized = dict(row)
+    cached_image_url = _first_non_empty(row, ['image_url'])
+    photo_public_urls = _coerce_list(_first_non_empty(row, ['photo_public_urls']))
     photo_path = _extract_photo_path(row) or _guess_photo_path_from_row(row)
     photo_url = _storage_public_url(supabase, photo_path) if photo_path else None
-    if photo_url:
-        normalized['photo_url'] = photo_url
+    if photo_url and not photo_public_urls:
+        photo_public_urls = [photo_url]
+
+    normalized['photo_public_urls'] = photo_public_urls
+    normalized['image_url'] = append_maxwidth(cached_image_url) if is_valid_http_url(cached_image_url) else None
+    normalized['image_source'] = _first_non_empty(row, ['image_source'])
+    normalized['photo_last_checked'] = _first_non_empty(row, ['photo_last_checked'])
+    normalized['photo_url'] = normalized['image_url'] or (photo_public_urls[0] if photo_public_urls else photo_url)
     normalized['name'] = str(_first_non_empty(row, ['name', 'place_name', 'title']) or '')
     normalized['primary_category'] = _resolve_primary_category(row)
     normalized['category'] = normalized['primary_category']
     normalized['categories'] = _parse_categories(_first_non_empty(row, ['categories', 'category_list']))
     normalized['description'] = _first_non_empty(row, ['description', 'details', 'summary']) or ''
     normalized['location'] = _first_non_empty(row, ['location', 'formatted_address', 'address']) or ''
+    normalized['google_url'] = _first_non_empty(row, ['google_url'])
     normalized['tags'] = _parse_tags(_first_non_empty(row, ['tags', 'keywords', 'labels']))
     normalized['latitude'] = _coerce_float(_first_non_empty(row, ['latitude', 'lat']))
     normalized['longitude'] = _coerce_float(_first_non_empty(row, ['longitude', 'lng', 'lon']))
     normalized['avg_rating'] = _coerce_float(_first_non_empty(row, ['avg_rating', 'rating']), 0.0) or 0.0
     normalized['review_count'] = int(_first_non_empty(row, ['review_count', 'reviews', 'user_rating_count']) or 0)
     return normalized
-
-
-def _extract_google_photo_url_from_page(page: str) -> str | None:
-    og_match = re.search(
-        r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']',
-        page,
-        flags=re.IGNORECASE,
-    )
-    if og_match:
-        url = html.unescape(og_match.group(1))
-        if _is_google_photo_candidate(url):
-            return url
-
-    for pattern in [
-        r'https://[^"\']*(?:googleusercontent|ggpht\.com|streetviewpixels-pa\.googleapis\.com)[^"\']+',
-        r'https://[^"\']*gstatic[^"\']*(?:/p/|=w\d+|=s\d+)[^"\']*',
-    ]:
-        for match in re.finditer(pattern, page, flags=re.IGNORECASE):
-            url = html.unescape(match.group(0))
-            if _is_google_photo_candidate(url):
-                return url
-
-    return None
-
-
-def _is_google_photo_candidate(url: str) -> bool:
-    lowered = url.lower()
-    blocked_parts = [
-        'fonts.gstatic.com',
-        '/maps/_/',
-        '/maps/vt',
-        '/mapfiles/',
-        'googlelogo',
-        'gstatic.com/images',
-    ]
-    if any(part in lowered for part in blocked_parts):
-        return False
-
-    allowed_hosts = (
-        'googleusercontent.com',
-        'ggpht.com',
-        'streetviewpixels-pa.googleapis.com',
-        'gstatic.com',
-    )
-    return any(host in lowered for host in allowed_hosts)
-
-
-def _proxy_image_response(client: httpx.Client, image_url: str) -> Response:
-    image_response = client.get(image_url, headers=GOOGLE_IMAGE_HEADERS)
-    image_response.raise_for_status()
-    media_type = image_response.headers.get('content-type', '').split(';', 1)[0].strip()
-    if not media_type.startswith('image/'):
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail='Resolved Google photo URL did not return image content.',
-        )
-    return Response(content=image_response.content, media_type=media_type)
 
 
 def _legacy_place_photo_url(client: httpx.Client, place_id: str, api_key: str) -> str | None:
@@ -495,7 +473,11 @@ async def google_place_photo(place_id: str):
                     detail='No photo available for this place.',
                 )
 
-            return _proxy_image_response(client, photo_url)
+            return {
+                'success': True,
+                'photo_url': append_maxwidth(photo_url),
+                'source': 'google_place_id',
+            }
     except HTTPException:
         raise
     except httpx.HTTPError as exc:
@@ -511,8 +493,12 @@ async def google_place_photo(place_id: str):
 
 
 @router.get('/photo-from-google-url')
-async def photo_from_google_url(url: str = Query(..., min_length=1)):
+async def photo_from_google_url(
+    url: str = Query(..., min_length=1),
+    place_id: str | None = Query(default=None),
+):
     try:
+        supabase = get_supabase_client()
         normalized_url = url.strip()
         if not normalized_url.startswith(('http://', 'https://')):
             raise HTTPException(
@@ -520,31 +506,69 @@ async def photo_from_google_url(url: str = Query(..., min_length=1)):
                 detail='google_url must be an absolute URL.',
             )
 
-        with httpx.Client(timeout=15.0, follow_redirects=True) as client:
-            if _is_google_photo_candidate(normalized_url):
-                return _proxy_image_response(client, normalized_url)
+        if place_id:
+            cached_row = {}
+            try:
+                existing = (
+                    supabase.table(PLACES_TABLE)
+                    .select('image_url, photo_public_urls, image_source')
+                    .eq('place_id', place_id)
+                    .limit(1)
+                    .execute()
+                )
+                cached_row = (existing.data or [{}])[0]
+            except Exception as exc:
+                if not is_missing_column_error(exc):
+                    raise
+            cached_image = _first_non_empty(cached_row, ['image_url'])
+            if is_valid_http_url(cached_image):
+                return {
+                    'success': True,
+                    'photo_url': append_maxwidth(cached_image),
+                    'source': cached_row.get('image_source') or 'cached_image_url',
+                    'cached': True,
+                }
+            public_urls = _coerce_list(cached_row.get('photo_public_urls'))
+            if public_urls:
+                return {
+                    'success': True,
+                    'photo_url': append_maxwidth(public_urls[0]),
+                    'source': 'photo_public_urls',
+                    'cached': True,
+                }
 
-            response = client.get(
-                normalized_url,
-                headers=GOOGLE_IMAGE_HEADERS,
+        resolved_url = resolve_photo_url_from_google_url(normalized_url)
+        if resolved_url:
+            if place_id:
+                update_place_photo_cache(
+                    supabase,
+                    PLACES_TABLE,
+                    place_id,
+                    image_url=resolved_url,
+                    image_source='google_url_resolved',
+                )
+            return {
+                'success': True,
+                'photo_url': resolved_url,
+                'source': 'google_url_resolved',
+                'cached': False,
+            }
+
+        if place_id:
+            update_place_photo_cache(
+                supabase,
+                PLACES_TABLE,
+                place_id,
+                image_url=None,
+                image_source='google_url_failed',
             )
-            response.raise_for_status()
-            page = response.text
-            image_url = _extract_google_photo_url_from_page(page)
-            if image_url:
-                return _proxy_image_response(client, image_url)
 
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='Could not resolve a photo from google_url.',
-        )
-    except HTTPException:
-        raise
-    except httpx.HTTPError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'Failed to fetch google_url: {exc}',
-        ) from exc
+        return {
+            'success': False,
+            'photo_url': None,
+            'source': None,
+            'cached': False,
+        }
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

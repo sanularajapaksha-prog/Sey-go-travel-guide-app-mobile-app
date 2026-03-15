@@ -5,10 +5,12 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:sizer/sizer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../widgets/custom_image_widget.dart';
+
 class TripSummaryOverviewScreen extends StatelessWidget {
   // Pass these from RoutePlannerScreen
   final String tripName;
-  final String tripImageUrl;
+  final String tripGoogleUrl;
   final String dateRange;
   final int days;
   final double totalBudgetLKR;
@@ -24,7 +26,7 @@ class TripSummaryOverviewScreen extends StatelessWidget {
   const TripSummaryOverviewScreen({
     super.key,
     required this.tripName,
-    required this.tripImageUrl,
+    required this.tripGoogleUrl,
     required this.dateRange,
     required this.days,
     required this.totalBudgetLKR,
@@ -64,16 +66,11 @@ class TripSummaryOverviewScreen extends StatelessWidget {
             // Hero Image + Trip Name Overlay
             Stack(
               children: [
-                Image.network(
-                  tripImageUrl,
+                CustomImageWidget(
+                  imageUrl: tripGoogleUrl,
                   height: 35.h,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(
-                    height: 35.h,
-                    color: theme.colorScheme.surfaceVariant,
-                    child: const Center(child: Icon(Icons.image_not_supported)),
-                  ),
                 ),
                 Positioned.fill(
                   child: Container(

@@ -59,17 +59,17 @@ class _DestinationHeaderWidgetState extends State<DestinationHeaderWidget> {
             },
             itemCount: widget.images.length,
             itemBuilder: (context, index) {
+              final image = widget.images[index];
               return GestureDetector(
                 onLongPress: () {
                   _showFullScreenGallery(context, index);
                 },
                 child: CustomImageWidget(
-                  imageUrl: widget.images[index]["url"] as String,
+                  imageUrl: (image['googleUrl'] ?? image['url']) as String?,
                   width: double.infinity,
                   height: 50.h,
                   fit: BoxFit.cover,
-                  semanticLabel:
-                  widget.images[index]["semanticLabel"] as String,
+                  semanticLabel: image["semanticLabel"] as String?,
                 ),
               );
             },
@@ -260,17 +260,17 @@ class _FullScreenGalleryState extends State<_FullScreenGallery> {
             },
             itemCount: widget.images.length,
             itemBuilder: (context, index) {
+              final image = widget.images[index];
               return InteractiveViewer(
                 minScale: 1.0,
                 maxScale: 4.0,
                 child: Center(
                   child: CustomImageWidget(
-                    imageUrl: widget.images[index]["url"] as String,
+                    imageUrl: (image['googleUrl'] ?? image['url']) as String?,
                     width: double.infinity,
                     height: double.infinity,
                     fit: BoxFit.contain,
-                    semanticLabel:
-                    widget.images[index]["semanticLabel"] as String,
+                    semanticLabel: image["semanticLabel"] as String?,
                   ),
                 ),
               );

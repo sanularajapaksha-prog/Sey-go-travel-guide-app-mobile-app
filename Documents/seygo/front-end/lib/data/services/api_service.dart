@@ -4,7 +4,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
+import '../models/place.dart';
+
 class ApiService {
+  static final Map<String, String?> _resolvedPhotoCache = <String, String?>{};
+  static final Map<String, Future<String?>> _pendingPhotoRequests =
+      <String, Future<String?>>{};
+
   static String get baseUrl {
     final envUrl = dotenv.env['API_BASE_URL'];
     if (envUrl != null && envUrl.isNotEmpty) {
@@ -138,6 +144,104 @@ class ApiService {
       }
     }
     return const <dynamic>[];
+  }
+
+  static Future<String?> resolveBestPlaceImage(Place place) async {
+    final cacheKey = place.id.isNotEmpty ? place.id : (place.googleUrl ?? place.name);
+    if (_resolvedPhotoCache.containsKey(cacheKey)) {
+      return _resolvedPhotoCache[cacheKey];
+    }
+
+    final immediate = place.resolveBestAvailableImageUrl();
+    if (immediate != null) {
+      _resolvedPhotoCache[cacheKey] = immediate;
+      return immediate;
+    }
+
+    final googleUrl = place.googleUrl;
+    if (googleUrl == null || googleUrl.isEmpty) {
+      _resolvedPhotoCache[cacheKey] = null;
+      return null;
+    }
+
+    final pending = _pendingPhotoRequests[cacheKey];
+    if (pending != null) {
+      return pending;
+    }
+
+    final future = _resolvePhotoFromGoogleUrl(
+      googleUrl: googleUrl,
+      placeId: place.id,
+    );
+    _pendingPhotoRequests[cacheKey] = future;
+
+    try {
+      final resolved = await future;
+      _resolvedPhotoCache[cacheKey] = resolved;
+      return resolved;
+    } finally {
+      _pendingPhotoRequests.remove(cacheKey);
+    }
+  }
+
+  static Future<String?> resolvePhotoFromRawGoogleUrl(
+    String googleUrl, {
+    String? cacheKey,
+    String? placeId,
+  }) async {
+    final key = cacheKey ?? placeId ?? googleUrl;
+    if (_resolvedPhotoCache.containsKey(key)) {
+      return _resolvedPhotoCache[key];
+    }
+    final pending = _pendingPhotoRequests[key];
+    if (pending != null) {
+      return pending;
+    }
+    final future = _resolvePhotoFromGoogleUrl(
+      googleUrl: googleUrl,
+      placeId: placeId,
+    );
+    _pendingPhotoRequests[key] = future;
+    try {
+      final resolved = await future;
+      _resolvedPhotoCache[key] = resolved;
+      return resolved;
+    } finally {
+      _pendingPhotoRequests.remove(key);
+    }
+  }
+
+  static Future<String?> _resolvePhotoFromGoogleUrl({
+    required String googleUrl,
+    String? placeId,
+  }) async {
+    final uri = Uri.parse('$baseUrl/places/photo-from-google-url').replace(
+      queryParameters: <String, String>{
+        'url': googleUrl,
+        if (placeId != null && placeId.isNotEmpty) 'place_id': placeId,
+      },
+    );
+
+    try {
+      final response = await http.get(uri).timeout(const Duration(seconds: 15));
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return null;
+      }
+
+      final bodyText = response.body.isEmpty ? '{}' : response.body;
+      final decoded = jsonDecode(bodyText);
+      if (decoded is! Map<String, dynamic>) {
+        return null;
+      }
+      if (decoded['success'] != true) {
+        return null;
+      }
+
+      final resolved = Place.withGooglePhotoWidth(decoded['photo_url']?.toString());
+      return resolved;
+    } catch (_) {
+      return null;
+    }
   }
 
   static Future<Map<String, dynamic>> register({

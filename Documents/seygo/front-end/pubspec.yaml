@@ -23,7 +23,7 @@ dependencies:
   get: ^4.6.6
 
   # all your other packages...
-  cached_network_image: ^3.3.1
+  cached_network_image: ^3.4.0
   connectivity_plus: ^7.0.0
   dio: ^5.4.0
   fluttertoast: ^9.0.0

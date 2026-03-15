@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
-import '../../../widgets/custom_image_widget.dart';
+import '../../../data/models/place.dart';
 
 class FeaturedCarouselWidget extends StatefulWidget {
   final List<Map<String, dynamic>> destinations;
@@ -55,6 +55,7 @@ class _FeaturedCarouselWidgetState extends State<FeaturedCarouselWidget> {
             itemCount: widget.destinations.length,
             itemBuilder: (context, index) {
               final destination = widget.destinations[index];
+              final place = Place.fromMap(destination);
               return GestureDetector(
                 onTap: () => widget.onDestinationTap(destination),
                 child: Container(
@@ -74,12 +75,13 @@ class _FeaturedCarouselWidgetState extends State<FeaturedCarouselWidget> {
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        CustomImageWidget(
-                          imageUrl: destination['image'] as String,
+                        PlacePhotoWidget(
+                          place: place,
                           width: double.infinity,
                           height: double.infinity,
                           fit: BoxFit.cover,
-                          semanticLabel: destination['semanticLabel'] as String,
+                          semanticLabel: place.semanticLabel,
+                          useSadFaceFallback: true,
                         ),
                         Container(
                           decoration: BoxDecoration(
@@ -101,7 +103,7 @@ class _FeaturedCarouselWidgetState extends State<FeaturedCarouselWidget> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                destination['name'] as String,
+                                place.name,
                                 style: theme.textTheme.titleLarge?.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w700,
@@ -109,7 +111,7 @@ class _FeaturedCarouselWidgetState extends State<FeaturedCarouselWidget> {
                               ),
                               SizedBox(height: 0.5.h),
                               Text(
-                                destination['category'] as String,
+                                place.category,
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   color: Colors.white.withValues(alpha: 0.9),
                                 ),

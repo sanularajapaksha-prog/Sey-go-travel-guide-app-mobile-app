@@ -22,10 +22,10 @@ class DestinationDetailScreen extends StatefulWidget {
 class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
   bool _isLoading = false;
   bool _isFavorite = false;
+  bool _didLoadArguments = false;
   final ScrollController _scrollController = ScrollController();
 
-  // Mock destination data
-  final Map<String, dynamic> _destinationData = {
+  Map<String, dynamic> _destinationData = {
     "id": 1,
     "name": "Ella",
     "location": "Badulla District, Uva Province, Sri Lanka",
@@ -35,25 +35,25 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
     "longitude": 81.0467,
     "images": [
       {
-        "url":
+        "googleUrl":
         "https://images.unsplash.com/photo-1522496884773-12ab0d24738e",
         "semanticLabel":
         "Scenic view of Ella town nestled in lush green mountains with tea plantations and misty valleys",
       },
       {
-        "url":
+        "googleUrl":
         "https://images.unsplash.com/photo-1519576325797-91124298a877",
         "semanticLabel":
         "Nine Arch Bridge in Ella surrounded by dense tropical forest and tea estates",
       },
       {
-        "url":
+        "googleUrl":
         "https://images.unsplash.com/photo-1707929592353-95578ba630f5",
         "semanticLabel":
         "Panoramic mountain landscape view from Ella Rock with rolling hills and valleys",
       },
       {
-        "url":
+        "googleUrl":
         "https://images.unsplash.com/photo-1651608018547-dfbc9e41d0e7",
         "semanticLabel":
         "Traditional Sri Lankan tea plantation workers harvesting tea leaves on hillside",
@@ -93,12 +93,12 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
     ],
   };
 
-  final List<Map<String, dynamic>> _relatedDestinations = [
+  List<Map<String, dynamic>> _relatedDestinations = [
     {
       "id": 2,
       "name": "Kandy",
       "location": "Central Province, Sri Lanka",
-      "image":
+      "googleUrl":
       "https://img.rocket.new/generatedImages/rocket_gen_img_193f33a5e-1766335454247.png",
       "semanticLabel":
       "Temple of the Sacred Tooth Relic in Kandy with traditional architecture and lake view",
@@ -107,7 +107,7 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
       "id": 3,
       "name": "Jaffna",
       "location": "Northern Province, Sri Lanka",
-      "image":
+      "googleUrl":
       "https://img.rocket.new/generatedImages/rocket_gen_img_1b20076d0-1768674030531.png",
       "semanticLabel":
       "Jaffna Fort colonial architecture with palm trees and coastal backdrop",
@@ -116,7 +116,7 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
       "id": 4,
       "name": "Sigiriya",
       "location": "Matale District, Central Province",
-      "image":
+      "googleUrl":
       "https://img.rocket.new/generatedImages/rocket_gen_img_13818a0b1-1765084352309.png",
       "semanticLabel":
       "Ancient Sigiriya Rock Fortress rising from jungle landscape at sunset",
@@ -125,7 +125,7 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
       "id": 5,
       "name": "Galle",
       "location": "Southern Province, Sri Lanka",
-      "image":
+      "googleUrl":
       "https://images.unsplash.com/photo-1734279135096-2854a06faba8",
       "semanticLabel":
       "Galle Fort Dutch colonial buildings and lighthouse overlooking Indian Ocean",
@@ -136,6 +136,90 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didLoadArguments) {
+      return;
+    }
+
+    final arguments = ModalRoute.of(context)?.settings.arguments;
+    Map<String, dynamic>? destination;
+    List<Map<String, dynamic>>? allDestinations;
+
+    if (arguments is Map<String, dynamic>) {
+      final rawDestination = arguments['destination'];
+      if (rawDestination is Map) {
+        destination = Map<String, dynamic>.from(rawDestination);
+      } else {
+        destination = Map<String, dynamic>.from(arguments);
+      }
+
+      final rawAllDestinations = arguments['allDestinations'];
+      if (rawAllDestinations is List) {
+        allDestinations = rawAllDestinations
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+      }
+    }
+
+    if (destination != null) {
+      _destinationData = _buildDestinationData(destination);
+      if (allDestinations != null && allDestinations.isNotEmpty) {
+        _relatedDestinations = allDestinations
+            .where((item) => item['id'] != destination!['id'])
+            .take(4)
+            .map(_buildRelatedDestination)
+            .toList();
+      }
+    }
+
+    _didLoadArguments = true;
+  }
+
+  Map<String, dynamic> _buildDestinationData(Map<String, dynamic> destination) {
+    final googleUrl = (destination['googleUrl'] ?? destination['google_url'])
+        ?.toString();
+    return {
+      'id': destination['id'],
+      'name': destination['name'] ?? 'Unknown Place',
+      'location':
+          destination['location'] ?? destination['address'] ?? 'Sri Lanka',
+      'description':
+          destination['description'] ?? 'No description available.',
+      'latitude': _toDouble(destination['latitude']) ?? 7.8731,
+      'longitude': _toDouble(destination['longitude']) ?? 80.7718,
+      'images': [
+        {
+          'googleUrl': googleUrl,
+          'semanticLabel':
+              destination['semanticLabel'] ?? destination['name'] ?? 'Place photo',
+        },
+      ],
+      'highlights': _destinationData['highlights'],
+    };
+  }
+
+  Map<String, dynamic> _buildRelatedDestination(Map<String, dynamic> destination) {
+    return {
+      'id': destination['id'],
+      'name': destination['name'] ?? 'Unknown Place',
+      'location':
+          destination['location'] ?? destination['address'] ?? 'Sri Lanka',
+      'googleUrl': destination['googleUrl'] ?? destination['google_url'],
+      'semanticLabel':
+          destination['semanticLabel'] ?? destination['name'] ?? 'Place photo',
+    };
+  }
+
+  double? _toDouble(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    return double.tryParse(value?.toString() ?? '');
   }
 
   Future<void> _refreshDestination() async {

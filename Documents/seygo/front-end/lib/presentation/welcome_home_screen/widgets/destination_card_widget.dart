@@ -1,20 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
+import '../../../data/models/place.dart';
 import '../../../core/app_export.dart';
-import '../../../widgets/custom_image_widget.dart';
 
 class DestinationCardWidget extends StatelessWidget {
-  final String name;
-  final String imageUrl;
-  final String semanticLabel;
+  final Place place;
   final VoidCallback onTap;
 
   const DestinationCardWidget({
     super.key,
-    required this.name,
-    required this.imageUrl,
-    required this.semanticLabel,
+    required this.place,
     required this.onTap,
   });
 
@@ -41,19 +37,19 @@ class DestinationCardWidget extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                child: CustomImageWidget(
-                  imageUrl: imageUrl,
+                child: PlacePhotoWidget(
+                  place: place,
                   width: double.infinity,
                   height: double.infinity,
                   fit: BoxFit.cover,
-                  semanticLabel: semanticLabel,
+                  semanticLabel: place.semanticLabel,
                 ),
               ),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.5.h),
                 color: theme.colorScheme.surface,
                 child: Text(
-                  name,
+                  place.name,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),

@@ -47,7 +47,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
       "category": "Mountains",
       "latitude": 6.8667,
       "longitude": 81.0467,
-      "image": "https://images.unsplash.com/photo-1620744577685-8fac0be42e44",
+      "googleUrl": "https://images.unsplash.com/photo-1620744577685-8fac0be42e44",
       "semanticLabel":
           "Scenic mountain view of Ella with lush green tea plantations and misty peaks",
       "description":
@@ -61,7 +61,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
       "category": "Temples",
       "latitude": 7.2906,
       "longitude": 80.6337,
-      "image":
+      "googleUrl":
           "https://img.rocket.new/generatedImages/rocket_gen_img_193f33a5e-1766335454247.png",
       "semanticLabel":
           "Sacred Temple of the Tooth Relic in Kandy with traditional Sri Lankan architecture",
@@ -76,7 +76,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
       "category": "Temples",
       "latitude": 9.6615,
       "longitude": 80.0255,
-      "image":
+      "googleUrl":
           "https://img.rocket.new/generatedImages/rocket_gen_img_1b20076d0-1768674030531.png",
       "semanticLabel":
           "Historic Jaffna Fort with ancient stone walls overlooking the northern coastline",
@@ -91,7 +91,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
       "category": "Beach Side",
       "latitude": 5.9467,
       "longitude": 80.4589,
-      "image": "https://images.unsplash.com/photo-1585723816185-2b158d4d5a34",
+      "googleUrl": "https://images.unsplash.com/photo-1585723816185-2b158d4d5a34",
       "semanticLabel":
           "Golden sandy beach at Mirissa with turquoise waters and palm trees swaying in breeze",
       "description":
@@ -105,7 +105,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
       "category": "Camping",
       "latitude": 6.3725,
       "longitude": 81.5185,
-      "image": "https://images.unsplash.com/photo-1420639246026-982a997b3abf",
+      "googleUrl": "https://images.unsplash.com/photo-1420639246026-982a997b3abf",
       "semanticLabel":
           "Wild leopard resting on rocky outcrop in Yala National Park surrounded by dry forest",
       "description":
@@ -119,7 +119,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
       "category": "Beach Side",
       "latitude": 6.0094,
       "longitude": 80.2506,
-      "image": "https://images.unsplash.com/photo-1662319173895-a2c67d4f473c",
+      "googleUrl": "https://images.unsplash.com/photo-1662319173895-a2c67d4d5a34",
       "semanticLabel":
           "Crescent-shaped Unawatuna beach with clear blue waters and coral reef visible underwater",
       "description":
@@ -133,7 +133,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
       "category": "Mountains",
       "latitude": 6.8103,
       "longitude": 80.7981,
-      "image":
+      "googleUrl":
           "https://img.rocket.new/generatedImages/rocket_gen_img_1e356b9db-1766848581776.png",
       "semanticLabel":
           "Dramatic cliff edge at World's End viewpoint in Horton Plains with clouds below",
@@ -148,7 +148,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
       "category": "Camping",
       "latitude": 8.4381,
       "longitude": 80.0255,
-      "image":
+      "googleUrl":
           "https://img.rocket.new/generatedImages/rocket_gen_img_1d28e9dd5-1767182645659.png",
       "semanticLabel":
           "Elephant herd walking through grasslands in Wilpattu National Park at golden hour",
@@ -163,7 +163,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
       "category": "Camping",
       "latitude": 6.4040,
       "longitude": 80.4581,
-      "image": "https://images.unsplash.com/photo-1448375240586-882707db888b",
+      "googleUrl": "https://images.unsplash.com/photo-1448375240586-882707db888b",
       "semanticLabel":
           "Dense tropical rainforest canopy in Sinharaja Forest Reserve with rich biodiversity",
       "description":
@@ -177,7 +177,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
       "category": "Camping",
       "latitude": 6.5314,
       "longitude": 81.6666,
-      "image": "https://images.unsplash.com/photo-1474511320723-9a56873867b5",
+      "googleUrl": "https://images.unsplash.com/photo-1474511320723-9a56873867b5",
       "semanticLabel":
           "Wetlands and wild birds in Kumana National Park during golden hour",
       "description":
@@ -288,16 +288,19 @@ class _MapViewScreenState extends State<MapViewScreen> {
 
   Future<void> _createMarkers() async {
     final filteredDestinations = _filteredDestinations;
+    final displayPositions = _buildDisplayPositions(filteredDestinations);
 
     _markers.clear();
 
     for (var destination in filteredDestinations) {
+      final displayPosition = displayPositions[destination['id'].toString()] ??
+          LatLng(
+            destination['latitude'] as double,
+            destination['longitude'] as double,
+          );
       final marker = Marker(
         markerId: MarkerId(destination['id'].toString()),
-        position: LatLng(
-          destination['latitude'] as double,
-          destination['longitude'] as double,
-        ),
+        position: displayPosition,
         icon: await _getMarkerIcon(destination['category'] as String),
         onTap: () => _onMarkerTapped(destination),
         infoWindow: InfoWindow(
@@ -309,6 +312,65 @@ class _MapViewScreenState extends State<MapViewScreen> {
     }
 
     setState(() {});
+  }
+
+  Map<String, LatLng> _buildDisplayPositions(
+    List<Map<String, dynamic>> places,
+  ) {
+    final grouped = <String, List<Map<String, dynamic>>>{};
+    for (final place in places) {
+      final latitude = place['latitude'] as double;
+      final longitude = place['longitude'] as double;
+      final bucket =
+          '${latitude.toStringAsFixed(2)}:${longitude.toStringAsFixed(2)}';
+      grouped.putIfAbsent(bucket, () => []).add(place);
+    }
+
+    final positions = <String, LatLng>{};
+    for (final group in grouped.values) {
+      if (group.length == 1) {
+        final place = group.first;
+        positions[place['id'].toString()] = LatLng(
+          place['latitude'] as double,
+          place['longitude'] as double,
+        );
+        continue;
+      }
+
+      for (var i = 0; i < group.length; i++) {
+        final place = group[i];
+        positions[place['id'].toString()] = _spreadMarkerPosition(
+          latitude: place['latitude'] as double,
+          longitude: place['longitude'] as double,
+          index: i,
+        );
+      }
+    }
+
+    return positions;
+  }
+
+  LatLng _spreadMarkerPosition({
+    required double latitude,
+    required double longitude,
+    required int index,
+  }) {
+    if (index == 0) {
+      return LatLng(latitude, longitude);
+    }
+
+    const slotsPerRing = 8;
+    const baseRadiusKm = 1.4;
+    const ringStepKm = 0.9;
+    final ring = ((index - 1) ~/ slotsPerRing) + 1;
+    final positionInRing = (index - 1) % slotsPerRing;
+    final angle = (2 * math.pi * positionInRing) / slotsPerRing;
+    final radiusKm = baseRadiusKm + ((ring - 1) * ringStepKm);
+    final latOffset = (radiusKm / 111.32) * math.sin(angle);
+    final lonScale = math.cos(_toRadians(latitude)).abs().clamp(0.2, 1.0);
+    final lonOffset = (radiusKm / (111.32 * lonScale)) * math.cos(angle);
+
+    return LatLng(latitude + latOffset, longitude + lonOffset);
   }
 
   Map<String, dynamic>? _mapPlaceRow(Map<String, dynamic> row, int index) {
@@ -328,11 +390,8 @@ class _MapViewScreenState extends State<MapViewScreen> {
       row['primary_category'] ?? row['category'],
       row['categories'] ?? row['types'],
     );
-    final imageUrl = _extractImageUrl(
-      row,
-      latitude: latitude,
-      longitude: longitude,
-    );
+    final googleUrl = _extractGoogleUrl(row);
+    final imageUrl = _extractImageUrl(row);
     final idValue = row['place_id'] ?? row['id'] ?? '${name}_$index';
 
     return {
@@ -341,9 +400,11 @@ class _MapViewScreenState extends State<MapViewScreen> {
       'category': category,
       'latitude': latitude,
       'longitude': longitude,
-      'image':
-          imageUrl ??
-          'https://images.unsplash.com/photo-1501785888041-af3ef285b470',
+      'googleUrl': googleUrl,
+      'imageUrl': imageUrl,
+      'imageSource': row['image_source'],
+      'photoPublicUrls': _asStringList(row['photo_public_urls']),
+      'image': imageUrl,
       'semanticLabel': 'Photo of $name',
       'description': (row['description'] ??
               row['address'] ??
@@ -353,7 +414,11 @@ class _MapViewScreenState extends State<MapViewScreen> {
       'rating': _toDouble(row['avg_rating'] ?? row['rating']) ?? 0.0,
       'reviews':
           row['review_count'] is num ? (row['review_count'] as num).toInt() : 0,
+      'location': (row['location'] ?? row['address'] ?? '').toString(),
+      'seedArea': (row['seed_area'] ?? '').toString(),
+      'seed_area': row['seed_area'],
       'google_url': row['google_url'],
+      'image_url': row['image_url'],
     };
   }
 
@@ -561,80 +626,25 @@ class _MapViewScreenState extends State<MapViewScreen> {
     return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
   }
 
-  String? _extractImageUrl(
-    Map<String, dynamic> row, {
-    required double latitude,
-    required double longitude,
-  }) {
-    final placeName =
-        (row['name'] ?? row['place_name'] ?? row['place_id'] ?? 'unknown')
-            .toString();
-    debugPrint('Map image: resolving source for $placeName');
-
-    final googleUrl = (row['google_url'] ?? '').toString().trim();
-    if (googleUrl.startsWith('http://') || googleUrl.startsWith('https://')) {
-      if (_isDirectGooglePhotoUrl(googleUrl)) {
-        debugPrint('Map image: $placeName -> direct google_url $googleUrl');
-        return googleUrl;
-      }
-
-      final url = '${ApiService.baseUrl}/places/photo-from-google-url'
-          '?url=${Uri.encodeComponent(googleUrl)}';
-      debugPrint('Map image: $placeName -> google_url resolver $url');
-      return url;
+  String? _extractGoogleUrl(Map<String, dynamic> row) {
+    final rawValue = (row['googleUrl'] ?? row['google_url']).toString().trim();
+    if (rawValue.isEmpty) {
+      return null;
     }
-
-    final directImage = _extractDirectImageUrl(row);
-    if (directImage != null) {
-      debugPrint('Map image: $placeName -> direct url $directImage');
-      return directImage;
+    if (rawValue.startsWith('http://') || rawValue.startsWith('https://')) {
+      return rawValue;
     }
-
-    final placeId = (row['place_id'] ?? '').toString().trim();
-    if (placeId.isNotEmpty) {
-      final url = '${ApiService.baseUrl}/places/photo/$placeId';
-      debugPrint('Map image: $placeName -> place_id proxy $url');
-      return url;
-    }
-
-    final publicUrls = _asStringList(row['photo_public_urls']);
-    if (publicUrls.isNotEmpty) {
-      debugPrint('Map image: $placeName -> public url ${publicUrls.first}');
-      return publicUrls.first;
-    }
-    final storagePaths = _asStringList(row['photo_storage_paths']);
-    if (storagePaths.isNotEmpty) {
-      final path = storagePaths.first;
-      if (path.startsWith('http://') || path.startsWith('https://')) {
-        debugPrint('Map image: $placeName -> storage http path $path');
-        return path;
-      }
-      debugPrint('Map image: $placeName -> storage path present but not usable $path');
-    }
-
-    debugPrint('Map image: $placeName -> no source, using fallback');
     return null;
   }
 
-  String? _extractDirectImageUrl(Map<String, dynamic> row) {
-    final candidates = <dynamic>[
-      row['photo_url'],
-      row['image_url'],
-      row['image'],
-      row['place_url'],
-    ];
-
-    for (final candidate in candidates) {
-      final value = candidate?.toString().trim() ?? '';
-      if (value.isEmpty) continue;
-      if (value.startsWith('http://') || value.startsWith('https://')) {
-        if (value.contains('/storage/v1/object/public/')) {
-          continue;
-        }
-        return value;
-      }
+  String? _extractImageUrl(Map<String, dynamic> row) {
+    final rawValue = (row['imageUrl'] ?? row['image_url']).toString().trim();
+    if (rawValue.isEmpty) {
+      return null;
     }
-
+    if (rawValue.startsWith('http://') || rawValue.startsWith('https://')) {
+      return rawValue;
+    }
     return null;
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
+import '../../../data/models/place.dart';
 
 class DestinationMarkerWidget extends StatelessWidget {
   const DestinationMarkerWidget({
@@ -16,6 +17,12 @@ class DestinationMarkerWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final place = Place.fromMap(destination);
+    final rating = (destination['rating'] as num?)?.toDouble() ?? 0.0;
+    final seedArea =
+        ((destination['seedArea'] ?? destination['seed_area']) as String?)
+                ?.trim() ??
+            '';
 
     return Material(
       color: theme.cardColor,
@@ -39,14 +46,13 @@ class DestinationMarkerWidget extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: CustomImageWidget(
-                  imageUrl: destination['image'] as String,
+                child: PlacePhotoWidget(
+                  place: place,
                   width: 22.w,
                   height: 22.w,
                   fit: BoxFit.cover,
-                  semanticLabel:
-                      (destination['semanticLabel'] as String?) ??
-                      (destination['name'] as String),
+                  semanticLabel: place.semanticLabel,
+                  useSadFaceFallback: true,
                 ),
               ),
               SizedBox(width: 3.5.w),
@@ -80,16 +86,43 @@ class DestinationMarkerWidget extends StatelessWidget {
                       style: theme.textTheme.bodySmall,
                     ),
                     SizedBox(height: 1.h),
-                    Row(
+                    Wrap(
+                      spacing: 3.w,
+                      runSpacing: 0.8.h,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        const Icon(Icons.star, color: Color(0xFFF59E0B), size: 16),
-                        SizedBox(width: 1.5.w),
-                        Text(
-                          '${destination['rating'] ?? 0.0}',
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star, color: Color(0xFFF59E0B), size: 16),
+                            SizedBox(width: 1.5.w),
+                            Text(
+                              rating > 0 ? rating.toStringAsFixed(1) : 'Unrated',
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
+                        if (seedArea.isNotEmpty)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.location_city,
+                                color: theme.colorScheme.onSurfaceVariant,
+                                size: 16,
+                              ),
+                              SizedBox(width: 1.5.w),
+                              Text(
+                                seedArea,
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                       ],
                     ),
                   ],

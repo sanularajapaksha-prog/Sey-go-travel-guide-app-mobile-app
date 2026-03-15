@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../../data/models/place.dart';
 import '../../data/services/api_service.dart';
 import '../trip_summary/route_summary_itinerary_screen.dart';
 import '../trip_summary/trip_summary_overview_screen.dart';
@@ -335,17 +336,16 @@ class _RoutePlannerScreenState extends State<RoutePlannerScreen> {
     if (_optimizedStops.isEmpty) return;
 
     final firstStop = _optimizedStops.first;
-    final imageUrl =
-        (firstStop['image'] ?? firstStop['photo_url'] ?? '').toString();
-    final resolvedImageUrl = imageUrl.isNotEmpty
-        ? imageUrl
-        : 'https://images.unsplash.com/photo-1501785888041-af3ef285b470';
+    final resolvedImageUrl = Place.withGooglePhotoWidth(
+          (firstStop['googleUrl'] ?? firstStop['google_url']).toString(),
+        ) ??
+        '';
 
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => TripSummaryOverviewScreen(
           tripName: 'Your Trip',
-          tripImageUrl: resolvedImageUrl,
+          tripGoogleUrl: resolvedImageUrl,
           dateRange: 'Flexible dates',
           days: _optimizedStops.length,
           totalBudgetLKR: 0.0,
