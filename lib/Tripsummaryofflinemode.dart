@@ -84,7 +84,7 @@ class _TripSummaryPageState extends State<TripSummaryPage> {
           padding: const EdgeInsets.all(16),
 
           child: Column(
-            children: [
+            children:[
               /// HEADER CARD
               Container(
                 height: 200,
@@ -127,7 +127,42 @@ class _TripSummaryPageState extends State<TripSummaryPage> {
                       ),
 
                       SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+
+                          SizedBox(width: 5),
+
+                          Text(
+                            "Jan 15 - Jan 17, 2025",
+                            style: TextStyle(color: Colors.white),
+                          ),
+
+                          SizedBox(width: 20),
+
+                          Icon(
+                            Icons.access_time,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+
+                          SizedBox(width: 5),
+
+                          Text("3 days", style: TextStyle(color: Colors.white)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            
+            
+                
                     
                 
               
-                 
+                
