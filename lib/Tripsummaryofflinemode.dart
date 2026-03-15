@@ -245,5 +245,101 @@ class _TripSummaryPageState extends State<TripSummaryPage> {
                     ),
 
                     const Divider(height: 25),
+                    GestureDetector(
+                      onTap: showEmergencyContact,
 
-                    
+                      child: const Row(
+                        children: [
+                          Icon(Icons.phone),
+
+                          SizedBox(width: 10),
+
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("Emergency Contact"),
+                                Text(
+                                  "+94 11 XXX XXXX",
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          Icon(Icons.keyboard_arrow_down),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 30),
+
+              /// START JOURNEY BUTTON
+              SizedBox(
+                width: double.infinity,
+                height: 55,
+
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black87,
+
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+
+                  onPressed: startJourney,
+
+                  icon: const Icon(Icons.navigation),
+
+                  label: const Text(
+                    "Start Journey",
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class InfoCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+
+  const InfoCard(this.icon, this.title, this.value, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 100,
+      padding: const EdgeInsets.all(12),
+
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+
+      child: Column(
+        children: [
+          Icon(icon),
+
+          const SizedBox(height: 8),
+
+          Text(title, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+
+          const SizedBox(height: 4),
+
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+}
