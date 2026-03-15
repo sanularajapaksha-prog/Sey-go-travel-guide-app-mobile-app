@@ -139,3 +139,62 @@ class GooglePlacesService:
             'taxonomy_category': taxonomy_category,
             'taxonomy_group': taxonomy_group,
         }
+        
+    def get_multi_stop_route(self, stops: list[dict]) -> dict:
+  
+    self._ensure_api_key()
+
+    if len(stops) < 2:
+        raise ValueError('At least 2 stops are required for a route.')
+
+    base_url = 'https://maps.googleapis.com/maps/api/directions/json'
+
+    origin = f"{stops[0]['latitude']},{stops[0]['longitude']}"
+    destination = f"{stops[-1]['latitude']},{stops[-1]['longitude']}"
+
+    waypoints = '|'.join(
+        f"{stop['latitude']},{stop['longitude']}"
+        for stop in stops[1:-1]
+    )
+
+    params = {
+        'origin': origin,
+        'destination': destination,
+        'key': self.api_key,
+    }
+    if waypoints:
+        params['waypoints'] = waypoints
+
+    with httpx.Client(timeout=15.0) as client:
+        response = client.get(base_url, params=params)
+        response.raise_for_status()
+        data = response.json()
+
+    if data.get('status') != 'OK':
+        raise RuntimeError(f"Google Directions error: {data.get('status')} — {data.get('error_message', '')}")
+
+    route = data['routes'][0]
+    legs = route['legs']
+
+    leg_summaries = []
+    for i, leg in enumerate(legs):
+        leg_summaries.append({
+            'from': stops[i]['name'],
+            'to': stops[i + 1]['name'],
+            'distance_km': round(leg['distance']['value'] / 1000, 2),
+            'duration_minutes': round(leg['duration']['value'] / 60, 1),
+            'start_location': leg['start_location'],
+            'end_location': leg['end_location'],
+        })
+
+    total_distance_km = round(sum(l['distance']['value'] for l in legs) / 1000, 2)
+    total_duration_minutes = round(sum(l['duration']['value'] for l in legs) / 60, 1)
+
+    return {
+        'total_stops': len(stops),
+        'total_distance_km': total_distance_km,
+        'total_duration_minutes': total_duration_minutes,
+        'stops': [{'name': s['name'], 'latitude': s['latitude'], 'longitude': s['longitude']} for s in stops],
+        'legs': leg_summaries,
+        'polyline': route['overview_polyline']['points'],  # encoded polyline for Flutter map rendering
+    }
