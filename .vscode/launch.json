@@ -1,0 +1,45 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Sey-go-travel-guide-app-mobile-app",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "Sey-go-travel-guide-app-mobile-app (profile mode)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "Sey-go-travel-guide-app-mobile-app (release mode)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "front-end",
+            "cwd": "Documents\\seygo\\front-end",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "front-end (profile mode)",
+            "cwd": "Documents\\seygo\\front-end",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "front-end (release mode)",
+            "cwd": "Documents\\seygo\\front-end",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        }
+    ]
+}
