@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+
+# Environment
+.env
+
+# ML model artifacts (auto-generated at runtime)
+ml_models/*.joblib
+ml_models/*.pkl
+ml_models/model_meta.json
