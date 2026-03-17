@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from ..dependencies import get_current_user, get_supabase_client
+from .places import PLACES_TABLE, _first_non_empty, _normalize_place_row
 
 router = APIRouter(prefix='/playlists', tags=['playlists'])
 
@@ -260,67 +261,101 @@ def _playlist_cover_image(name: str, description: str | None) -> str:
 
 
 def _fetch_playlist_places(supabase, playlist_id: str) -> list[dict]:
-    select_variants = [
-        '*, places(*)',
-        '*, public_places(*)',
-        '*',
-    ]
+    try:
+        relation_rows = (
+            supabase.table('playlist_places')
+            .select('*')
+            .eq('playlist_id', playlist_id)
+            .execute()
+            .data
+            or []
+        )
+    except Exception:
+        return []
 
-    for select_clause in select_variants:
+    if not relation_rows:
+        return []
+
+    place_lookup: dict[str, dict] = {}
+    place_keys = _extract_playlist_place_keys(relation_rows)
+
+    for key_name, values in place_keys.items():
+        if not values:
+            continue
         try:
-            response = (
-                supabase.table('playlist_places')
-                .select(select_clause)
-                .eq('playlist_id', playlist_id)
+            rows = (
+                supabase.table(PLACES_TABLE)
+                .select('*')
+                .in_(key_name, values)
                 .execute()
+                .data
+                or []
             )
-            return response.data or []
         except Exception:
             continue
-    return []
+
+        for row in rows:
+            normalized = _normalize_place_row(supabase, row)
+            for lookup_key in _candidate_place_lookup_keys(normalized):
+                place_lookup[lookup_key] = normalized
+
+    merged_rows: list[dict] = []
+    for relation_row in relation_rows:
+        place_row = _match_place_row(place_lookup, relation_row)
+        merged_rows.append(
+            {
+                **relation_row,
+                '_place': place_row or {},
+            }
+        )
+    return merged_rows
 
 
 def _normalize_playlist_stop(row: dict, index: int) -> dict:
-    place_row = row.get('places') or row.get('public_places') or {}
-    merged = {**place_row, **row} if isinstance(place_row, dict) else dict(row)
+    place_row = row.get('_place') or {}
+    merged = {**row, **place_row}
 
-    name = str(
-        merged.get('name')
-        or merged.get('place_name')
-        or merged.get('title')
-        or f'Stop {index + 1}'
-    )
+    name = str(_first_non_empty(merged, ['name', 'place_name', 'title']) or f'Stop {index + 1}')
     category = str(
-        merged.get('category')
-        or merged.get('primary_category')
-        or merged.get('type')
-        or 'Place'
+        _first_non_empty(merged, ['category', 'primary_category', 'type', 'primary_type']) or 'Place'
     )
-    description = (
-        merged.get('description')
-        or merged.get('details')
-        or merged.get('summary')
-        or ''
+    description = _first_non_empty(merged, ['description', 'details', 'summary']) or ''
+    location = _first_non_empty(merged, ['location', 'formatted_address', 'address']) or ''
+    primary_gallery_photo = (
+        place_row.get('photo_public_urls')[0]
+        if isinstance(place_row.get('photo_public_urls'), list) and place_row.get('photo_public_urls')
+        else None
     )
     image_url = (
-        merged.get('image_url')
-        or merged.get('photo_url')
-        or merged.get('cover_image')
+        primary_gallery_photo
+        or _first_non_empty(merged, ['image_url', 'photo_url', 'cover_image'])
         or _playlist_stop_cover_image(name, category, description)
     )
-    distance_km = merged.get('distance_km') or merged.get('distance_from_previous_km') or 0
+    distance_km = _coerce_playlist_distance(
+        _first_non_empty(row, ['distance_km', 'distance_from_previous_km', 'distance'])
+    )
+    avg_rating = _coerce_playlist_distance(_first_non_empty(merged, ['avg_rating', 'rating'])) or 0.0
+    review_count = int(_first_non_empty(merged, ['review_count', 'reviews', 'user_rating_count']) or 0)
 
     return {
         'id': str(merged.get('id') or merged.get('place_id') or index),
+        'place_id': str(_first_non_empty(merged, ['place_id', 'id']) or ''),
         'name': name,
         'category': category,
         'description': description,
+        'location': location,
         'image_url': image_url,
         'imageUrl': image_url,
-        'google_url': merged.get('google_url'),
-        'googleUrl': merged.get('google_url'),
-        'latitude': merged.get('latitude'),
-        'longitude': merged.get('longitude'),
+        'photo_public_urls': place_row.get('photo_public_urls') or [],
+        'photo_url': _first_non_empty(merged, ['photo_url', 'image_url']),
+        'google_url': _first_non_empty(merged, ['google_url']),
+        'googleUrl': _first_non_empty(merged, ['google_url']),
+        'latitude': _first_non_empty(merged, ['latitude', 'lat']),
+        'longitude': _first_non_empty(merged, ['longitude', 'lng', 'lon']),
+        'avg_rating': avg_rating,
+        'review_count': review_count,
+        'tags': merged.get('tags') or [],
+        'playlist_notes': _first_non_empty(row, ['notes', 'description']),
         'distance_km': float(distance_km or 0),
         'stop_number': index + 1,
     }
@@ -352,3 +387,53 @@ def _sum_stop_distance(stops: list[dict]) -> float:
         except Exception:
             continue
     return round(total, 1)
+
+
+def _extract_playlist_place_keys(rows: list[dict]) -> dict[str, list]:
+    keys: dict[str, set] = {
+        'id': set(),
+        'place_id': set(),
+    }
+    for row in rows:
+        for field in ['place_id', 'destination_id', 'places_id', 'place_ref']:
+            value = row.get(field)
+            if value is not None and str(value).strip():
+                keys['id'].add(value)
+                keys['place_id'].add(str(value))
+        for field in ['google_place_id', 'external_place_id']:
+            value = row.get(field)
+            if value is not None and str(value).strip():
+                keys['place_id'].add(str(value))
+    return {
+        key: list(values)
+        for key, values in keys.items()
+    }
+
+
+def _candidate_place_lookup_keys(row: dict) -> list[str]:
+    keys = []
+    for field in ['id', 'place_id']:
+        value = row.get(field)
+        if value is not None and str(value).strip():
+            keys.append(str(value))
+    return keys
+
+
+def _match_place_row(place_lookup: dict[str, dict], relation_row: dict) -> dict | None:
+    for field in ['place_id', 'destination_id', 'places_id', 'place_ref', 'google_place_id', 'external_place_id']:
+        value = relation_row.get(field)
+        if value is None:
+            continue
+        matched = place_lookup.get(str(value))
+        if matched is not None:
+            return matched
+    return None
+
+
+def _coerce_playlist_distance(value) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except Exception:
+        return None
