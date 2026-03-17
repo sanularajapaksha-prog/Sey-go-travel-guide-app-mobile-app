@@ -9,7 +9,7 @@ from .places import PLACES_TABLE, _first_non_empty, _normalize_place_row
 router = APIRouter(prefix='/playlists', tags=['playlists'])
 
 PLAYLISTS_TABLE = 'playlists'
-PLAYLIST_DESTINATIONS_TABLE = 'playlist_destinations'
+PLAYLIST_DESTINATIONS_TABLE = 'playlist_places'
 
 
 class CreatePlaylistRequest(BaseModel):
