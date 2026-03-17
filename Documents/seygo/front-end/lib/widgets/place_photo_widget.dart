@@ -153,12 +153,17 @@ class _PlacePhotoWidgetState extends State<PlacePhotoWidget> {
       );
     }
 
-    return Image.asset(
-      'assets/images/no-image.jpg',
+    return Container(
       width: widget.width,
       height: widget.height,
-      fit: widget.fit ?? BoxFit.cover,
-      semanticLabel: widget.semanticLabel,
+      color: Colors.grey.shade200,
+      child: Center(
+        child: Icon(
+          Icons.image_not_supported,
+          color: Colors.grey.shade400,
+          size: (widget.width ?? 64) * 0.45,
+        ),
+      ),
     );
   }
 }

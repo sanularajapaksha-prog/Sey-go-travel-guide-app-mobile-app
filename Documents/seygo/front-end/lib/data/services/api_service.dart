@@ -215,6 +215,19 @@ class ApiService {
     required String googleUrl,
     String? placeId,
   }) async {
+    // --- Direct Google Places API resolution using GOOGLE_PLACES_API_KEY ---
+    final apiKey = dotenv.env['GOOGLE_PLACES_API_KEY'] ?? '';
+
+    if (apiKey.isNotEmpty) {
+      // Try resolving directly via Google Places API (no backend needed)
+      final directUrl = await _resolveViaGooglePlacesApi(
+        googleUrl: googleUrl,
+        apiKey: apiKey,
+      );
+      if (directUrl != null) return directUrl;
+    }
+
+    // --- Fallback: use backend endpoint ---
     final uri = Uri.parse('$baseUrl/places/photo-from-google-url').replace(
       queryParameters: <String, String>{
         'url': googleUrl,
@@ -243,6 +256,96 @@ class ApiService {
       return null;
     }
   }
+
+  /// Resolves a Google Maps URL directly to a photo URL using
+  /// the Google Places API.
+  ///
+  /// Flow:
+  ///   1. Extract `cid` (e.g. ?cid=123) OR `q` (e.g. ?q=Kandy) from URL
+  ///   2. Use Find Place API to get the place_id
+  ///   3. Use Place Details API to get a photo_reference
+  ///   4. Build the photo URL from the photo_reference
+  static Future<String?> _resolveViaGooglePlacesApi({
+    required String googleUrl,
+    required String apiKey,
+  }) async {
+    try {
+      // Step 1: Extract CID or Query from URL
+      final uri = Uri.tryParse(googleUrl);
+      final cid = uri?.queryParameters['cid'];
+      final q = uri?.queryParameters['q'];
+      
+      String searchInput;
+      if (cid != null && cid.isNotEmpty) {
+        searchInput = 'cid:$cid';
+      } else if (q != null && q.isNotEmpty) {
+        searchInput = q;
+      } else {
+        return null;
+      }
+
+      // Step 2: Find Place using CID or Query → get place_id
+      final findPlaceUri = Uri.parse(
+        'https://maps.googleapis.com/maps/api/place/findplacefromtext/json',
+      ).replace(queryParameters: {
+        'input': searchInput,
+        'inputtype': 'textquery',
+        'fields': 'place_id',
+        'key': apiKey,
+      });
+
+      final findResponse = await http
+          .get(findPlaceUri)
+          .timeout(const Duration(seconds: 10));
+
+      if (findResponse.statusCode != 200) return null;
+
+      final findData = jsonDecode(findResponse.body) as Map<String, dynamic>;
+      final candidates = findData['candidates'] as List?;
+      if (candidates == null || candidates.isEmpty) return null;
+
+      final resolvedPlaceId =
+          (candidates.first as Map<String, dynamic>)['place_id']?.toString();
+      if (resolvedPlaceId == null || resolvedPlaceId.isEmpty) return null;
+
+      // Step 3: Get photo_reference from Place Details
+      final detailsUri = Uri.parse(
+        'https://maps.googleapis.com/maps/api/place/details/json',
+      ).replace(queryParameters: {
+        'place_id': resolvedPlaceId,
+        'fields': 'photos',
+        'key': apiKey,
+      });
+
+      final detailsResponse = await http
+          .get(detailsUri)
+          .timeout(const Duration(seconds: 10));
+
+      if (detailsResponse.statusCode != 200) return null;
+
+      final detailsData =
+          jsonDecode(detailsResponse.body) as Map<String, dynamic>;
+      final photos =
+          (detailsData['result'] as Map<String, dynamic>?)?['photos'] as List?;
+      if (photos == null || photos.isEmpty) return null;
+
+      final photoRef =
+          (photos.first as Map<String, dynamic>)['photo_reference']?.toString();
+      if (photoRef == null || photoRef.isEmpty) return null;
+
+      // Step 4: Build final photo URL
+      final photoUrl =
+          'https://maps.googleapis.com/maps/api/place/photo'
+          '?maxwidth=800'
+          '&photoreference=$photoRef'
+          '&key=$apiKey';
+
+      return photoUrl;
+    } catch (_) {
+      return null;
+    }
+  }
+
 
   static Future<Map<String, dynamic>> register({
     required String fullName,
@@ -394,5 +497,42 @@ class ApiService {
       throw Exception(decoded['detail'].toString());
     }
     throw Exception('Failed to verify code: ${response.statusCode}');
+  }
+
+  /// Geocode a free-text query to lat/lng using the Google Places
+  /// findplacefromtext API, biased to Sri Lanka.
+  /// Returns a map with keys: name, latitude, longitude, address, place_id.
+  static Future<Map<String, dynamic>?> geocodePlace(String query) async {
+    final apiKey = dotenv.env['GOOGLE_PLACES_API_KEY'] ?? '';
+    if (apiKey.isEmpty) return null;
+    try {
+      final uri = Uri.parse(
+        'https://maps.googleapis.com/maps/api/place/findplacefromtext/json',
+      ).replace(queryParameters: {
+        'input': query,
+        'inputtype': 'textquery',
+        'fields': 'place_id,name,geometry,formatted_address',
+        'locationbias': 'rectangle:5.5,79.4|10.1,82.1',
+        'key': apiKey,
+      });
+      final response = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) return null;
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final candidates = data['candidates'] as List?;
+      if (candidates == null || candidates.isEmpty) return null;
+      final candidate = candidates.first as Map<String, dynamic>;
+      final geometry = candidate['geometry'] as Map?;
+      final location = geometry?['location'] as Map?;
+      if (location == null) return null;
+      return {
+        'name': candidate['name']?.toString() ?? query,
+        'latitude': (location['lat'] as num).toDouble(),
+        'longitude': (location['lng'] as num).toDouble(),
+        'address': candidate['formatted_address']?.toString() ?? '',
+        'place_id': candidate['place_id']?.toString() ?? '',
+      };
+    } catch (_) {
+      return null;
+    }
   }
 }

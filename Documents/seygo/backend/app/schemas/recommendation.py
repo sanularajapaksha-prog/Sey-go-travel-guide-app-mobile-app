@@ -3,6 +3,16 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
+class MLRecommendationRequest(BaseModel):
+    """Request schema for the ML-based /recommend-ml endpoint."""
+    query: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    radius_km: Optional[float] = None
+    preferred_categories: list[str] = Field(default_factory=list)
+    top_n: int = Field(default=10, ge=1, le=50)
+
+
 class PlaceRecommendationRequest(BaseModel):
     preference_tags: list[str] = Field(default_factory=list)
     selected_categories: list[str] = Field(default_factory=list)

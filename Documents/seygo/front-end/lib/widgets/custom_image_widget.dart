@@ -10,7 +10,7 @@ extension ImageTypeExtension on String {
       return ImageType.network;
     } else if (endsWith('.svg')) {
       return ImageType.svg;
-    } else if (startsWith('file: //')) {
+    } else if (startsWith('file://')) {
       return ImageType.file;
     } else {
       return ImageType.png;
@@ -153,12 +153,16 @@ class CustomImageWidget extends StatelessWidget {
             ),
             errorWidget: (context, url, error) =>
             errorWidget ??
-                Image.asset(
-                  placeHolder,
+                Container(
                   height: height,
                   width: width,
-                  fit: fit ?? BoxFit.cover,
-                  semanticLabel: semanticLabel,
+                  color: Colors.grey.shade200,
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.image_not_supported,
+                    color: Colors.grey.shade400,
+                    size: (width ?? 40) * 0.5,
+                  ),
                 ),
           );
         case ImageType.png:

@@ -321,17 +321,6 @@ class _RoutePlannerScreenState extends State<RoutePlannerScreen> {
     unawaited(_rebuildOptimizedRoute());
   }
 
-  void _optimizeRouteManually() {
-    if (_cartDestinations.isEmpty) return;
-    unawaited(_rebuildOptimizedRoute());
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Route optimized'),
-        duration: Duration(seconds: 1),
-      ),
-    );
-  }
-
   void _openTripOverview() {
     if (_optimizedStops.isEmpty) return;
 
@@ -406,7 +395,7 @@ class _RoutePlannerScreenState extends State<RoutePlannerScreen> {
               color: theme.scaffoldBackgroundColor,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
+                  color: Colors.black.withValues(alpha: 0.06),
                   blurRadius: 12,
                   offset: const Offset(0, -4),
                 ),
@@ -415,25 +404,6 @@ class _RoutePlannerScreenState extends State<RoutePlannerScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _cartDestinations.isEmpty || _isOptimizingRoute
-                        ? null
-                        : _optimizeRouteManually,
-                    icon: const Icon(Icons.alt_route, size: 18),
-                    label: Text(
-                      _isOptimizingRoute ? 'Optimizing...' : 'Optimize Route',
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(28),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -477,7 +447,7 @@ class _RoutePlannerScreenState extends State<RoutePlannerScreen> {
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

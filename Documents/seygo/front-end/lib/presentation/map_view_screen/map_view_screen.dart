@@ -39,6 +39,19 @@ class _MapViewScreenState extends State<MapViewScreen> {
   final List<Map<String, dynamic>> _tripCart = [];
   final List<double> _radiusOptionsKm = [1, 3, 5, 10, 15, 20, 30, 40, 50, 60];
 
+  // Prevents the initial "pan to my location" from firing more than once
+  bool _didInitialLocationPan = false;
+
+  // Radius circle overlay
+  Set<Circle> _circles = {};
+  bool _showRadiusCircle = false;
+
+  // Geocoded pin for locations not in DB
+  Map<String, dynamic>? _geocodedPin;
+
+  // Place cards strip at bottom of map
+  late final PageController _placeCardPageController;
+
   // Mock destination data with geographic coordinates
   final List<Map<String, dynamic>> _destinations = [
     {
@@ -190,6 +203,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
   @override
   void initState() {
     super.initState();
+    _placeCardPageController = PageController(viewportFraction: 0.88);
     _initializeMap();
   }
 
@@ -198,6 +212,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
     _mapController?.dispose();
     _searchController.dispose();
     _searchDebounce?.cancel();
+    _placeCardPageController.dispose();
     super.dispose();
   }
 
@@ -278,12 +293,24 @@ class _MapViewScreenState extends State<MapViewScreen> {
       );
 
       setState(() => _currentPosition = position);
+      _panToCurrentLocationOnce();
     } catch (e) {
       if (mounted) {
         setState(() => _hasLocationPermission = false);
       }
-      // Silent fail - map will show default location
     }
+  }
+
+  void _panToCurrentLocationOnce() {
+    if (_didInitialLocationPan) return;
+    if (_currentPosition == null || _mapController == null) return;
+    _didInitialLocationPan = true;
+    _mapController!.animateCamera(
+      CameraUpdate.newLatLngZoom(
+        LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+        13.0,
+      ),
+    );
   }
 
   Future<void> _createMarkers() async {
@@ -675,17 +702,6 @@ class _MapViewScreenState extends State<MapViewScreen> {
     return const [];
   }
 
-  bool _isDirectGooglePhotoUrl(String url) {
-    final lower = url.toLowerCase();
-    return lower.contains('googleusercontent.com') ||
-        lower.contains('ggpht.com') ||
-        lower.contains('streetviewpixels-pa.googleapis.com') ||
-        (lower.contains('gstatic.com') &&
-            (lower.contains('/p/') ||
-                lower.contains('=s') ||
-                lower.contains('=w')));
-  }
-
   void _onMarkerTapped(Map<String, dynamic> destination) {
     setState(() => _selectedDestination = destination);
     _showDestinationBottomSheet();
@@ -919,6 +935,9 @@ class _MapViewScreenState extends State<MapViewScreen> {
         _apiSearchPlaces = [];
         _searchCenter = null;
         _searchSuggestions = [];
+        _geocodedPin = null;
+        _circles = {};
+        _showRadiusCircle = false;
       });
       await _createMarkers();
       return;
@@ -958,6 +977,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
       setState(() {
         _apiSearchPlaces = ranked;
         _searchSuggestions = [];
+        _geocodedPin = null;
       });
       await _createMarkers();
 
@@ -966,12 +986,50 @@ class _MapViewScreenState extends State<MapViewScreen> {
         final lat = first['latitude'] as double;
         final lon = first['longitude'] as double;
         setState(() => _searchCenter = LatLng(lat, lon));
-        _mapController!.animateCamera(
-          CameraUpdate.newLatLngZoom(
-            LatLng(lat, lon),
-            _zoomForRadius(_selectedRadiusKm),
-          ),
+        if (_showRadiusCircle) _updateRadiusCircle();
+        // Fit camera to show ALL result markers, not just the first one
+        final visiblePoints = _filteredDestinations
+            .map((p) => LatLng(
+                  (p['latitude'] as num).toDouble(),
+                  (p['longitude'] as num).toDouble(),
+                ))
+            .toList();
+        await _fitMapToMarkers(
+          visiblePoints.isNotEmpty ? visiblePoints : [LatLng(lat, lon)],
         );
+      } else {
+        // No DB results — geocode and drop a pin on the map
+        final geo = await ApiService.geocodePlace(query);
+        if (geo != null && mounted) {
+          final lat = geo['latitude'] as double;
+          final lon = geo['longitude'] as double;
+          final pinCenter = LatLng(lat, lon);
+          final pinMarker = Marker(
+            markerId: const MarkerId('__geocoded__'),
+            position: pinCenter,
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueCyan,
+            ),
+            infoWindow: InfoWindow(
+              title: geo['name'] as String,
+              snippet: (geo['address'] as String?)?.isNotEmpty == true
+                  ? geo['address'] as String
+                  : null,
+            ),
+          );
+          setState(() {
+            _geocodedPin = geo;
+            _searchCenter = pinCenter;
+            _markers.add(pinMarker);
+          });
+          if (_showRadiusCircle) _updateRadiusCircle();
+          _mapController?.animateCamera(
+            CameraUpdate.newLatLngZoom(
+              pinCenter,
+              _zoomForRadius(_selectedRadiusKm),
+            ),
+          );
+        }
       }
     } catch (_) {
       final local = _localSuggestions(query, limit: 20);
@@ -986,12 +1044,14 @@ class _MapViewScreenState extends State<MapViewScreen> {
           final lat = first['latitude'] as double;
           final lon = first['longitude'] as double;
           setState(() => _searchCenter = LatLng(lat, lon));
-          _mapController!.animateCamera(
-            CameraUpdate.newLatLngZoom(
-              LatLng(lat, lon),
-              _zoomForRadius(_selectedRadiusKm),
-            ),
-          );
+          if (_showRadiusCircle) _updateRadiusCircle();
+          final pts = local
+              .map((p) => LatLng(
+                    (p['latitude'] as num).toDouble(),
+                    (p['longitude'] as num).toDouble(),
+                  ))
+              .toList();
+          await _fitMapToMarkers(pts);
         }
       }
     } finally {
@@ -1015,18 +1075,34 @@ class _MapViewScreenState extends State<MapViewScreen> {
   }
 
   void _onRadiusSelected(double radiusKm) {
-    setState(() => _selectedRadiusKm = radiusKm);
-    _createMarkers();
-    final center =
-        _searchCenter ??
-        (_currentPosition != null
-            ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
-            : null);
-    if (center != null && _mapController != null) {
-      _mapController!.animateCamera(
-        CameraUpdate.newLatLngZoom(center, _zoomForRadius(radiusKm)),
-      );
-    }
+    setState(() {
+      _selectedRadiusKm = radiusKm;
+      _showRadiusCircle = true;
+    });
+    _updateRadiusCircle();
+    _createMarkers().then((_) {
+      // Fit camera to show all places that are now visible within the radius
+      final pts = _filteredDestinations
+          .map((p) => LatLng(
+                (p['latitude'] as num).toDouble(),
+                (p['longitude'] as num).toDouble(),
+              ))
+          .toList();
+      if (pts.isNotEmpty) {
+        _fitMapToMarkers(pts);
+      } else {
+        final center =
+            _searchCenter ??
+            (_currentPosition != null
+                ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+                : null);
+        if (center != null && _mapController != null) {
+          _mapController!.animateCamera(
+            CameraUpdate.newLatLngZoom(center, _zoomForRadius(radiusKm)),
+          );
+        }
+      }
+    });
   }
 
   double _zoomForRadius(double radiusKm) {
@@ -1039,6 +1115,55 @@ class _MapViewScreenState extends State<MapViewScreen> {
     if (radiusKm <= 40) return 10.0;
     if (radiusKm <= 50) return 9.6;
     return 9.2;
+  }
+
+  /// Animate the camera to show all given [points] with padding.
+  /// Falls back to a single zoom if only one point is given.
+  Future<void> _fitMapToMarkers(List<LatLng> points) async {
+    if (points.isEmpty || _mapController == null) return;
+    if (points.length == 1) {
+      await _mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(points.first, _zoomForRadius(_selectedRadiusKm)),
+      );
+      return;
+    }
+    final lats = points.map((p) => p.latitude).toList();
+    final lons = points.map((p) => p.longitude).toList();
+    final minLat = lats.reduce(math.min);
+    final maxLat = lats.reduce(math.max);
+    final minLon = lons.reduce(math.min);
+    final maxLon = lons.reduce(math.max);
+    // Add a small padding around bounds so pins aren't right on the edge
+    const pad = 0.05;
+    final bounds = LatLngBounds(
+      southwest: LatLng(minLat - pad, minLon - pad),
+      northeast: LatLng(maxLat + pad, maxLon + pad),
+    );
+    await _mapController!.animateCamera(
+      CameraUpdate.newLatLngBounds(bounds, 72.0),
+    );
+  }
+
+  void _updateRadiusCircle() {
+    final center =
+        _searchCenter ??
+        (_currentPosition != null
+            ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+            : null);
+    if (center == null) return;
+    final theme = Theme.of(context);
+    setState(() {
+      _circles = {
+        Circle(
+          circleId: const CircleId('radius'),
+          center: center,
+          radius: _selectedRadiusKm * 1000,
+          strokeColor: theme.colorScheme.primary,
+          strokeWidth: 2,
+          fillColor: theme.colorScheme.primary.withValues(alpha: 0.08),
+        ),
+      };
+    });
   }
 
   List<Map<String, dynamic>> _applyRadiusFilter(
@@ -1362,6 +1487,8 @@ class _MapViewScreenState extends State<MapViewScreen> {
 
   Widget _buildMapView() {
     final theme = Theme.of(context);
+    final cards = _filteredDestinations;
+    final hasCards = cards.isNotEmpty;
 
     if (_isLoading) {
       return Center(
@@ -1377,7 +1504,13 @@ class _MapViewScreenState extends State<MapViewScreen> {
             zoom: 8.0,
           ),
           markers: _markers,
-          onMapCreated: (controller) => _mapController = controller,
+          circles: Set<Circle>.from(_circles),
+          onMapCreated: (controller) {
+            _mapController = controller;
+            // If location was already fetched before the map finished
+            // initialising, pan there now.
+            _panToCurrentLocationOnce();
+          },
           myLocationEnabled: _hasLocationPermission,
           myLocationButtonEnabled: false,
           zoomControlsEnabled: false,
@@ -1389,10 +1522,19 @@ class _MapViewScreenState extends State<MapViewScreen> {
           zoomGesturesEnabled: true,
         ),
 
-        // Current location button
+        // Place cards strip at bottom
+        if (hasCards)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _buildPlaceCardsStrip(cards, theme),
+          ),
+
+        // Location + radius buttons (moved up when cards visible)
         Positioned(
           right: 4.w,
-          bottom: 4.h,
+          bottom: hasCards ? 19.h : 4.h,
           child: Column(
             children: [
               Container(
@@ -1426,22 +1568,62 @@ class _MapViewScreenState extends State<MapViewScreen> {
                 ),
               ),
               SizedBox(height: 1.2.h),
-              PopupMenuButton<double>(
+              PopupMenuButton<String>(
                 tooltip: 'Radius',
-                onSelected: _onRadiusSelected,
-                itemBuilder: (context) => _radiusOptionsKm
-                    .map(
-                      (radius) => PopupMenuItem<double>(
-                        value: radius,
-                        child: Text('${radius.toInt()} km'),
+                onSelected: (value) {
+                  if (value == '__clear__') {
+                    setState(() {
+                      _showRadiusCircle = false;
+                      _circles = {};
+                    });
+                  } else {
+                    _onRadiusSelected(double.parse(value));
+                  }
+                },
+                itemBuilder: (context) => [
+                  ..._radiusOptionsKm.map(
+                    (radius) => PopupMenuItem<String>(
+                      value: radius.toString(),
+                      child: Row(
+                        children: [
+                          if (_showRadiusCircle &&
+                              _selectedRadiusKm == radius)
+                            Icon(
+                              Icons.check,
+                              size: 16,
+                              color: theme.colorScheme.primary,
+                            ),
+                          if (!(_showRadiusCircle &&
+                              _selectedRadiusKm == radius))
+                            const SizedBox(width: 16),
+                          const SizedBox(width: 8),
+                          Text('${radius.toInt()} km'),
+                        ],
                       ),
-                    )
-                    .toList(),
+                    ),
+                  ),
+                  if (_showRadiusCircle)
+                    const PopupMenuItem<String>(
+                      value: '__clear__',
+                      child: Row(
+                        children: [
+                          Icon(Icons.clear, size: 16, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text(
+                            'Clear radius',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
                 child: Container(
                   height: 5.4.h,
                   width: 12.w,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
+                    color: _showRadiusCircle
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(12.0),
                     boxShadow: [
                       BoxShadow(
@@ -1452,11 +1634,219 @@ class _MapViewScreenState extends State<MapViewScreen> {
                     ],
                   ),
                   alignment: Alignment.center,
+                  child: _showRadiusCircle
+                      ? Text(
+                          '${_selectedRadiusKm.toInt()}km',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onPrimary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 11,
+                          ),
+                        )
+                      : CustomIconWidget(
+                          iconName: 'radar',
+                          color: theme.colorScheme.primary,
+                          size: 22,
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPlaceCardsStrip(
+    List<Map<String, dynamic>> cards,
+    ThemeData theme,
+  ) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Count badge row
+        Padding(
+          padding: EdgeInsets.only(left: 4.w, bottom: 0.6.h),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.colorScheme.shadow,
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Text(
+              '${cards.length} place${cards.length == 1 ? '' : 's'} found',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 14.h,
+          child: PageView.builder(
+            controller: _placeCardPageController,
+            itemCount: cards.length,
+            onPageChanged: (index) {
+              final place = cards[index];
+              final lat = (place['latitude'] as num).toDouble();
+              final lon = (place['longitude'] as num).toDouble();
+              _mapController?.animateCamera(
+                CameraUpdate.newLatLng(LatLng(lat, lon)),
+              );
+            },
+            itemBuilder: (context, index) =>
+                _buildSinglePlaceCard(cards[index], theme),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSinglePlaceCard(
+    Map<String, dynamic> place,
+    ThemeData theme,
+  ) {
+    final name = (place['name'] as String?) ?? '';
+    final category = (place['category'] as String?) ?? '';
+    final rating = (place['rating'] as num?)?.toDouble() ?? 0.0;
+    final googleUrl = place['googleUrl'] as String?;
+
+    String distanceLabel = '';
+    final centerLat = _activeCenterLat;
+    final centerLon = _activeCenterLon;
+    final placeLat = (place['latitude'] as num?)?.toDouble();
+    final placeLon = (place['longitude'] as num?)?.toDouble();
+    if (centerLat != null &&
+        centerLon != null &&
+        placeLat != null &&
+        placeLon != null) {
+      final d = _haversineKm(centerLat, centerLon, placeLat, placeLon);
+      distanceLabel = d < 1
+          ? '${(d * 1000).toInt()} m'
+          : '${d.toStringAsFixed(1)} km';
+    }
+
+    return Container(
+      margin: EdgeInsets.fromLTRB(2.w, 1.h, 2.w, 1.5.h),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.shadow,
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _onMarkerTapped(place),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(16),
+                ),
+                child: PlacePhotoWidget(
+                  googleUrl: googleUrl,
+                  width: 22.w,
+                  height: double.infinity,
+                  fit: BoxFit.cover,
+                  semanticLabel: name,
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 3.w,
+                    vertical: 1.2.h,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      SizedBox(height: 0.3.h),
+                      Text(
+                        category,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      SizedBox(height: 0.3.h),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.star_rounded,
+                            size: 14,
+                            color: Colors.amber,
+                          ),
+                          SizedBox(width: 2),
+                          Text(
+                            rating > 0
+                                ? rating.toStringAsFixed(1)
+                                : 'N/A',
+                            style: theme.textTheme.bodySmall,
+                          ),
+                          if (distanceLabel.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            Text(
+                              distanceLabel,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.only(right: 3.w),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 3.w,
+                      vertical: 0.8.h,
+                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () {
+                    setState(() => _selectedDestination = place);
+                    _addSelectedDestinationToTripCart();
+                  },
                   child: Text(
-                    '${_selectedRadiusKm.toInt()}',
+                    '+ Cart',
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onPrimary,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -1464,7 +1854,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
             ],
           ),
         ),
-      ],
+      ),
     );
   }
 

@@ -58,6 +58,7 @@ class DestinationBottomSheetWidget extends StatelessWidget {
             borderRadius: BorderRadius.circular(20.0),
             child: PlacePhotoWidget(
               place: place,
+              googleUrl: destination['google_url'] ?? destination['googleUrl'],
               width: 90.w,
               height: 25.h,
               fit: BoxFit.cover,
@@ -75,7 +76,7 @@ class DestinationBottomSheetWidget extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        destination['name'] as String,
+                        (destination['name'] as String?) ?? 'Unknown',
                         style: theme.textTheme.headlineSmall,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -115,14 +116,14 @@ class DestinationBottomSheetWidget extends StatelessWidget {
                   children: [
                     CustomIconWidget(
                       iconName: _getCategoryIcon(
-                        destination['category'] as String,
+                        (destination['category'] as String?) ?? 'Other',
                       ),
                       color: theme.colorScheme.onSurfaceVariant,
                       size: 20,
                     ),
                     SizedBox(width: 2.w),
                     Text(
-                      destination['category'] as String,
+                      (destination['category'] as String?) ?? 'Other',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -163,7 +164,7 @@ class DestinationBottomSheetWidget extends StatelessWidget {
                 ),
                 SizedBox(height: 2.h),
                 Text(
-                  destination['description'] as String,
+                  (destination['description'] as String?) ?? 'No description available.',
                   style: theme.textTheme.bodyMedium,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,

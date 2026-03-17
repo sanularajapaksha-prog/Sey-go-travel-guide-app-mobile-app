@@ -48,6 +48,7 @@ class DestinationMarkerWidget extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 child: PlacePhotoWidget(
                   place: place,
+                  googleUrl: destination['google_url'] ?? destination['googleUrl'],
                   width: 22.w,
                   height: 22.w,
                   fit: BoxFit.cover,
@@ -61,7 +62,7 @@ class DestinationMarkerWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      destination['name'] as String,
+                      (destination['name'] as String?) ?? 'Unknown',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleMedium?.copyWith(
@@ -70,7 +71,7 @@ class DestinationMarkerWidget extends StatelessWidget {
                     ),
                     SizedBox(height: 0.7.h),
                     Text(
-                      destination['category'] as String,
+                      (destination['category'] as String?) ?? 'Other',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodyMedium?.copyWith(

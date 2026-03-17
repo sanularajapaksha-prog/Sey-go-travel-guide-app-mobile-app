@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:sizer/sizer.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_export.dart';
 import '../../widgets/custom_icon_widget.dart';
@@ -438,13 +439,23 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
               'Open in Google Maps',
               style: theme.textTheme.titleMedium,
             ),
-            onTap: () {
+            onTap: () async {
               Navigator.pop(context);
-              Fluttertoast.showToast(
-                msg: "Opening Google Maps...",
-                toastLength: Toast.LENGTH_SHORT,
-                gravity: ToastGravity.BOTTOM,
+              // Google Maps: directions to destination
+              final uri = Uri.parse(
+                'https://www.google.com/maps/dir/?api=1'
+                '&destination=$lat,$lng'
+                '&travelmode=driving',
               );
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              } else {
+                Fluttertoast.showToast(
+                  msg: 'Google Maps is not installed',
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                );
+              }
             },
           ),
 
@@ -469,13 +480,21 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
               'Open in Apple Maps',
               style: theme.textTheme.titleMedium,
             ),
-            onTap: () {
+            onTap: () async {
               Navigator.pop(context);
-              Fluttertoast.showToast(
-                msg: "Opening Apple Maps...",
-                toastLength: Toast.LENGTH_SHORT,
-                gravity: ToastGravity.BOTTOM,
+              // Apple Maps: directions to destination
+              final uri = Uri.parse(
+                'https://maps.apple.com/?daddr=$lat,$lng&dirflg=d',
               );
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              } else {
+                Fluttertoast.showToast(
+                  msg: 'Apple Maps is not available on this device',
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                );
+              }
             },
           ),
 

@@ -7,7 +7,7 @@ import httpx
 from ..dependencies import get_current_user, get_supabase_client
 from ..schemas.google_places import GooglePlacesSearchRequest
 from ..schemas.place import PlaceCreate
-from ..schemas.recommendation import PlaceRecommendationRequest
+from ..schemas.recommendation import MLRecommendationRequest, PlaceRecommendationRequest
 from ..services.google_photo_resolver import (
     GOOGLE_IMAGE_HEADERS,
     append_maxwidth,
@@ -19,10 +19,12 @@ from ..services.google_photo_resolver import (
 )
 from ..services.google_places import GooglePlacesService
 from ..services.place_taxonomy import PLACE_TAXONOMY, infer_taxonomy
+from ..services.ml_recommender import MLRecommender
 from ..services.recommender import PlaceFeature, PlaceRecommender, _haversine_km
 
 router = APIRouter(prefix='/places', tags=['places'])
 recommender = PlaceRecommender()
+ml_recommender = MLRecommender()
 google_places_service = GooglePlacesService()
 # Default table name corrected to the expected `places`.
 PLACES_TABLE = os.getenv('SUPABASE_PLACES_TABLE', 'places')
@@ -94,6 +96,10 @@ def _first_non_empty(row: dict, keys: list[str]):
 def _coerce_float(value, default: float | None = None) -> float | None:
     if value is None:
         return default
+    try:
+        return float(value)
+    except Exception:
+        return default
 
 
 def _coerce_list(value) -> list[str]:
@@ -113,10 +119,6 @@ def _coerce_list(value) -> list[str]:
             pass
         return [item.strip() for item in text.split(',') if item.strip()]
     return []
-    try:
-        return float(value)
-    except Exception:
-        return default
 
 
 def _extract_photo_path(row: dict) -> str | None:
@@ -349,6 +351,62 @@ async def recommend_places(
         ) from exc
 
 
+@router.post('/recommend-ml')
+async def recommend_places_ml(
+    request: MLRecommendationRequest,
+    user=Depends(get_current_user),
+):
+    """Hybrid ML recommendation endpoint.
+
+    Combines TF-IDF content-based similarity with collaborative filtering
+    (SVD on saved_destinations) plus popularity and distance signals.
+    Auto-trains the model on first call if no cached model exists.
+    """
+    try:
+        supabase = get_supabase_client()
+        result = ml_recommender.recommend(
+            supabase,
+            user_id=str(user.id),
+            query=request.query,
+            latitude=request.latitude,
+            longitude=request.longitude,
+            radius_km=request.radius_km,
+            preferred_categories=request.preferred_categories or [],
+            top_n=request.top_n,
+        )
+        return result
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'ML recommendation failed: {exc}',
+        ) from exc
+
+
+@router.post('/recommend-ml/retrain')
+async def retrain_ml_model(user=Depends(get_current_user)):
+    """Force a synchronous retrain of the ML model.
+
+    This re-fetches all places and saved_destinations from Supabase and
+    rebuilds both the content-based and collaborative filtering models.
+    May take several seconds on large datasets.
+    """
+    try:
+        supabase = get_supabase_client()
+        ml_recommender.retrain(supabase)
+        return ml_recommender.model_info()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Retraining failed: {exc}',
+        ) from exc
+
+
+@router.get('/recommend-ml/info')
+async def ml_model_info():
+    """Return metadata about the currently loaded ML model (no auth required)."""
+    return ml_recommender.model_info()
+
+
 @router.get('/search')
 async def search_places(
     q: str = Query(..., min_length=1),
@@ -511,7 +569,7 @@ async def photo_from_google_url(
             try:
                 existing = (
                     supabase.table(PLACES_TABLE)
-                    .select('image_url, photo_public_urls, image_source')
+                    .select('image_url, photo_public_urls')
                     .eq('place_id', place_id)
                     .limit(1)
                     .execute()
@@ -525,7 +583,7 @@ async def photo_from_google_url(
                 return {
                     'success': True,
                     'photo_url': append_maxwidth(cached_image),
-                    'source': cached_row.get('image_source') or 'cached_image_url',
+                    'source': 'cached_image_url',
                     'cached': True,
                 }
             public_urls = _coerce_list(cached_row.get('photo_public_urls'))
