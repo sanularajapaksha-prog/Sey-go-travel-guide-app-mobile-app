@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(find 'c:\\\\Users\\\\user\\\\New folder\\\\Sey-go-travel-guide-app-mobile-app\\\\Documents\\\\seygo\\\\backend' -type d -not -path */.venv/* -not -path */__pycache__/*)",
-      "Bash(ls -la \"c:\\\\Users\\\\user\\\\New folder\\\\Sey-go-travel-guide-app-mobile-app\\\\Documents\\\\seygo\\\\backend\\\\app\\\\routers\"\" 2>/dev/null || echo \"Directory may not exist or path issue \")"
-    ]
-  }
-}
