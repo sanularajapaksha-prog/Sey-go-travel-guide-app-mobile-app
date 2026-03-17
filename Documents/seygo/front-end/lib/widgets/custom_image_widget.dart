@@ -161,7 +161,7 @@ class CustomImageWidget extends StatelessWidget {
                   child: Icon(
                     Icons.image_not_supported,
                     color: Colors.grey.shade400,
-                    size: (width ?? 40) * 0.5,
+                    size: _safePlaceholderSize(),
                   ),
                 ),
           );
@@ -178,5 +178,18 @@ class CustomImageWidget extends StatelessWidget {
       }
     }
     return SizedBox();
+  }
+
+  double _safePlaceholderSize() {
+    final widthValue = width;
+    final heightValue = height;
+    final base = (widthValue != null && widthValue.isFinite && widthValue > 0)
+        ? widthValue
+        : (heightValue != null && heightValue.isFinite && heightValue > 0)
+            ? heightValue
+            : 64.0;
+    final size = base * 0.32;
+    if (!size.isFinite || size <= 0) return 24.0;
+    return size.clamp(24.0, 72.0);
   }
 }

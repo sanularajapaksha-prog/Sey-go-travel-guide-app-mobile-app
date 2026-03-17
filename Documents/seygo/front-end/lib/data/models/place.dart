@@ -84,14 +84,14 @@ class Place {
   String? get cachedImageUrl => withGooglePhotoWidth(imageUrl);
 
   String? resolveBestAvailableImageUrl() {
-    if (cachedImageUrl != null) {
-      return cachedImageUrl;
-    }
     for (final url in photoPublicUrls) {
       final normalized = withGooglePhotoWidth(url);
       if (normalized != null) {
         return normalized;
       }
+    }
+    if (cachedImageUrl != null) {
+      return cachedImageUrl;
     }
     return null;
   }

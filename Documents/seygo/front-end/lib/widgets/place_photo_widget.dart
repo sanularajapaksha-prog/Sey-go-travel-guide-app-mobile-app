@@ -138,14 +138,15 @@ class _PlacePhotoWidgetState extends State<PlacePhotoWidget> {
 
   Widget _fallback() {
     if (widget.useSadFaceFallback) {
+      final fallbackSize = _safePlaceholderSize();
       return SizedBox(
         width: widget.width,
         height: widget.height,
         child: Center(
           child: SvgPicture.asset(
             'assets/images/sad_face.svg',
-            width: (widget.width ?? 64) * 0.45,
-            height: (widget.height ?? 64) * 0.45,
+            width: fallbackSize,
+            height: fallbackSize,
             semanticsLabel: widget.semanticLabel,
             fit: BoxFit.contain,
           ),
@@ -161,9 +162,22 @@ class _PlacePhotoWidgetState extends State<PlacePhotoWidget> {
         child: Icon(
           Icons.image_not_supported,
           color: Colors.grey.shade400,
-          size: (widget.width ?? 64) * 0.45,
+          size: _safePlaceholderSize(),
         ),
       ),
     );
+  }
+
+  double _safePlaceholderSize() {
+    final widthValue = widget.width;
+    final heightValue = widget.height;
+    final base = (widthValue != null && widthValue.isFinite && widthValue > 0)
+        ? widthValue
+        : (heightValue != null && heightValue.isFinite && heightValue > 0)
+            ? heightValue
+            : 64.0;
+    final size = base * 0.32;
+    if (!size.isFinite || size <= 0) return 24.0;
+    return size.clamp(24.0, 72.0);
   }
 }
