@@ -309,12 +309,100 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<void> _submitRegister() async {
-    // Temporary bypass: go straight into the app without auth.
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      AppRoutes.welcomeHomeScreen,
-      (route) => false,
-    );
+    final fullName = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final confirmPassword = _confirmController.text;
+
+    final emailError = email.isEmpty ? 'Email is required' : _validateEmail(email);
+    String? passwordError;
+    String? confirmError;
+
+    if (fullName.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Full name is required.')));
+      return;
+    }
+
+    if (password.isEmpty) {
+      passwordError = 'Password is required';
+    } else if (password.length < 6) {
+      passwordError = 'Password must be at least 6 characters';
+    }
+
+    if (confirmPassword.isEmpty) {
+      confirmError = 'Please confirm your password';
+    } else if (password != confirmPassword) {
+      confirmError = 'Passwords do not match';
+    }
+
+    setState(() {
+      _emailError = emailError;
+      _passwordError = passwordError;
+      _confirmError = confirmError;
+    });
+
+    if (emailError != null || passwordError != null || confirmError != null) {
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final response = await ApiService.register(
+        fullName: fullName,
+        email: email,
+        password: password,
+      );
+
+      final hasTokens =
+          (response['refresh_token']?.toString().isNotEmpty ?? false);
+
+      if (hasTokens) {
+        await ApiService.persistBackendSession(response);
+        ApiService.invalidateProfileCache();
+        if (!mounted) return;
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.welcomeHomeScreen,
+          (route) => false,
+        );
+        return;
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            response['verification_email_sent'] == true
+                ? 'Account created. Enter the verification code sent to your email.'
+                : 'Account created. Verify your email to continue.',
+          ),
+        ),
+      );
+      Navigator.pushNamed(
+        context,
+        AppRoutes.otpPage,
+        arguments: <String, dynamic>{
+          'email': email,
+          'mode': 'register',
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
   }
 
   Future<void> _signInWithGoogle() async {

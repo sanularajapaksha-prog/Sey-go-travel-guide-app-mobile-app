@@ -143,27 +143,60 @@ class HelpSupportPopup extends StatelessWidget {
             context,
             icon: Icons.group_outlined,
             title: "Community Guidelines",
-            onTap: () {
-              // TODO: Navigate to guidelines screen or open URL
-              debugPrint("Open Community Guidelines");
+            onTap: () async {
+              final uri = Uri.parse('https://seygo.lk/community-guidelines');
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              } else {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Coming soon'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
             },
           ),
           _buildTile(
             context,
             icon: Icons.description_outlined,
             title: "Terms of Service",
-            onTap: () {
-              // TODO: Navigate or open URL
-              debugPrint("Open Terms of Service");
+            onTap: () async {
+              final uri = Uri.parse('https://seygo.lk/terms');
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              } else {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Coming soon'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
             },
           ),
           _buildTile(
             context,
             icon: Icons.security_outlined,
             title: "Privacy Policy",
-            onTap: () {
-              // TODO: Navigate or open URL
-              debugPrint("Open Privacy Policy");
+            onTap: () async {
+              final uri = Uri.parse('https://seygo.lk/privacy');
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              } else {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Coming soon'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
             },
           ),
         ],

@@ -43,7 +43,15 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
     if (mounted) {
       setState(() {
         _playlists = data;
-        _filteredPlaylists = List.from(_playlists);
+        final q = _searchController.text;
+        _filteredPlaylists = q.isEmpty
+            ? List.from(_playlists)
+            : _playlists.where((p) {
+                final name = (p['name'] as String).toLowerCase();
+                final desc = (p['description'] as String? ?? '').toLowerCase();
+                return name.contains(q.toLowerCase()) ||
+                    desc.contains(q.toLowerCase());
+              }).toList();
       });
     }
   }
@@ -67,15 +75,6 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
 
   Future<void> _refreshPlaylists() async {
     await _loadPlaylists();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Playlists synced'),
-          behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
   }
 
   void _createPlaylist() async {
@@ -242,127 +241,134 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Column(
-      children: [
-        Container(
-          color: theme.appBarTheme.backgroundColor,
-          child: SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
-                  child: Row(
-                    children: [
-                      _isSearching
-                          ? Expanded(
-                        child: TextField(
-                          controller: _searchController,
-                          autofocus: true,
-                          decoration: InputDecoration(
-                            hintText: 'Search playlists...',
-                            prefixIcon: Padding(
-                              padding: EdgeInsets.all(2.w),
-                              child: CustomIconWidget(
-                                iconName: 'search',
-                                size: 20,
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            suffixIcon: IconButton(
-                              icon: CustomIconWidget(
-                                iconName: 'clear',
-                                size: 20,
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _isSearching = false;
-                                  _searchController.clear();
-                                  _filteredPlaylists = List.from(
-                                    _playlists,
-                                  );
-                                });
-                              },
-                            ),
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 4.w,
-                              vertical: 1.5.h,
-                            ),
-                          ),
-                          onChanged: _filterPlaylists,
-                        ),
-                      )
-                          : Expanded(
-                        child: Text(
-                          'Playlists',
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      if (!_isSearching) ...[
-                        IconButton(
-                          icon: CustomIconWidget(
-                            iconName: 'search',
-                            size: 24,
-                            color: theme.colorScheme.onSurface,
-                          ),
-                          onPressed: () => setState(() => _isSearching = true),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        Expanded(
-          child: _filteredPlaylists.isEmpty
-              ? _playlists.isEmpty
-              ? EmptyPlaylistsWidget(onCreatePlaylist: _createPlaylist)
-              : Center(
-            child: Padding(
-              padding: EdgeInsets.all(8.w),
+    return ColoredBox(
+      color: theme.scaffoldBackgroundColor,
+      child: Column(
+        children: [
+          Container(
+            color: theme.appBarTheme.backgroundColor,
+            child: SafeArea(
+              bottom: false,
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CustomIconWidget(
-                    iconName: 'search_off',
-                    size: 64,
-                    color: theme.colorScheme.onSurfaceVariant
-                        .withValues(alpha: 0.3),
-                  ),
-                  SizedBox(height: 2.h),
-                  Text(
-                    'No playlists found',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                  Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+                    child: Row(
+                      children: [
+                        _isSearching
+                            ? Expanded(
+                                child: TextField(
+                                  controller: _searchController,
+                                  autofocus: true,
+                                  decoration: InputDecoration(
+                                    hintText: 'Search playlists...',
+                                    prefixIcon: Padding(
+                                      padding: EdgeInsets.all(2.w),
+                                      child: CustomIconWidget(
+                                        iconName: 'search',
+                                        size: 20,
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                    suffixIcon: IconButton(
+                                      icon: CustomIconWidget(
+                                        iconName: 'clear',
+                                        size: 20,
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          _isSearching = false;
+                                          _searchController.clear();
+                                          _filteredPlaylists = List.from(
+                                            _playlists,
+                                          );
+                                        });
+                                      },
+                                    ),
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 4.w,
+                                      vertical: 1.5.h,
+                                    ),
+                                  ),
+                                  onChanged: _filterPlaylists,
+                                ),
+                              )
+                            : Expanded(
+                                child: Text(
+                                  'Playlists',
+                                  style: theme.textTheme.headlineSmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                        if (!_isSearching) ...[
+                          IconButton(
+                            icon: CustomIconWidget(
+                              iconName: 'search',
+                              size: 24,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                            onPressed: () =>
+                                setState(() => _isSearching = true),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-          )
-              : RefreshIndicator(
-            onRefresh: _refreshPlaylists,
-            child: ListView.builder(
-              padding: EdgeInsets.only(top: 1.h, bottom: 2.h),
-              itemCount: _filteredPlaylists.length,
-              itemBuilder: (context, index) {
-                final playlist = _filteredPlaylists[index];
-                return PlaylistCardWidget(
-                  playlist: playlist,
-                  onTap: () => _openPlaylistDetail(playlist),
-                  onEdit: () => _editPlaylist(playlist),
-                  onDelete: () => _deletePlaylist(playlist),
-                );
-              },
-            ),
           ),
-        ),
-      ],
+          Expanded(
+            child: _filteredPlaylists.isEmpty
+                ? _playlists.isEmpty
+                    ? EmptyPlaylistsWidget(onCreatePlaylist: _createPlaylist)
+                    : Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(8.w),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CustomIconWidget(
+                                iconName: 'search_off',
+                                size: 64,
+                                color: theme.colorScheme.onSurfaceVariant
+                                    .withValues(alpha: 0.3),
+                              ),
+                              SizedBox(height: 2.h),
+                              Text(
+                                'No playlists found',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                : RefreshIndicator(
+                    onRefresh: _refreshPlaylists,
+                    child: ListView.builder(
+                      padding: EdgeInsets.only(top: 1.h, bottom: 2.h),
+                      itemCount: _filteredPlaylists.length,
+                      itemBuilder: (context, index) {
+                        final playlist = _filteredPlaylists[index];
+                        return PlaylistCardWidget(
+                          playlist: playlist,
+                          onTap: () => _openPlaylistDetail(playlist),
+                          onEdit: () => _editPlaylist(playlist),
+                          onDelete: () => _deletePlaylist(playlist),
+                        );
+                      },
+                    ),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }

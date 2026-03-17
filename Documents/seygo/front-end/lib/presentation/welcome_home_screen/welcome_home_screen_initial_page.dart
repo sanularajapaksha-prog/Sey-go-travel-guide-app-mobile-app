@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/app_export.dart';
 import '../../data/models/place.dart';
 import '../../data/services/api_service.dart';
+import '../../widgets/custom_icon_widget.dart';
 import './widgets/category_pill_widget.dart';
 import './widgets/destination_card_widget.dart';
 import './widgets/featured_carousel_widget.dart';
@@ -156,10 +157,7 @@ class _WelcomeHomeScreenInitialPageState
       backgroundColor: theme.scaffoldBackgroundColor,
       drawer: SettingsDrawer(),
       body: RefreshIndicator(
-        onRefresh: () async {
-          await Future.delayed(const Duration(milliseconds: 500));
-          setState(() {});
-        },
+        onRefresh: _loadPlaylists,
         child: CustomScrollView(
           slivers: [
             SliverAppBar(
@@ -540,8 +538,8 @@ class _WelcomeHomeScreenInitialPageState
                       color: theme.colorScheme.primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(2.w),
                     ),
-                    child: Icon(
-                      _iconFromName(icon),
+                    child: CustomIconWidget(
+                      iconName: icon,
                       color: theme.colorScheme.primary,
                       size: 5.w,
                     ),
@@ -575,20 +573,5 @@ class _WelcomeHomeScreenInitialPageState
     );
   }
 
-  IconData _iconFromName(String name) {
-    const map = <String, IconData>{
-      'favorite': Icons.favorite,
-      'explore': Icons.explore,
-      'beach_access': Icons.beach_access,
-      'terrain': Icons.terrain,
-      'account_balance': Icons.account_balance,
-      'playlist_play': Icons.playlist_play,
-      'bookmark': Icons.bookmark,
-      'star': Icons.star,
-      'map': Icons.map,
-      'directions_car': Icons.directions_car,
-    };
-    return map[name] ?? Icons.playlist_play;
-  }
 }
 

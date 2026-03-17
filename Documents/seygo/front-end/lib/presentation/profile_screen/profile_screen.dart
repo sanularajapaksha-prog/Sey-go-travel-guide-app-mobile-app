@@ -2,9 +2,11 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'profile_modals.dart';
+import '../../data/services/api_service.dart';
 import '../../theme/app_theme.dart';
+import 'profile_modals.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -14,46 +16,183 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  // ── profile fields ──────────────────────────────────────────────────────────
   String _avatarPath = '';
+  String _displayName = '';
+  String _email = '';
+  String _homeCity = '';
+  String _bio = '';
+  String _travelStyle = '';
+
+  // ── loading flags ────────────────────────────────────────────────────────────
+  bool _profileLoading = true;
+  bool _playlistsLoading = true;
+  bool _statsLoading = true;
+  bool _avatarUploading = false;
+
+  // ── data ─────────────────────────────────────────────────────────────────────
+  List<Map<String, dynamic>> _userPlaylists = [];
+  Map<String, dynamic> _stats = {
+    'playlists': 0,
+    'places': 0,
+    'reviews': 0,
+    'photos': 0,
+  };
+
   bool _isPrivatePlaylist = true;
   bool _isSideRailVisible = false;
 
+  // ── theme constants ──────────────────────────────────────────────────────────
   static const Color _ink = AppTheme.secondaryLight;
   static const Color _accent = AppTheme.secondaryLight;
-  static const Color _surface = AppTheme.surfaceLight;
   static const Color _border = AppTheme.dividerLight;
   static const Color _text = AppTheme.tertiaryLight;
   static const Color _mutedText = AppTheme.neutralLight;
   static const Color _chipFill = Color(0xFFEAF4FA);
 
-  final List<_ProfileChip> _chips = const [
-    _ProfileChip('Camping'),
-    _ProfileChip('Mountains', selected: true),
-    _ProfileChip('Beachside'),
-  ];
+  // ── travel style → interest chip labels ─────────────────────────────────────
+  static const _styleChips = <String, List<String>>{
+    'Beach & Culture': ['Beach Side', 'Culture', 'History'],
+    'Adventure & Hiking': ['Hiking', 'Mountains', 'Adventure'],
+    'Urban Exploration': ['Cities', 'Urban', 'Nightlife'],
+    'Nature & Wildlife': ['Nature', 'Wildlife', 'Camping'],
+    'Relaxation & Spa': ['Wellness', 'Beach Side', 'Spa'],
+  };
 
-  final List<_PlaylistItem> _playlists = const [
-    _PlaylistItem(
-      title: 'Hill Country\nAdventures',
-      imageUrl: 'https://images.unsplash.com/photo-1577717903315-1691ae25ab3f',
-    ),
-    _PlaylistItem(
-      title: 'Beach Relax\nTrip',
-      imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e',
-    ),
-    _PlaylistItem(
-      title: 'Weekend Short\nTrip',
-      imageUrl: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee',
-    ),
-  ];
+  List<String> get _interestLabels =>
+      _styleChips[_travelStyle] ?? ['Camping', 'Mountains', 'Beach Side'];
 
   @override
+  void initState() {
+    super.initState();
+    _loadAll();
+  }
+
+  // ── load everything in parallel ──────────────────────────────────────────────
+  Future<void> _loadAll() async {
+    await Future.wait([_loadProfile(), _loadPlaylists(), _loadStats()]);
+  }
+
+  Future<void> _loadProfile() async {
+    // Fast path: auth metadata
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user != null && mounted) {
+      final meta = user.userMetadata ?? {};
+      setState(() {
+        _displayName = meta['full_name'] as String? ?? user.email ?? '';
+        _email = user.email ?? '';
+      });
+    }
+
+    // Full profile — force refresh so changes from settings appear immediately
+    final token = Supabase.instance.client.auth.currentSession?.accessToken;
+    final profile = await ApiService.fetchProfile(
+      accessToken: token,
+      forceRefresh: true,
+    );
+    if (!mounted) return;
+    setState(() {
+      if (profile != null) {
+        _displayName = (profile['full_name'] as String?)?.isNotEmpty == true
+            ? profile['full_name'] as String
+            : _displayName;
+        _email = (profile['email'] as String?)?.isNotEmpty == true
+            ? profile['email'] as String
+            : _email;
+        _homeCity = profile['home_city'] as String? ?? '';
+        _bio = profile['bio'] as String? ?? '';
+        _travelStyle = profile['travel_style'] as String? ?? '';
+        final av = profile['avatar_url'] as String?;
+        if (av != null && av.isNotEmpty) _avatarPath = av;
+      }
+      _profileLoading = false;
+    });
+  }
+
+  Future<void> _loadPlaylists() async {
+    final token = Supabase.instance.client.auth.currentSession?.accessToken;
+    final data = await ApiService.fetchMyPlaylists(accessToken: token);
+    if (!mounted) return;
+    setState(() {
+      _userPlaylists = data;
+      _playlistsLoading = false;
+    });
+  }
+
+  Future<void> _loadStats() async {
+    final token = Supabase.instance.client.auth.currentSession?.accessToken;
+    final data = await ApiService.fetchUserStats(accessToken: token);
+    if (!mounted) return;
+    setState(() {
+      _stats = data;
+      _statsLoading = false;
+    });
+  }
+
+  // ── avatar: pick → upload → persist ─────────────────────────────────────────
+  Future<void> _pickAndUploadAvatar() async {
+    showAvatarPicker(context, (path) async {
+      // Show local preview immediately
+      setState(() {
+        _avatarPath = path;
+        _avatarUploading = true;
+      });
+
+      final supabase = Supabase.instance.client;
+      final userId = supabase.auth.currentUser?.id;
+      if (userId == null) {
+        if (mounted) setState(() => _avatarUploading = false);
+        return;
+      }
+
+      final ext = path.split('.').last.toLowerCase();
+      final storagePath = 'avatars/$userId.$ext';
+      String? publicUrl;
+      try {
+        await supabase.storage.from('profiles').upload(
+              storagePath,
+              File(path),
+              fileOptions: const FileOptions(upsert: true),
+            );
+        publicUrl =
+            supabase.storage.from('profiles').getPublicUrl(storagePath);
+      } catch (_) {}
+
+      if (!mounted) return;
+
+      if (publicUrl != null) {
+        final token = supabase.auth.currentSession?.accessToken;
+        await ApiService.updateProfile(
+          avatarUrl: publicUrl,
+          accessToken: token,
+        );
+        ApiService.invalidateProfileCache();
+        if (mounted) setState(() => _avatarPath = publicUrl!);
+      } else {
+        // Upload failed — show error, revert preview
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to upload photo'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+
+      if (mounted) setState(() => _avatarUploading = false);
+    });
+  }
+
+  // ── build ────────────────────────────────────────────────────────────────────
+  @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
     final isCompact = screenWidth < 380;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Stack(
           children: [
@@ -85,6 +224,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
+            // Side rail
             Positioned(
               left: 0,
               right: 0,
@@ -104,6 +244,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
+            // Assistive touch button
             Positioned(
               left: 0,
               right: 0,
@@ -129,6 +270,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // ── hero section ─────────────────────────────────────────────────────────────
   Widget _buildProfileHero(bool isCompact) {
     final ImageProvider? avatarImage = _avatarPath.isEmpty
         ? null
@@ -153,7 +295,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               SizedBox(height: isCompact ? 0.4.h : 0.8.h),
               Text(
-                'Amanda Smith',
+                _displayName.isNotEmpty ? _displayName : 'Traveller',
                 style: TextStyle(
                   fontSize: isCompact ? 20.sp : 24.sp,
                   fontWeight: FontWeight.w700,
@@ -162,19 +304,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               SizedBox(height: isCompact ? 0.7.h : 1.h),
               Text(
-                'Australia | Age 23',
+                _homeCity.isNotEmpty
+                    ? _homeCity
+                    : (_email.isNotEmpty ? _email : 'Sri Lanka'),
                 style: TextStyle(
                   fontSize: isCompact ? 12.5.sp : 15.sp,
                   color: _mutedText,
                 ),
               ),
+              if (_bio.isNotEmpty) ...[
+                SizedBox(height: isCompact ? 0.5.h : 0.8.h),
+                Text(
+                  _bio,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: isCompact ? 11.sp : 13.sp,
+                    color: _mutedText,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
         GestureDetector(
-          onTap: () => showAvatarPicker(context, (path) {
-            setState(() => _avatarPath = path);
-          }),
+          onTap: _pickAndUploadAvatar,
           child: Stack(
             clipBehavior: Clip.none,
             children: [
@@ -202,6 +356,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ),
+              if (_avatarUploading)
+                Positioned.fill(
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.black38,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
               Positioned(
                 right: -1.w,
                 bottom: 2.w,
@@ -212,6 +381,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     color: _chipFill,
                     borderRadius: BorderRadius.circular(8),
                   ),
+                  child: Icon(
+                    Icons.camera_alt_rounded,
+                    size: isCompact ? 3.5.w : 4.w,
+                    color: _accent,
+                  ),
                 ),
               ),
             ],
@@ -221,7 +395,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // ── badge card ───────────────────────────────────────────────────────────────
   Widget _buildBadgeCard(bool isCompact) {
+    // Badge title/description derived from travel style
+    final badgeTitle = _travelStyle.isNotEmpty ? _travelStyle : 'Explorer';
+    final badgeDesc = _travelStyle.isNotEmpty
+        ? 'Your travel style is set to $_travelStyle.'
+        : 'Complete your profile to unlock your travel badge.';
+
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(
@@ -232,10 +413,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF4FA3D1),
-            AppTheme.secondaryLight,
-          ],
+          colors: [Color(0xFF4FA3D1), AppTheme.secondaryLight],
         ),
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
@@ -254,7 +432,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Mountain Explorer',
+                  badgeTitle,
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: isCompact ? 18.sp : 21.sp,
@@ -263,7 +441,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 SizedBox(height: isCompact ? 0.8.h : 1.2.h),
                 Text(
-                  'You mostly visit mountain and nature destinations.',
+                  badgeDesc,
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.94),
                     fontSize: isCompact ? 12.6.sp : 15.sp,
@@ -291,21 +469,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // ── interest chips (from travel_style) ───────────────────────────────────────
   Widget _buildInterestChips(bool isCompact) {
+    final labels = _interestLabels;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: _chips.map((chip) {
+      children: List.generate(labels.length, (i) {
+        final selected = i == 0; // first chip is the primary style
         return Container(
           width: isCompact ? 22.5.w : 24.5.w,
-          padding: EdgeInsets.symmetric(vertical: isCompact ? 1.05.h : 1.35.h),
+          padding:
+              EdgeInsets.symmetric(vertical: isCompact ? 1.05.h : 1.35.h),
           decoration: BoxDecoration(
-            color: chip.selected ? _chipFill : Colors.white,
+            color: selected ? _chipFill : Colors.white,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: _border),
           ),
           child: Center(
             child: Text(
-              chip.label,
+              labels[i],
               style: TextStyle(
                 fontSize: isCompact ? 11.5.sp : 14.5.sp,
                 color: _text,
@@ -313,10 +495,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         );
-      }).toList(),
+      }),
     );
   }
 
+  // ── activity summary (real stats) ────────────────────────────────────────────
   Widget _buildSummaryCard(bool isCompact) {
     return Container(
       width: double.infinity,
@@ -327,7 +510,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         isCompact ? 1.8.h : 2.2.h,
       ),
       decoration: BoxDecoration(
-        color: _surface,
+        color: AppTheme.surfaceLight,
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
@@ -348,20 +531,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           SizedBox(height: isCompact ? 1.6.h : 2.2.h),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _StatTile(value: '42', label: 'Places', compact: isCompact),
-              _StatTile(value: '12', label: 'Reviews', compact: isCompact),
-              _StatTile(value: '89', label: 'Photos', compact: isCompact),
-              _StatTile(value: '9', label: 'Journeys', compact: isCompact),
-            ],
-          ),
+          _statsLoading
+              ? const SizedBox(
+                  height: 48,
+                  child: Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _StatTile(
+                      value: '${_stats['places'] ?? 0}',
+                      label: 'Places',
+                      compact: isCompact,
+                    ),
+                    _StatTile(
+                      value: '${_stats['playlists'] ?? 0}',
+                      label: 'Journeys',
+                      compact: isCompact,
+                    ),
+                    _StatTile(
+                      value: '${_stats['reviews'] ?? 0}',
+                      label: 'Reviews',
+                      compact: isCompact,
+                    ),
+                    _StatTile(
+                      value: '${_stats['photos'] ?? 0}',
+                      label: 'Photos',
+                      compact: isCompact,
+                    ),
+                  ],
+                ),
         ],
       ),
     );
   }
 
+  // ── your playlists (real data) ───────────────────────────────────────────────
   Widget _buildPlaylistsCard(bool isCompact) {
     return Container(
       width: double.infinity,
@@ -372,7 +579,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         isCompact ? 1.8.h : 2.2.h,
       ),
       decoration: BoxDecoration(
-        color: _surface,
+        color: AppTheme.surfaceLight,
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
@@ -393,53 +600,93 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           SizedBox(height: isCompact ? 1.5.h : 2.1.h),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: _playlists.map((playlist) {
-              return Container(
-                width: isCompact ? 25.w : 25.5.w,
-                padding: EdgeInsets.fromLTRB(
-                  1.5.w,
-                  isCompact ? 0.9.h : 1.1.h,
-                  1.5.w,
-                  isCompact ? 1.h : 1.3.h,
+          if (_playlistsLoading)
+            const SizedBox(
+              height: 80,
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            )
+          else if (_userPlaylists.isEmpty)
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: 2.h),
+              child: Text(
+                'No playlists yet.\nCreate one in the Playlists tab.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: isCompact ? 12.sp : 13.5.sp,
+                  color: _mutedText,
+                  height: 1.5,
                 ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: _border),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        playlist.imageUrl,
-                        height: isCompact ? 7.4.h : 8.6.h,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
+              ),
+            )
+          else
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: _userPlaylists.take(3).map((playlist) {
+                final title = playlist['name'] as String? ?? 'Playlist';
+                final images = playlist['previewImages'] as List?;
+                final imageUrl = images?.isNotEmpty == true
+                    ? images!.first as String
+                    : null;
+                return Container(
+                  width: isCompact ? 25.w : 25.5.w,
+                  padding: EdgeInsets.fromLTRB(
+                    1.5.w,
+                    isCompact ? 0.9.h : 1.1.h,
+                    1.5.w,
+                    isCompact ? 1.h : 1.3.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: _border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: imageUrl != null
+                            ? Image.network(
+                                imageUrl,
+                                height: isCompact ? 7.4.h : 8.6.h,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, _, _) =>
+                                    _playlistPlaceholder(isCompact),
+                              )
+                            : _playlistPlaceholder(isCompact),
                       ),
-                    ),
-                    SizedBox(height: isCompact ? 0.9.h : 1.2.h),
-                    Text(
-                      playlist.title,
-                      style: TextStyle(
-                        fontSize: isCompact ? 11.5.sp : 13.7.sp,
-                        height: 1.25,
-                        color: _text,
+                      SizedBox(height: isCompact ? 0.9.h : 1.2.h),
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: isCompact ? 11.5.sp : 13.7.sp,
+                          height: 1.25,
+                          color: _text,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
         ],
       ),
     );
   }
 
+  Widget _playlistPlaceholder(bool isCompact) {
+    return Container(
+      height: isCompact ? 7.4.h : 8.6.h,
+      width: double.infinity,
+      color: _chipFill,
+      child: Icon(Icons.playlist_play, color: _accent, size: 28),
+    );
+  }
+
+  // ── privacy toggle ───────────────────────────────────────────────────────────
   Widget _buildPrivacyToggle(bool isCompact) {
     return Container(
       padding: EdgeInsets.all(0.5.w),
@@ -484,6 +731,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // ── side rail ────────────────────────────────────────────────────────────────
   Widget _buildSideRail(bool isCompact) {
     final items = <(String, VoidCallback)>[
       ('Saved', () => showSavedRoutesModal(context)),
@@ -578,6 +826,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
+// ── supporting widgets ────────────────────────────────────────────────────────
+
 class _StatTile extends StatelessWidget {
   final String value;
   final String label;
@@ -621,18 +871,4 @@ class _StatTile extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ProfileChip {
-  final String label;
-  final bool selected;
-
-  const _ProfileChip(this.label, {this.selected = false});
-}
-
-class _PlaylistItem {
-  final String title;
-  final String imageUrl;
-
-  const _PlaylistItem({required this.title, required this.imageUrl});
 }

@@ -226,11 +226,14 @@ class _OtpPageState extends State<OtpPage> {
     });
 
     try {
+      Map<String, dynamic> response;
       if (isLogin) {
-        await ApiService.verifyLoginOtp(email: email, code: code);
+        response = await ApiService.verifyLoginOtp(email: email, code: code);
       } else {
-        await ApiService.verifyOtp(email: email, code: code);
+        response = await ApiService.verifyOtp(email: email, code: code);
       }
+      await ApiService.persistBackendSession(response);
+      ApiService.invalidateProfileCache();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

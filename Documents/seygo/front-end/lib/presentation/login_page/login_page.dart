@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/services/api_service.dart';
 import '../../routes/app_routes.dart';
@@ -154,6 +155,28 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                 ),
               ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: OutlinedButton(
+                  onPressed: _isSubmitting ? null : _sendLoginOtp,
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: brandBlue, width: 1.3),
+                    foregroundColor: brandBlue,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                  ),
+                  child: Text(
+                    'Login with OTP',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ),
               if (_emailError != null || _passwordError != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
@@ -248,13 +271,107 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _submitLogin() async {
-    // Temporary bypass: go straight into the app without auth.
-    if (!mounted) return;
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      AppRoutes.welcomeHomeScreen,
-      (route) => false,
-    );
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final emailError = _validateEmail(email);
+    String? passwordError;
+
+    if (password.isEmpty) {
+      passwordError = 'Password is required';
+    } else if (password.length < 6) {
+      passwordError = 'Password must be at least 6 characters';
+    }
+
+    setState(() {
+      _emailError = emailError;
+      _passwordError = passwordError;
+    });
+
+    if (emailError != null || passwordError != null || email.isEmpty) {
+      if (email.isEmpty) {
+        setState(() {
+          _emailError = 'Email is required';
+        });
+      }
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final response = await ApiService.login(email: email, password: password);
+      await ApiService.persistBackendSession(response);
+      ApiService.invalidateProfileCache();
+      if (!mounted) return;
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.welcomeHomeScreen,
+        (route) => false,
+      );
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _sendLoginOtp() async {
+    final email = _emailController.text.trim();
+    final emailError = email.isEmpty ? 'Email is required' : _validateEmail(email);
+
+    setState(() {
+      _emailError = emailError;
+      _passwordError = null;
+    });
+
+    if (emailError != null) {
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      await ApiService.sendLoginOtp(email: email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Check your email for the login code.')),
+      );
+      Navigator.pushNamed(
+        context,
+        AppRoutes.otpPage,
+        arguments: <String, dynamic>{
+          'email': email,
+          'mode': 'login',
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
   }
 }
 

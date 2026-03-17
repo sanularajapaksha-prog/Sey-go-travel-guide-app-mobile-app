@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/place.dart';
 
@@ -10,6 +11,9 @@ class ApiService {
   static final Map<String, String?> _resolvedPhotoCache = <String, String?>{};
   static final Map<String, Future<String?>> _pendingPhotoRequests =
       <String, Future<String?>>{};
+
+  static Map<String, dynamic>? _profileCache;
+  static DateTime? _profileCacheTime;
 
   static String get baseUrl {
     final envUrl = dotenv.env['API_BASE_URL'];
@@ -405,6 +409,23 @@ class ApiService {
     throw Exception('Login failed: ${response.statusCode}');
   }
 
+  static Future<void> persistBackendSession(
+    Map<String, dynamic> authPayload,
+  ) async {
+    final refreshToken = authPayload['refresh_token']?.toString();
+    if (refreshToken == null || refreshToken.isEmpty) {
+      return;
+    }
+
+    try {
+      await Supabase.instance.client.auth.setSession(refreshToken);
+    } catch (e) {
+      throw Exception(
+        'Authenticated, but failed to store the session locally: $e',
+      );
+    }
+  }
+
   static Future<void> sendLoginOtp({required String email}) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/login/send-otp'),
@@ -542,7 +563,15 @@ class ApiService {
 
   static Future<Map<String, dynamic>?> fetchProfile({
     String? accessToken,
+    bool forceRefresh = false,
   }) async {
+    final now = DateTime.now();
+    if (!forceRefresh &&
+        _profileCache != null &&
+        _profileCacheTime != null &&
+        now.difference(_profileCacheTime!) < const Duration(minutes: 5)) {
+      return _profileCache;
+    }
     final headers = <String, String>{
       'Content-Type': 'application/json',
       if (accessToken != null && accessToken.isNotEmpty)
@@ -554,10 +583,17 @@ class ApiService {
           .get(uri, headers: headers)
           .timeout(const Duration(seconds: 15));
       if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
+        _profileCache = jsonDecode(response.body) as Map<String, dynamic>;
+        _profileCacheTime = DateTime.now();
+        return _profileCache;
       }
     } catch (_) {}
     return null;
+  }
+
+  static void invalidateProfileCache() {
+    _profileCache = null;
+    _profileCacheTime = null;
   }
 
   static Future<bool> updateProfile({
@@ -589,7 +625,11 @@ class ApiService {
             body: jsonEncode(payload),
           )
           .timeout(const Duration(seconds: 15));
-      return response.statusCode == 200;
+      if (response.statusCode == 200) {
+        invalidateProfileCache();
+        return true;
+      }
+      return false;
     } catch (_) {
       return false;
     }
@@ -619,6 +659,50 @@ class ApiService {
       }
     } catch (_) {}
     return const [];
+  }
+
+  /// Returns playlists owned by the authenticated user (calls /playlists/mine).
+  static Future<List<Map<String, dynamic>>> fetchMyPlaylists({
+    String? accessToken,
+  }) async {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      if (accessToken != null && accessToken.isNotEmpty)
+        'Authorization': 'Bearer $accessToken',
+    };
+    final uri = Uri.parse('$baseUrl/playlists/mine');
+    try {
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final list = body['playlists'] as List? ?? [];
+        return list.cast<Map<String, dynamic>>();
+      }
+    } catch (_) {}
+    return const [];
+  }
+
+  /// Returns activity stat counts for the authenticated user.
+  static Future<Map<String, dynamic>> fetchUserStats({
+    String? accessToken,
+  }) async {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      if (accessToken != null && accessToken.isNotEmpty)
+        'Authorization': 'Bearer $accessToken',
+    };
+    final uri = Uri.parse('$baseUrl/users/me/stats');
+    try {
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return {'playlists': 0, 'places': 0, 'reviews': 0, 'photos': 0};
   }
 
   static Future<Map<String, dynamic>?> fetchPlaylistDetails({

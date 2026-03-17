@@ -1,11 +1,9 @@
-// lib/presentation/welcome_home_screen/widgets/appearance_popup.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sizer/sizer.dart';
 
-import '../../../providers/theme_provider.dart'; // from lib/providers/
-import '../../../providers/font_scale_provider.dart'; // from lib/providers/
+import '../../../providers/font_scale_provider.dart';
+import '../../../providers/theme_provider.dart';
 
 class AppearancePopup extends StatefulWidget {
   const AppearancePopup({super.key});
@@ -23,26 +21,26 @@ class AppearancePopup extends StatefulWidget {
 }
 
 class _AppearancePopupState extends State<AppearancePopup> {
-  String _theme = "System Default";
-  String _fontSize = "Medium (Default)";
+  String _theme = 'System Default';
+  String _fontSize = 'Medium (Default)';
+
+  static const _themeOptions = ['Light mode', 'Dark mode', 'System Default'];
+  static const _fontOptions = ['Large', 'Medium (Default)', 'Small'];
 
   @override
   void initState() {
     super.initState();
     final themeProv = Provider.of<ThemeProvider>(context, listen: false);
     final fontProv = Provider.of<FontScaleProvider>(context, listen: false);
-
-    _theme = _themeModeToString(themeProv.themeMode);
+    _theme = _themeModeToLabel(themeProv.themeMode);
     _fontSize = fontProv.currentLabel;
   }
 
-  String _themeModeToString(ThemeMode mode) {
-    return switch (mode) {
-      ThemeMode.light => "Light mode",
-      ThemeMode.dark => "Dark mode",
-      _ => "System Default",
-    };
-  }
+  String _themeModeToLabel(ThemeMode mode) => switch (mode) {
+        ThemeMode.light => 'Light mode',
+        ThemeMode.dark => 'Dark mode',
+        _ => 'System Default',
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +56,7 @@ class _AppearancePopupState extends State<AppearancePopup> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header - matches your screenshot
+            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -70,15 +68,15 @@ class _AppearancePopupState extends State<AppearancePopup> {
                         color: theme.colorScheme.primary.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.palette_outlined,
-                        color: Color(0xFF2B84B4),
+                        color: theme.colorScheme.primary,
                         size: 24,
                       ),
                     ),
                     SizedBox(width: 3.w),
                     Text(
-                      "Appearance",
+                      'Appearance',
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                         fontSize: 20.sp,
@@ -99,93 +97,81 @@ class _AppearancePopupState extends State<AppearancePopup> {
 
             SizedBox(height: 2.5.h),
             Divider(height: 1, color: theme.dividerColor),
-
             SizedBox(height: 3.h),
 
-            // Theme
+            // Theme section
             Text(
-              "Theme",
+              'Theme',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
-            SizedBox(height: 1.5.h),
+            SizedBox(height: 1.h),
+            ..._themeOptions.map(
+              (opt) => RadioListTile<String>(
+                value: opt,
+                groupValue: _theme,
+                title: Text(opt),
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                activeColor: theme.colorScheme.primary,
+                controlAffinity: ListTileControlAffinity.trailing,
+                onChanged: (v) {
+                  if (v != null) setState(() => _theme = v);
+                },
+              ),
+            ),
 
-            RadioGroup<String>(
-              groupValue: _theme,
-              onChanged: (value) {
-                if (value == null) return;
-                setState(() => _theme = value);
-              },
-              child: Column(
-                children: const [
-                  _AppearanceRadio(label: "Light mode"),
-                  _AppearanceRadio(label: "Dark mode"),
-                  _AppearanceRadio(label: "System Default"),
-                  _AppearanceRadio(label: "Custom"),
-                ],
+            SizedBox(height: 3.h),
+
+            // Font Size section
+            Text(
+              'Font Size',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            SizedBox(height: 1.h),
+            ..._fontOptions.map(
+              (opt) => RadioListTile<String>(
+                value: opt,
+                groupValue: _fontSize,
+                title: Text(opt),
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                activeColor: theme.colorScheme.primary,
+                controlAffinity: ListTileControlAffinity.trailing,
+                onChanged: (v) {
+                  if (v != null) setState(() => _fontSize = v);
+                },
               ),
             ),
 
             SizedBox(height: 4.h),
 
-            // Font Size
-            Text(
-              "Font Size",
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            SizedBox(height: 1.5.h),
-
-            RadioGroup<String>(
-              groupValue: _fontSize,
-              onChanged: (value) {
-                if (value == null) return;
-                setState(() => _fontSize = value);
-              },
-              child: Column(
-                children: const [
-                  _AppearanceRadio(label: "Large"),
-                  _AppearanceRadio(label: "Medium (Default)"),
-                  _AppearanceRadio(label: "Small"),
-                ],
-              ),
-            ),
-
-            SizedBox(height: 5.h),
-
-            // Apply button - teal color from your palette
+            // Apply button
             SizedBox(
               width: double.infinity,
               height: 6.5.h,
               child: ElevatedButton(
                 onPressed: () {
-                  final themeProv = Provider.of<ThemeProvider>(
-                    context,
-                    listen: false,
-                  );
-                  final fontProv = Provider.of<FontScaleProvider>(
-                    context,
-                    listen: false,
-                  );
+                  final themeProv =
+                      Provider.of<ThemeProvider>(context, listen: false);
+                  final fontProv =
+                      Provider.of<FontScaleProvider>(context, listen: false);
 
-                  // Apply theme
-                  final newMode = switch (_theme) {
-                    "Light mode" => ThemeMode.light,
-                    "Dark mode" => ThemeMode.dark,
+                  themeProv.setThemeMode(switch (_theme) {
+                    'Light mode' => ThemeMode.light,
+                    'Dark mode' => ThemeMode.dark,
                     _ => ThemeMode.system,
-                  };
-                  themeProv.setThemeMode(newMode);
+                  });
 
-                  // Apply font size
                   fontProv.setScaleFromLabel(_fontSize);
 
                   Navigator.pop(context);
-
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: const Text("Appearance updated"),
+                      content: const Text('Appearance updated'),
                       backgroundColor: theme.colorScheme.primary,
                     ),
                   );
@@ -199,7 +185,7 @@ class _AppearancePopupState extends State<AppearancePopup> {
                   ),
                 ),
                 child: Text(
-                  "Apply",
+                  'Apply',
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w600,
@@ -210,25 +196,6 @@ class _AppearancePopupState extends State<AppearancePopup> {
           ],
         ),
       ),
-    );
-  }
-
-}
-
-class _AppearanceRadio extends StatelessWidget {
-  const _AppearanceRadio({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return RadioListTile<String>(
-      value: label,
-      title: Text(label),
-      dense: true,
-      contentPadding: EdgeInsets.zero,
-      activeColor: Theme.of(context).colorScheme.primary,
-      controlAffinity: ListTileControlAffinity.trailing,
     );
   }
 }

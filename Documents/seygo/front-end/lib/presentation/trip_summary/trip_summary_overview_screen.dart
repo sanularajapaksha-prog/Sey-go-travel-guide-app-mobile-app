@@ -1,14 +1,13 @@
-// lib/presentation/trip_summary/trip_summary_overview_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../data/services/offline_trip_service.dart';
 import '../../widgets/custom_image_widget.dart';
 
-class TripSummaryOverviewScreen extends StatelessWidget {
-  // Pass these from RoutePlannerScreen
+class TripSummaryOverviewScreen extends StatefulWidget {
   final String tripName;
   final String tripGoogleUrl;
   final String dateRange;
@@ -41,6 +40,73 @@ class TripSummaryOverviewScreen extends StatelessWidget {
   });
 
   @override
+  State<TripSummaryOverviewScreen> createState() =>
+      _TripSummaryOverviewScreenState();
+}
+
+class _TripSummaryOverviewScreenState extends State<TripSummaryOverviewScreen> {
+  static const String _offlineEnabledKey = 'offline_trip_mode_enabled';
+
+  bool _offlineMode = false;
+  bool _offlineReady = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadOfflineState();
+  }
+
+  Future<void> _loadOfflineState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final enabled = prefs.getBool(_offlineEnabledKey) ?? false;
+    final hasCachedTrip = await OfflineTripService.hasOfflineTrip();
+    if (!mounted) return;
+    setState(() {
+      _offlineMode = enabled && hasCachedTrip;
+      _offlineReady = true;
+    });
+  }
+
+  Future<void> _toggleOfflineMode(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    if (value) {
+      await OfflineTripService.saveTrip(
+        tripName: widget.tripName,
+        tripGoogleUrl: widget.tripGoogleUrl,
+        dateRange: widget.dateRange,
+        days: widget.days,
+        totalBudgetLKR: widget.totalBudgetLKR,
+        totalDistanceKm: widget.totalDistanceKm,
+        transportMode: widget.transportMode,
+        travelTime: widget.travelTime,
+        stops: widget.stops,
+        emergencyContact: widget.emergencyContact,
+        origin: widget.origin,
+        routePoints: widget.routePoints,
+        optimizedStops: widget.optimizedStops,
+      );
+      await prefs.setBool(_offlineEnabledKey, true);
+    } else {
+      await OfflineTripService.clearTrip();
+      await prefs.setBool(_offlineEnabledKey, false);
+    }
+
+    if (!mounted) return;
+    setState(() => _offlineMode = value);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          value
+              ? 'Trip saved for offline use'
+              : 'Offline trip cache cleared',
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
@@ -55,7 +121,7 @@ class TripSummaryOverviewScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.share_outlined),
-            onPressed: () {}, // TODO: share trip
+            onPressed: () {},
           ),
         ],
       ),
@@ -63,11 +129,10 @@ class TripSummaryOverviewScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Hero Image + Trip Name Overlay
             Stack(
               children: [
                 CustomImageWidget(
-                  imageUrl: tripGoogleUrl,
+                  imageUrl: widget.tripGoogleUrl,
                   height: 35.h,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -78,7 +143,10 @@ class TripSummaryOverviewScreen extends StatelessWidget {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Colors.black.withOpacity(0.65)],
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.65),
+                        ],
                       ),
                     ),
                   ),
@@ -91,7 +159,7 @@ class TripSummaryOverviewScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        tripName,
+                        widget.tripName,
                         style: theme.textTheme.headlineMedium?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -99,9 +167,9 @@ class TripSummaryOverviewScreen extends StatelessWidget {
                       ),
                       SizedBox(height: 0.5.h),
                       Text(
-                        '$dateRange - $days days',
+                        '${widget.dateRange} - ${widget.days} days',
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                         ),
                       ),
                     ],
@@ -114,26 +182,24 @@ class TripSummaryOverviewScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Budget & Distance Row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       _buildStatCard(
                         context,
                         'Total Budget',
-                        'LKR ${totalBudgetLKR.toStringAsFixed(0)}',
+                        'LKR ${widget.totalBudgetLKR.toStringAsFixed(0)}',
                         Icons.attach_money,
                       ),
                       _buildStatCard(
                         context,
                         'Total Distance',
-                        '${totalDistanceKm.toStringAsFixed(0)} km',
+                        '${widget.totalDistanceKm.toStringAsFixed(0)} km',
                         Icons.straighten,
                       ),
                     ],
                   ),
                   SizedBox(height: 3.h),
-                  // Transport / Time / Stops Chips
                   Wrap(
                     spacing: 3.w,
                     runSpacing: 2.h,
@@ -142,24 +208,23 @@ class TripSummaryOverviewScreen extends StatelessWidget {
                         context,
                         Icons.directions_car,
                         'Transport',
-                        transportMode,
+                        widget.transportMode,
                       ),
                       _buildStatChip(
                         context,
                         Icons.timer_outlined,
                         'Travel Time',
-                        travelTime,
+                        widget.travelTime,
                       ),
                       _buildStatChip(
                         context,
                         Icons.place_outlined,
                         'Stops',
-                        '$stops places',
+                        '${widget.stops} places',
                       ),
                     ],
                   ),
                   SizedBox(height: 4.h),
-                  // Safety & Preparation Card
                   Card(
                     elevation: 2,
                     shape: RoundedRectangleBorder(
@@ -179,113 +244,46 @@ class TripSummaryOverviewScreen extends StatelessWidget {
                           SizedBox(height: 2.h),
                           SwitchListTile(
                             title: const Text('Offline Mode'),
-                            subtitle: const Text('Download maps & details'),
-                            value: false, // TODO: connect to real state
-                            onChanged: (val) {}, // TODO: toggle download
+                            subtitle: Text(
+                              _offlineMode
+                                  ? 'Trip details saved on this device'
+                                  : 'Save route and trip details for offline use',
+                            ),
+                            value: _offlineReady && _offlineMode,
+                            onChanged: _offlineReady ? _toggleOfflineMode : null,
                             activeColor: theme.colorScheme.primary,
                           ),
+                          if (_offlineMode)
+                            Padding(
+                              padding: EdgeInsets.only(
+                                left: 4.w,
+                                right: 4.w,
+                                bottom: 1.h,
+                              ),
+                              child: Text(
+                                'Google Maps can open offline only if the map area is already downloaded in the Google Maps app.',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
                           ListTile(
                             leading: const Icon(Icons.phone_outlined),
                             title: const Text('Emergency Contact'),
-                            subtitle: Text(emergencyContact),
+                            subtitle: Text(widget.emergencyContact),
                             trailing: const Icon(Icons.chevron_right),
-                            onTap: () {
-                              // TODO: launch tel://
-                            },
+                            onTap: _callEmergencyContact,
                           ),
                         ],
                       ),
                     ),
                   ),
                   SizedBox(height: 6.h),
-                  // Start Journey Button with Confirmation Dialog
                   SizedBox(
                     width: double.infinity,
                     height: 7.h,
                     child: ElevatedButton.icon(
-                      onPressed: () async {
-                        final choice = await showDialog<String>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Start Journey'),
-                            content:
-                                const Text('Open this route in external maps?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text('Cancel'),
-                              ),
-                              TextButton(
-                                onPressed: () =>
-                                    Navigator.pop(context, 'google'),
-                                child: const Text('Google Maps'),
-                              ),
-                              if (Theme.of(context).platform ==
-                                  TargetPlatform.iOS)
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(context, 'apple'),
-                                  child: const Text('Apple Maps'),
-                                ),
-                            ],
-                          ),
-                        );
-
-                        if (choice == null) return;
-
-                        final originStr =
-                            '${origin.latitude},${origin.longitude}';
-                        final destinationStr = optimizedStops.isNotEmpty
-                            ? '${optimizedStops.last['latitude'] as num},${optimizedStops.last['longitude'] as num}'
-                            : originStr;
-                        final waypoints = optimizedStops.length > 1
-                            ? optimizedStops
-                                .sublist(0, optimizedStops.length - 1)
-                                .map(
-                                  (stop) =>
-                                      '${stop['latitude'] as num},${stop['longitude'] as num}',
-                                )
-                                .join('|')
-                            : '';
-
-                        if (choice == 'google') {
-                          final googleUrl = Uri.parse(
-                            'https://www.google.com/maps/dir/?api=1'
-                            '&origin=$originStr'
-                            '&destination=$destinationStr'
-                            '${waypoints.isNotEmpty ? '&waypoints=$waypoints' : ''}'
-                            '&travelmode=driving',
-                          );
-                          if (await canLaunchUrl(googleUrl)) {
-                            await launchUrl(
-                              googleUrl,
-                              mode: LaunchMode.externalApplication,
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Could not open Google Maps'),
-                              ),
-                            );
-                          }
-                        } else if (choice == 'apple') {
-                          final appleUrl = Uri.parse(
-                            'maps://?saddr=$originStr&daddr=$destinationStr&dirflg=d',
-                          );
-                          if (await canLaunchUrl(appleUrl)) {
-                            await launchUrl(
-                              appleUrl,
-                              mode: LaunchMode.externalApplication,
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Could not open Apple Maps'),
-                              ),
-                            );
-                          }
-                        }
-                      },
+                      onPressed: _startJourney,
                       icon: const Icon(Icons.play_arrow_rounded, size: 28),
                       label: Text(
                         'Start Journey',
@@ -313,6 +311,96 @@ class TripSummaryOverviewScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _startJourney() async {
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Start Journey'),
+        content: Text(
+          _offlineMode
+              ? 'Open this route in external maps? If you are offline, Google Maps will only navigate if that region is already downloaded.'
+              : 'Open this route in external maps?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'google'),
+            child: const Text('Google Maps'),
+          ),
+          if (Theme.of(context).platform == TargetPlatform.iOS)
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'apple'),
+              child: const Text('Apple Maps'),
+            ),
+        ],
+      ),
+    );
+
+    if (choice == null) return;
+
+    final originStr = '${widget.origin.latitude},${widget.origin.longitude}';
+    final destinationStr = widget.optimizedStops.isNotEmpty
+        ? '${widget.optimizedStops.last['latitude'] as num},${widget.optimizedStops.last['longitude'] as num}'
+        : originStr;
+    final waypoints = widget.optimizedStops.length > 1
+        ? widget.optimizedStops
+            .sublist(0, widget.optimizedStops.length - 1)
+            .map(
+              (stop) =>
+                  '${stop['latitude'] as num},${stop['longitude'] as num}',
+            )
+            .join('|')
+        : '';
+
+    if (choice == 'google') {
+      final googleUrl = Uri.parse(
+        'https://www.google.com/maps/dir/?api=1'
+        '&origin=$originStr'
+        '&destination=$destinationStr'
+        '${waypoints.isNotEmpty ? '&waypoints=$waypoints' : ''}'
+        '&travelmode=driving',
+      );
+      if (await canLaunchUrl(googleUrl)) {
+        await launchUrl(
+          googleUrl,
+          mode: LaunchMode.externalApplication,
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open Google Maps'),
+          ),
+        );
+      }
+    } else if (choice == 'apple') {
+      final appleUrl = Uri.parse(
+        'maps://?saddr=$originStr&daddr=$destinationStr&dirflg=d',
+      );
+      if (await canLaunchUrl(appleUrl)) {
+        await launchUrl(
+          appleUrl,
+          mode: LaunchMode.externalApplication,
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open Apple Maps'),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _callEmergencyContact() async {
+    final telUri = Uri.parse('tel:${widget.emergencyContact}');
+    if (await canLaunchUrl(telUri)) {
+      await launchUrl(telUri);
+    }
+  }
+
   Widget _buildStatCard(
     BuildContext context,
     String title,
@@ -333,8 +421,9 @@ class TripSummaryOverviewScreen extends StatelessWidget {
             SizedBox(height: 0.5.h),
             Text(
               value,
-              style:
-                  theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
@@ -352,7 +441,7 @@ class TripSummaryOverviewScreen extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.2.h),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withOpacity(0.1),
+        color: theme.colorScheme.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -364,7 +453,9 @@ class TripSummaryOverviewScreen extends StatelessWidget {
           SizedBox(width: 2.w),
           Text(
             value,
-            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),

@@ -53,7 +53,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
     await Supabase.instance.client.auth.signOut();
     if (!context.mounted) return;
     Navigator.of(context, rootNavigator: true)
-        .pushNamedAndRemoveUntil('/login-screen', (route) => false);
+        .pushNamedAndRemoveUntil('/login-page', (route) => false);
   }
 
   @override
@@ -107,13 +107,14 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                   title: t.t('profile_settings'),
                                   subtitle: t.t('account_details_identity'),
                                   highlighted: true,
-                                  onTap: () {
+                                  onTap: () async {
                                     Navigator.pop(context);
-                                    _showSettingsDialog(
+                                    final saved = await _showSettingsDialog(
                                       context,
                                       barrierLabel: t.t('profile_settings'),
-                                      child: ProfileSettingsPopup(),
+                                      child: const ProfileSettingsPopup(),
                                     );
+                                    if (saved == true) _loadUserName();
                                   },
                                 ),
                                 _buildMenuItem(
@@ -415,12 +416,12 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
     );
   }
 
-  void _showSettingsDialog(
+  Future<dynamic> _showSettingsDialog(
     BuildContext context, {
     required String barrierLabel,
     required Widget child,
   }) {
-    showGeneralDialog(
+    return showGeneralDialog(
       context: context,
       barrierDismissible: true,
       barrierLabel: barrierLabel,

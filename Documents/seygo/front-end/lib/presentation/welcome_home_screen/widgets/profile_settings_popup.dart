@@ -107,6 +107,18 @@ class _ProfileSettingsPopupState extends State<ProfileSettingsPopup> {
     String? uploadedUrl;
     if (_pickedImage != null) {
       uploadedUrl = await _uploadAvatar(_pickedImage!);
+      if (uploadedUrl == null) {
+        if (mounted) {
+          setState(() => _saving = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to upload photo'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
     }
 
     final token = Supabase.instance.client.auth.currentSession?.accessToken;

@@ -38,6 +38,8 @@ class _MapViewScreenState extends State<MapViewScreen> {
   bool _showListView = false;
   final List<Map<String, dynamic>> _tripCart = [];
   final List<double> _radiusOptionsKm = [1, 3, 5, 10, 15, 20, 30, 40, 50, 60];
+  bool _usingBackendPlaces = false;
+  String? _placesLoadError;
 
   // Prevents the initial "pan to my location" from firing more than once
   bool _didInitialLocationPan = false;
@@ -252,13 +254,19 @@ class _MapViewScreenState extends State<MapViewScreen> {
           _destinations
             ..clear()
             ..addAll(mapped);
+          _usingBackendPlaces = true;
+          _placesLoadError = null;
           if (_selectedCategory != 'All' && !_availableCategories.contains(_selectedCategory)) {
             _selectedCategory = 'All';
           }
         });
       }
-    } catch (_) {
-      // Keep bundled fallback places if backend is unavailable.
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _usingBackendPlaces = false;
+        _placesLoadError = error.toString();
+      });
     }
   }
 
@@ -1651,8 +1659,32 @@ class _MapViewScreenState extends State<MapViewScreen> {
                 ),
               ),
             ],
+              ),
+            ),
+        if (!_usingBackendPlaces)
+          Positioned(
+            top: 16,
+            left: 16,
+            right: 16,
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Text(
+                  'Backend places not loaded. Showing sample places.${_placesLoadError != null ? ' Check backend/API connection.' : ''}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.orange.shade900,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
       ],
     );
   }
