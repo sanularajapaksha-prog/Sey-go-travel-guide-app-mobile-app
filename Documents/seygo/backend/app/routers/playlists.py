@@ -46,6 +46,26 @@ async def get_playlists():
     return {'playlists': playlists}
 
 
+@router.get('/mine')
+async def get_my_playlists(user=Depends(get_current_user)):
+    """Return all playlists owned by the current user."""
+    supabase = get_supabase_client()
+    response = (
+        supabase.table(PLAYLISTS_TABLE)
+        .select('*')
+        .eq('user_id', str(user.id))
+        .order('created_at', desc=True)
+        .execute()
+    )
+    playlists = []
+    for row in (response.data or []):
+        p = _normalize_playlist_row(row)
+        p['is_editable'] = True
+        p['is_deletable'] = not bool(row.get('is_default'))
+        playlists.append(p)
+    return {'playlists': playlists}
+
+
 @router.get('/{playlist_id}/details')
 async def get_playlist_details(playlist_id: str):
     supabase = get_supabase_client()

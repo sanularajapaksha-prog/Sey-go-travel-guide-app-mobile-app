@@ -42,6 +42,32 @@ async def get_profile(user=Depends(get_current_user)):
     }
 
 
+@router.get('/me/stats')
+async def get_user_stats(user=Depends(get_current_user)):
+    """Return activity counts for the current user."""
+    supabase = get_supabase_client()
+
+    # Playlist count + total places saved across all playlists
+    playlist_rows = (
+        supabase.table('playlists')
+        .select('id, places_count')
+        .eq('user_id', str(user.id))
+        .eq('status', 'active')
+        .execute()
+        .data
+        or []
+    )
+    playlist_count = len(playlist_rows)
+    total_places = sum(int(r.get('places_count') or 0) for r in playlist_rows)
+
+    return {
+        'playlists': playlist_count,
+        'places': total_places,
+        'reviews': 0,   # reserved for future reviews feature
+        'photos': 0,    # reserved for future photos feature
+    }
+
+
 @router.put('/me')
 async def update_profile(
     body: UpdateProfileRequest,
