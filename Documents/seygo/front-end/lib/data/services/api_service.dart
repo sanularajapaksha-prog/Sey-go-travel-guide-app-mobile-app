@@ -535,4 +535,197 @@ class ApiService {
       return null;
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // User Profile
+  // ---------------------------------------------------------------------------
+
+  static Future<Map<String, dynamic>?> fetchProfile({
+    String? accessToken,
+  }) async {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      if (accessToken != null && accessToken.isNotEmpty)
+        'Authorization': 'Bearer $accessToken',
+    };
+    final uri = Uri.parse('$baseUrl/users/me');
+    try {
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<bool> updateProfile({
+    String? fullName,
+    String? bio,
+    String? homeCity,
+    String? travelStyle,
+    String? avatarUrl,
+    String? accessToken,
+  }) async {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      if (accessToken != null && accessToken.isNotEmpty)
+        'Authorization': 'Bearer $accessToken',
+    };
+    final uri = Uri.parse('$baseUrl/users/me');
+    final payload = <String, dynamic>{
+      if (fullName != null) 'full_name': fullName,
+      if (bio != null) 'bio': bio,
+      if (homeCity != null) 'home_city': homeCity,
+      if (travelStyle != null) 'travel_style': travelStyle,
+      if (avatarUrl != null) 'avatar_url': avatarUrl,
+    };
+    try {
+      final response = await http
+          .put(
+            uri,
+            headers: headers,
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 15));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Playlists
+  // ---------------------------------------------------------------------------
+
+  static Future<List<Map<String, dynamic>>> fetchPlaylists({
+    String? accessToken,
+  }) async {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      if (accessToken != null && accessToken.isNotEmpty)
+        'Authorization': 'Bearer $accessToken',
+    };
+    final uri = Uri.parse('$baseUrl/playlists/');
+    try {
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final list = body['playlists'] as List? ?? [];
+        return list.cast<Map<String, dynamic>>();
+      }
+    } catch (_) {}
+    return const [];
+  }
+
+  static Future<Map<String, dynamic>?> fetchPlaylistDetails({
+    required String playlistId,
+    String? accessToken,
+  }) async {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      if (accessToken != null && accessToken.isNotEmpty)
+        'Authorization': 'Bearer $accessToken',
+    };
+    final uri = Uri.parse('$baseUrl/playlists/$playlistId/details');
+    try {
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body is Map<String, dynamic>) {
+          return body;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<Map<String, dynamic>?> createPlaylist({
+    required String name,
+    String? description,
+    String icon = 'playlist_play',
+    String? accessToken,
+  }) async {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      if (accessToken != null && accessToken.isNotEmpty)
+        'Authorization': 'Bearer $accessToken',
+    };
+    final uri = Uri.parse('$baseUrl/playlists/');
+    try {
+      final response = await http
+          .post(
+            uri,
+            headers: headers,
+            body: jsonEncode({
+              'name': name,
+              if (description != null) 'description': description,
+              'icon': icon,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode == 201) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<bool> deletePlaylist({
+    required String playlistId,
+    String? accessToken,
+  }) async {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      if (accessToken != null && accessToken.isNotEmpty)
+        'Authorization': 'Bearer $accessToken',
+    };
+    final uri = Uri.parse('$baseUrl/playlists/$playlistId');
+    try {
+      final response = await http
+          .delete(uri, headers: headers)
+          .timeout(const Duration(seconds: 15));
+      return response.statusCode == 204;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> updatePlaylist({
+    required String playlistId,
+    String? name,
+    String? description,
+    String? icon,
+    String? accessToken,
+  }) async {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      if (accessToken != null && accessToken.isNotEmpty)
+        'Authorization': 'Bearer $accessToken',
+    };
+    final uri = Uri.parse('$baseUrl/playlists/$playlistId');
+    final payload = <String, dynamic>{
+      if (name != null) 'name': name,
+      if (description != null) 'description': description,
+      if (icon != null) 'icon': icon,
+    };
+    if (payload.isEmpty) return false;
+    try {
+      final response = await http
+          .put(
+            uri,
+            headers: headers,
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 15));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
 }

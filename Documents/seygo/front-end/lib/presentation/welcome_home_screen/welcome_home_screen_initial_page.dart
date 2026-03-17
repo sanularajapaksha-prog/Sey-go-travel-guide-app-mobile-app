@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/app_export.dart';
 import '../../data/models/place.dart';
+import '../../data/services/api_service.dart';
 import './widgets/category_pill_widget.dart';
 import './widgets/destination_card_widget.dart';
 import './widgets/featured_carousel_widget.dart';
@@ -21,6 +24,9 @@ class _WelcomeHomeScreenInitialPageState
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _searchController = TextEditingController();
   String _selectedCategory = 'All';
+
+  List<Map<String, dynamic>> _playlists = [];
+  bool _playlistsLoading = true;
 
   final List<Map<String, dynamic>> _featuredDestinations = [
     {
@@ -118,9 +124,27 @@ class _WelcomeHomeScreenInitialPageState
   }
 
   @override
+  void initState() {
+    super.initState();
+    _loadPlaylists();
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadPlaylists() async {
+    final token =
+        Supabase.instance.client.auth.currentSession?.accessToken;
+    final result = await ApiService.fetchPlaylists(accessToken: token);
+    if (mounted) {
+      setState(() {
+        _playlists = result;
+        _playlistsLoading = false;
+      });
+    }
   }
 
   @override
@@ -441,11 +465,130 @@ class _WelcomeHomeScreenInitialPageState
               ),
             ),
 
-            SliverToBoxAdapter(child: SizedBox(height: 10.h)),
+            SliverToBoxAdapter(child: _buildPlaylistCarousel(theme)),
+
+            SliverToBoxAdapter(child: SizedBox(height: 4.h)),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildPlaylistCarousel(ThemeData theme) {
+    if (_playlistsLoading) {
+      return SizedBox(
+        height: 14.h,
+        child: Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+      );
+    }
+
+    if (_playlists.isEmpty) {
+      return Padding(
+        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+        child: Text(
+          'No playlists yet. Tap "See all" to create one.',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 14.h,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.symmetric(horizontal: 4.w),
+        itemCount: _playlists.length,
+        separatorBuilder: (_, _) => SizedBox(width: 3.w),
+        itemBuilder: (context, index) {
+          final playlist = _playlists[index];
+          final name = playlist['name'] as String? ?? 'Playlist';
+          final icon = playlist['icon'] as String? ?? 'playlist_play';
+          final count = playlist['destination_count'] as int? ?? 0;
+
+          return GestureDetector(
+            onTap: () => Navigator.of(context, rootNavigator: true)
+                .pushNamed('/playlists-screen'),
+            child: Container(
+              width: 38.w,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(3.w),
+                border: Border.all(color: theme.dividerColor),
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.colorScheme.shadow.withValues(alpha: 0.06),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              padding: EdgeInsets.all(3.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(2.w),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(2.w),
+                    ),
+                    child: Icon(
+                      _iconFromName(icon),
+                      color: theme.colorScheme.primary,
+                      size: 5.w,
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        '$count place${count == 1 ? '' : 's'}',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.55),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  IconData _iconFromName(String name) {
+    const map = <String, IconData>{
+      'favorite': Icons.favorite,
+      'explore': Icons.explore,
+      'beach_access': Icons.beach_access,
+      'terrain': Icons.terrain,
+      'account_balance': Icons.account_balance,
+      'playlist_play': Icons.playlist_play,
+      'bookmark': Icons.bookmark,
+      'star': Icons.star,
+      'map': Icons.map,
+      'directions_car': Icons.directions_car,
+    };
+    return map[name] ?? Icons.playlist_play;
   }
 }
 

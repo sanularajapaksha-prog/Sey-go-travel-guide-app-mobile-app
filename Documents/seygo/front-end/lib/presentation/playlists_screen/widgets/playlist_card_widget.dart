@@ -22,8 +22,13 @@ class PlaylistCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final destinationCount = playlist['destinationCount'] as int;
-    final previewImages = playlist['previewImages'] as List<String>;
+    final destinationCount =
+        (playlist['destinationCount'] ?? playlist['destination_count'] ?? 0)
+            as int;
+    final previewImages = (playlist['previewImages'] as List? ?? const [])
+        .map((item) => item.toString())
+        .toList();
+    final canManage = (playlist['is_editable'] as bool?) ?? true;
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
@@ -31,7 +36,7 @@ class PlaylistCardWidget extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          onLongPress: () => _showContextMenu(context),
+          onLongPress: canManage ? () => _showContextMenu(context) : null,
           borderRadius: BorderRadius.circular(12.0),
           child: Container(
             decoration: BoxDecoration(
@@ -60,6 +65,10 @@ class PlaylistCardWidget extends StatelessWidget {
 
   Widget _buildPreviewSection(BuildContext context, List<String> images) {
     final theme = Theme.of(context);
+    final semanticLabels = (playlist['semanticLabels'] as List? ?? const [])
+        .map((item) => item.toString())
+        .toList();
+    final fallbackLabel = (playlist['name'] as String?) ?? 'Playlist';
 
     return Container(
       height: 20.h,
@@ -87,7 +96,8 @@ class PlaylistCardWidget extends StatelessWidget {
           width: double.infinity,
           height: 20.h,
           fit: BoxFit.cover,
-          semanticLabel: playlist['semanticLabels'][0] as String,
+          semanticLabel:
+              semanticLabels.isNotEmpty ? semanticLabels.first : fallbackLabel,
         )
             : Row(
           children: List.generate(
@@ -98,9 +108,9 @@ class PlaylistCardWidget extends StatelessWidget {
                 width: double.infinity,
                 height: 20.h,
                 fit: BoxFit.cover,
-                semanticLabel:
-                (playlist['semanticLabels']
-                as List<String>)[index],
+                semanticLabel: semanticLabels.length > index
+                    ? semanticLabels[index]
+                    : fallbackLabel,
               ),
             ),
           ),
@@ -135,16 +145,17 @@ class PlaylistCardWidget extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              IconButton(
-                icon: CustomIconWidget(
-                  iconName: 'more_vert',
-                  size: 20,
-                  color: theme.colorScheme.onSurfaceVariant,
+              if ((playlist['is_editable'] as bool?) ?? true)
+                IconButton(
+                  icon: CustomIconWidget(
+                    iconName: 'more_vert',
+                    size: 20,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  onPressed: () => _showContextMenu(context),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
-                onPressed: () => _showContextMenu(context),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
             ],
           ),
           SizedBox(height: 0.5.h),
@@ -162,6 +173,17 @@ class PlaylistCardWidget extends StatelessWidget {
                 color: theme.colorScheme.onSurfaceVariant,
               ),
               maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          if ((playlist['creator_name'] as String?)?.isNotEmpty ?? false) ...[
+            SizedBox(height: 0.5.h),
+            Text(
+              'By ${playlist['creator_name']}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ],

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_export.dart';
+import '../../data/services/api_service.dart';
 import '../../widgets/custom_icon_widget.dart';
+import '../playlist_details/playlist_details_screen.dart';
 import './widgets/create_playlist_dialog.dart';
 import './widgets/empty_playlists_widget.dart';
 import './widgets/playlist_card_widget.dart';
@@ -34,92 +37,15 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
     super.dispose();
   }
 
-  void _loadPlaylists() {
-    _playlists = [
-      {
-        'id': '1',
-        'name': 'Favorites',
-        'description': 'My favorite destinations to visit',
-        'icon': 'favorite',
-        'destinationCount': 8,
-        'previewImages': [
-          'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800',
-          'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800',
-          'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800',
-        ],
-        'semanticLabels': [
-          'Scenic mountain landscape with snow-capped peaks under blue sky',
-          'Tropical beach with turquoise water and palm trees at sunset',
-          'Crystal clear ocean water meeting sandy beach with gentle waves',
-        ],
-        'isDefault': true,
-      },
-      {
-        'id': '2',
-        'name': 'Want to Visit',
-        'description': 'Places on my bucket list',
-        'icon': 'explore',
-        'destinationCount': 12,
-        'previewImages': [
-          'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800',
-          'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800',
-        ],
-        'semanticLabels': [
-          'Winding mountain road through lush green hills at golden hour',
-          'Ancient temple architecture with ornate stone carvings and pillars',
-        ],
-        'isDefault': true,
-      },
-      {
-        'id': '3',
-        'name': 'Beach Escapes',
-        'description': 'Tropical paradise destinations',
-        'icon': 'beach_access',
-        'destinationCount': 6,
-        'previewImages': [
-          'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800',
-          'https://images.unsplash.com/photo-1473496169904-658ba7c44d8a?w=800',
-          'https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?w=800',
-        ],
-        'semanticLabels': [
-          'White sand beach with crystal clear turquoise water and palm trees',
-          'Tropical island beach with overwater bungalows at sunset',
-          'Pristine beach cove surrounded by rocky cliffs and lush vegetation',
-        ],
-        'isDefault': false,
-      },
-      {
-        'id': '4',
-        'name': 'Mountain Adventures',
-        'description': 'High altitude destinations',
-        'icon': 'terrain',
-        'destinationCount': 5,
-        'previewImages': [
-          'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800',
-        ],
-        'semanticLabels': [
-          'Majestic mountain range with snow-covered peaks against dramatic sky',
-        ],
-        'isDefault': false,
-      },
-      {
-        'id': '5',
-        'name': 'Cultural Heritage',
-        'description': 'Historical sites and temples',
-        'icon': 'account_balance',
-        'destinationCount': 9,
-        'previewImages': [
-          'https://images.unsplash.com/photo-1548013146-72479768bada?w=800',
-          'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=800',
-        ],
-        'semanticLabels': [
-          'Ancient Buddhist temple with golden spires and intricate architecture',
-          'Historic stone temple ruins surrounded by tropical jungle vegetation',
-        ],
-        'isDefault': false,
-      },
-    ];
-    _filteredPlaylists = List.from(_playlists);
+  Future<void> _loadPlaylists() async {
+    final token = Supabase.instance.client.auth.currentSession?.accessToken;
+    final data = await ApiService.fetchPlaylists(accessToken: token);
+    if (mounted) {
+      setState(() {
+        _playlists = data;
+        _filteredPlaylists = List.from(_playlists);
+      });
+    }
   }
 
   void _filterPlaylists(String query) {
@@ -140,10 +66,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
   }
 
   Future<void> _refreshPlaylists() async {
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() {
-      _loadPlaylists();
-    });
+    await _loadPlaylists();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -162,30 +85,39 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
     );
 
     if (result != null && mounted) {
-      setState(() {
-        _playlists.add({
-          'id': DateTime.now().millisecondsSinceEpoch.toString(),
-          'name': result['name']!,
-          'description': result['description'],
-          'icon': result['icon']!,
-          'destinationCount': 0,
-          'previewImages': [],
-          'semanticLabels': [],
-          'isDefault': false,
-        });
-        _filteredPlaylists = List.from(_playlists);
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Playlist "${result['name']}" created'),
-          behavior: SnackBarBehavior.floating,
-        ),
+      final token = Supabase.instance.client.auth.currentSession?.accessToken;
+      final created = await ApiService.createPlaylist(
+        name: result['name']!,
+        description: result['description'],
+        icon: result['icon'] ?? 'playlist_play',
+        accessToken: token,
       );
+
+      if (!mounted) return;
+
+      if (created != null) {
+        await _loadPlaylists();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Playlist "${result['name']}" created'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to create playlist'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
   void _editPlaylist(Map<String, dynamic> playlist) async {
+    final isEditable = playlist['is_editable'] as bool? ?? true;
+    if (!isEditable) return;
+
     final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) => CreatePlaylistDialog(
@@ -196,27 +128,41 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
     );
 
     if (result != null && mounted) {
-      setState(() {
-        final index = _playlists.indexWhere((p) => p['id'] == playlist['id']);
-        if (index != -1) {
-          _playlists[index]['name'] = result['name'];
-          _playlists[index]['description'] = result['description'];
-          _playlists[index]['icon'] = result['icon'];
-          _filteredPlaylists = List.from(_playlists);
-        }
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Playlist "${result['name']}" updated'),
-          behavior: SnackBarBehavior.floating,
-        ),
+      final token = Supabase.instance.client.auth.currentSession?.accessToken;
+      final ok = await ApiService.updatePlaylist(
+        playlistId: playlist['id'] as String,
+        name: result['name'],
+        description: result['description'],
+        icon: result['icon'],
+        accessToken: token,
       );
+
+      if (!mounted) return;
+
+      if (ok) {
+        await _loadPlaylists();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Playlist "${result['name']}" updated'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to update playlist'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
   void _deletePlaylist(Map<String, dynamic> playlist) {
-    final isDefault = playlist['isDefault'] as bool;
+    final isDeletable = playlist['is_deletable'] as bool? ?? true;
+    if (!isDeletable) return;
+
+    final isDefault = playlist['is_default'] as bool? ?? false;
 
     if (isDefault) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -243,18 +189,32 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(context);
-                setState(() {
-                  _playlists.removeWhere((p) => p['id'] == playlist['id']);
-                  _filteredPlaylists = List.from(_playlists);
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Playlist "${playlist['name']}" deleted'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
+                final token = Supabase
+                    .instance.client.auth.currentSession?.accessToken;
+                final ok = await ApiService.deletePlaylist(
+                  playlistId: playlist['id'] as String,
+                  accessToken: token,
                 );
+                if (!mounted) return;
+                if (ok) {
+                  await _loadPlaylists();
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Playlist "${playlist['name']}" deleted'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Failed to delete playlist'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
               },
               child: Text(
                 'Delete',
@@ -268,10 +228,14 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
   }
 
   void _openPlaylistDetail(Map<String, dynamic> playlist) {
-    Navigator.of(
-      context,
-      rootNavigator: true,
-    ).pushNamed('/destination-detail-screen');
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PlaylistDetailsScreen(
+          playlistId: (playlist['id'] ?? '').toString(),
+          initialPlaylist: playlist,
+        ),
+      ),
+    );
   }
 
   @override
@@ -331,7 +295,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
                       )
                           : Expanded(
                         child: Text(
-                          'My Playlists',
+                          'Playlists',
                           style: theme.textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
@@ -345,14 +309,6 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
                             color: theme.colorScheme.onSurface,
                           ),
                           onPressed: () => setState(() => _isSearching = true),
-                        ),
-                        IconButton(
-                          icon: CustomIconWidget(
-                            iconName: 'add',
-                            size: 24,
-                            color: theme.colorScheme.onSurface,
-                          ),
-                          onPressed: _createPlaylist,
                         ),
                       ],
                     ],

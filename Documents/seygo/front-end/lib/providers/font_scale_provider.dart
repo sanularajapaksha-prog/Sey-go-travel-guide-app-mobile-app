@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class FontScaleProvider extends ChangeNotifier {
-  double _scaleFactor = 1.0;
   static const String _prefKey = 'font_scale_factor';
+
+  double _scaleFactor = 1.0;
 
   FontScaleProvider() {
     _load();
@@ -20,31 +21,39 @@ class FontScaleProvider extends ChangeNotifier {
   Future<void> _load() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _scaleFactor = prefs.getDouble(_prefKey) ?? 1.0;
-      notifyListeners();
+      _scaleFactor = _sanitizeScaleFactor(prefs.getDouble(_prefKey));
     } catch (_) {
-      // silent fail → default to 1.0
+      _scaleFactor = 1.0;
     }
+    notifyListeners();
   }
 
   Future<void> setScaleFromLabel(String label) async {
-    final newScale = switch (label) {
+    final requestedScale = switch (label) {
       'Large' => 1.3,
       'Small' => 0.85,
       _ => 1.0,
     };
 
-    if (newScale == _scaleFactor) return;
+    final nextScale = _sanitizeScaleFactor(requestedScale);
+    if (nextScale == _scaleFactor) return;
 
-    _scaleFactor = newScale;
+    _scaleFactor = nextScale;
 
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setDouble(_prefKey, _scaleFactor);
-    } catch (_) {
-      // silent fail
-    }
+    } catch (_) {}
 
     notifyListeners();
+  }
+
+  double _sanitizeScaleFactor(double? value) {
+    const fallback = 1.0;
+    final factor = value ?? fallback;
+    if (!factor.isFinite || factor <= 0) {
+      return fallback;
+    }
+    return factor.clamp(0.8, 1.5);
   }
 }

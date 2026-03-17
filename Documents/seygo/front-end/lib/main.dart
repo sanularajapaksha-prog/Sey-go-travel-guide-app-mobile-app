@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
@@ -9,6 +10,7 @@ import 'core/app_export.dart'; // AppRoutes
 import 'providers/theme_provider.dart';
 import 'providers/font_scale_provider.dart';
 import 'providers/favorites_provider.dart';
+import 'providers/locale_provider.dart';
 import 'widgets/custom_error_widget.dart';
 
 
@@ -85,11 +87,12 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => FontScaleProvider()),
         ChangeNotifierProvider(create: (_) => FavoritesProvider()),
+        ChangeNotifierProvider(create: (_) => LocaleProvider()),
       ],
       child: Sizer(
         builder: (context, orientation, deviceType) {
-          return Consumer2<ThemeProvider, FontScaleProvider>(
-            builder: (context, themeProvider, fontProvider, child) {
+          return Consumer3<ThemeProvider, FontScaleProvider, LocaleProvider>(
+            builder: (context, themeProvider, fontProvider, localeProvider, child) {
               return MaterialApp(
                 title: 'seygo_travel_app',
                 debugShowCheckedModeBanner: false,
@@ -98,12 +101,28 @@ class MyApp extends StatelessWidget {
                 theme: AppTheme.lightTheme,
                 darkTheme: AppTheme.darkTheme,
                 themeMode: themeProvider.themeMode,
+                locale: localeProvider.locale,
+                supportedLocales: const [
+                  Locale('en', 'LK'),
+                  Locale('en', 'US'),
+                  Locale('si', 'LK'),
+                  Locale('ta', 'LK'),
+                ],
+                localizationsDelegates: const [
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                ],
 
                 // Apply dynamic font scaling
                 builder: (context, child) {
+                  final scaleFactor = fontProvider.scaleFactor.isFinite &&
+                          fontProvider.scaleFactor > 0
+                      ? fontProvider.scaleFactor
+                      : 1.0;
                   return MediaQuery(
                     data: MediaQuery.of(context).copyWith(
-                      textScaler: TextScaler.linear(fontProvider.scaleFactor),
+                      textScaler: TextScaler.linear(scaleFactor),
                     ),
                     child: child!,
                   );

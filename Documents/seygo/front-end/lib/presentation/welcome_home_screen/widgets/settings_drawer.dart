@@ -1,18 +1,66 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../../core/app_localizer.dart';
+import '../../../data/services/api_service.dart';
 import './appearance_popup.dart';
 import './general_settings_popup.dart';
 import './help_support_popup.dart';
 import './privacy_popup.dart';
 import './profile_settings_popup.dart';
 
-class SettingsDrawer extends StatelessWidget {
+class SettingsDrawer extends StatefulWidget {
   const SettingsDrawer({super.key});
+
+  @override
+  State<SettingsDrawer> createState() => _SettingsDrawerState();
+}
+
+class _SettingsDrawerState extends State<SettingsDrawer> {
+  String _displayName = '';
+  String? _avatarUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserName();
+  }
+
+  Future<void> _loadUserName() async {
+    // Fast: use auth metadata first
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user != null) {
+      final meta = user.userMetadata ?? {};
+      final name = meta['full_name'] as String? ?? user.email ?? '';
+      if (mounted) setState(() => _displayName = name);
+    }
+
+    // Fetch full profile for avatar + latest name
+    final token = Supabase.instance.client.auth.currentSession?.accessToken;
+    final profile = await ApiService.fetchProfile(accessToken: token);
+    if (profile != null && mounted) {
+      setState(() {
+        _displayName = (profile['full_name'] as String?)?.isNotEmpty == true
+            ? profile['full_name'] as String
+            : _displayName;
+        _avatarUrl = profile['avatar_url'] as String?;
+      });
+    }
+  }
+
+  Future<void> _logout(BuildContext context) async {
+    await Supabase.instance.client.auth.signOut();
+    if (!context.mounted) return;
+    Navigator.of(context, rootNavigator: true)
+        .pushNamedAndRemoveUntil('/login-screen', (route) => false);
+  }
 
   @override
   Widget build(BuildContext context) {
     final bool darkMode = Theme.of(context).brightness == Brightness.dark;
     final _DrawerPalette colors = _DrawerPalette.forMode(darkMode);
+    final t = AppLocalizer.of(context);
 
     return SizedBox(
       width: 82.w,
@@ -44,26 +92,26 @@ class SettingsDrawer extends StatelessWidget {
                     borderRadius: BorderRadius.circular(30),
                     child: Column(
                       children: [
-                        _buildHeader(colors),
+                        _buildHeader(colors, t),
                         Expanded(
                           child: SingleChildScrollView(
                             padding: EdgeInsets.fromLTRB(6.w, 1.2.h, 6.w, 1.6.h),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildSectionTitle('MAIN', colors),
+                                _buildSectionTitle(t.t('main'), colors),
                                 SizedBox(height: 1.2.h),
                                 _buildMenuItem(
                                   colors,
                                   icon: Icons.person_outline_rounded,
-                                  title: 'Profile Settings',
-                                  subtitle: 'Account details and identity',
+                                  title: t.t('profile_settings'),
+                                  subtitle: t.t('account_details_identity'),
                                   highlighted: true,
                                   onTap: () {
                                     Navigator.pop(context);
                                     _showSettingsDialog(
                                       context,
-                                      barrierLabel: 'Profile Settings',
+                                      barrierLabel: t.t('profile_settings'),
                                       child: ProfileSettingsPopup(),
                                     );
                                   },
@@ -71,13 +119,13 @@ class SettingsDrawer extends StatelessWidget {
                                 _buildMenuItem(
                                   colors,
                                   icon: Icons.settings_outlined,
-                                  title: 'General Settings',
-                                  subtitle: 'Notifications and preferences',
+                                  title: t.t('general_settings'),
+                                  subtitle: t.t('notifications_preferences'),
                                   onTap: () {
                                     Navigator.pop(context);
                                     _showSettingsDialog(
                                       context,
-                                      barrierLabel: 'General Settings',
+                                      barrierLabel: t.t('general_settings'),
                                       child: GeneralSettingsPopup(),
                                     );
                                   },
@@ -85,8 +133,8 @@ class SettingsDrawer extends StatelessWidget {
                                 _buildMenuItem(
                                   colors,
                                   icon: Icons.security_outlined,
-                                  title: 'Privacy',
-                                  subtitle: 'Permissions and security',
+                                  title: t.t('privacy'),
+                                  subtitle: t.t('permissions_security'),
                                   onTap: () {
                                     Navigator.pop(context);
                                     PrivacyPopup.show(context);
@@ -95,13 +143,13 @@ class SettingsDrawer extends StatelessWidget {
                                 _buildMenuItem(
                                   colors,
                                   icon: Icons.palette_outlined,
-                                  title: 'Appearance',
-                                  subtitle: 'Theme and visual style',
+                                  title: t.t('appearance'),
+                                  subtitle: t.t('theme_visual_style'),
                                   onTap: () {
                                     Navigator.pop(context);
                                     _showSettingsDialog(
                                       context,
-                                      barrierLabel: 'Appearance',
+                                      barrierLabel: t.t('appearance'),
                                       child: AppearancePopup(),
                                     );
                                   },
@@ -109,8 +157,8 @@ class SettingsDrawer extends StatelessWidget {
                                 _buildMenuItem(
                                   colors,
                                   icon: Icons.help_outline_rounded,
-                                  title: 'Help & Support',
-                                  subtitle: 'FAQs and contact support',
+                                  title: t.t('help_support'),
+                                  subtitle: t.t('faqs_contact_support'),
                                   onTap: () {
                                     Navigator.pop(context);
                                     HelpSupportPopup.show(context);
@@ -120,7 +168,7 @@ class SettingsDrawer extends StatelessWidget {
                             ),
                           ),
                         ),
-                        _buildFooter(colors, context),
+                        _buildFooter(colors, context, t),
                       ],
                     ),
                   ),
@@ -157,7 +205,7 @@ class SettingsDrawer extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(_DrawerPalette colors) {
+  Widget _buildHeader(_DrawerPalette colors, AppLocalizer t) {
     return Padding(
       padding: EdgeInsets.fromLTRB(6.3.w, 2.5.h, 6.3.w, 2.1.h),
       child: Column(
@@ -169,35 +217,44 @@ class SettingsDrawer extends StatelessWidget {
               CircleAvatar(
                 radius: 6.w,
                 backgroundColor: colors.avatarBackground,
-                child: Icon(
-                  Icons.person,
-                  size: 5.8.w,
-                  color: colors.text.withValues(alpha: 0.70),
-                ),
+                backgroundImage: (_avatarUrl != null && _avatarUrl!.isNotEmpty)
+                    ? NetworkImage(_avatarUrl!)
+                    : null,
+                child: (_avatarUrl == null || _avatarUrl!.isEmpty)
+                    ? Icon(
+                        Icons.person,
+                        size: 5.8.w,
+                        color: colors.text.withValues(alpha: 0.70),
+                      )
+                    : null,
               ),
               SizedBox(width: 2.8.w),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'SEYGO USER',
-                    style: TextStyle(
-                      fontSize: 11.6.sp,
-                      color: colors.mutedText,
-                      letterSpacing: 0.7,
-                      fontWeight: FontWeight.w600,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'SEYGO USER',
+                      style: TextStyle(
+                        fontSize: 11.6.sp,
+                        color: colors.mutedText,
+                        letterSpacing: 0.7,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 0.2.h),
-                  Text(
-                    'Sarah Johnson',
-                    style: TextStyle(
-                      fontSize: 16.2.sp,
-                      color: colors.text,
-                      fontWeight: FontWeight.w700,
+                    SizedBox(height: 0.2.h),
+                    Text(
+                      _displayName.isNotEmpty ? _displayName : t.t('welcome'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 16.2.sp,
+                        color: colors.text,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -206,7 +263,11 @@ class SettingsDrawer extends StatelessWidget {
     );
   }
 
-  Widget _buildFooter(_DrawerPalette colors, BuildContext context) {
+  Widget _buildFooter(
+    _DrawerPalette colors,
+    BuildContext context,
+    AppLocalizer t,
+  ) {
     return Padding(
       padding: EdgeInsets.fromLTRB(5.6.w, 1.2.h, 5.6.w, 2.4.h),
       child: Container(
@@ -220,7 +281,7 @@ class SettingsDrawer extends StatelessWidget {
         child: Column(
           children: [
             Text(
-              'Ready to customize?',
+              t.t('ready_to_customize'),
               style: TextStyle(
                 fontSize: 15.8.sp,
                 fontWeight: FontWeight.w700,
@@ -229,7 +290,7 @@ class SettingsDrawer extends StatelessWidget {
             ),
             SizedBox(height: 1.h),
             Text(
-              'Use settings to personalize your app experience.',
+              t.t('personalize_experience'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12.4.sp,
@@ -242,12 +303,9 @@ class SettingsDrawer extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: () {
-                  Navigator.pop(context);
-                  // TODO: Replace with real auth sign-out action.
-                },
+                onPressed: () => _logout(context),
                 icon: const Icon(Icons.logout_rounded, size: 18),
-                label: const Text('Logout'),
+                label: Text(t.t('logout')),
                 style: FilledButton.styleFrom(
                   backgroundColor: colors.accent,
                   foregroundColor: Colors.white,

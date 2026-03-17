@@ -29,7 +29,7 @@ class EmptyPlaylistsWidget extends StatelessWidget {
               ),
               child: Center(
                 child: CustomIconWidget(
-                  iconName: 'playlist_add',
+                  iconName: 'playlist_play',
                   size: 15.w,
                   color: theme.colorScheme.primary,
                 ),
@@ -37,7 +37,7 @@ class EmptyPlaylistsWidget extends StatelessWidget {
             ),
             SizedBox(height: 3.h),
             Text(
-              'No Playlists Yet',
+              'No Playlists Available',
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -45,24 +45,11 @@ class EmptyPlaylistsWidget extends StatelessWidget {
             ),
             SizedBox(height: 1.h),
             Text(
-              'Create your first playlist to organize your favorite destinations',
+              'No active public playlists were returned from Supabase.',
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
               textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 4.h),
-            ElevatedButton.icon(
-              onPressed: onCreatePlaylist,
-              icon: CustomIconWidget(
-                iconName: 'add',
-                size: 20,
-                color: theme.colorScheme.onPrimary,
-              ),
-              label: const Text('Create Playlist'),
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-              ),
             ),
           ],
         ),
