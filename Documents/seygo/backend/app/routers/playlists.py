@@ -164,7 +164,7 @@ async def add_destination(
         supabase.table(PLAYLIST_DESTINATIONS_TABLE)
         .select('id')
         .eq('playlist_id', playlist_id)
-        .eq('destination_id', body.destination_id)
+        .eq('place_id', body.destination_id)
         .execute()
     )
     if existing.data:
@@ -175,7 +175,7 @@ async def add_destination(
 
     response = (
         supabase.table(PLAYLIST_DESTINATIONS_TABLE)
-        .insert({'playlist_id': playlist_id, 'destination_id': body.destination_id})
+        .insert({'playlist_id': playlist_id, 'place_id': str(body.destination_id)})
         .execute()
     )
     if not response.data:
@@ -194,7 +194,7 @@ async def remove_destination(
 ):
     supabase = get_supabase_client()
     _assert_owner(supabase, playlist_id, user)
-    supabase.table(PLAYLIST_DESTINATIONS_TABLE).delete().eq('playlist_id', playlist_id).eq('destination_id', destination_id).execute()
+    supabase.table(PLAYLIST_DESTINATIONS_TABLE).delete().eq('playlist_id', playlist_id).eq('place_id', str(destination_id)).execute()
 
 
 @router.get('/{playlist_id}/destinations')
@@ -206,7 +206,7 @@ async def get_playlist_destinations(
     _assert_owner(supabase, playlist_id, user)
     response = (
         supabase.table(PLAYLIST_DESTINATIONS_TABLE)
-        .select('*, saved_destinations(*)')
+        .select('*, placses(*)')
         .eq('playlist_id', playlist_id)
         .execute()
     )
