@@ -42,14 +42,23 @@ def geocode(name: str, location_hint: str = 'Sri Lanka') -> tuple[float, float] 
 def main():
     supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-    # Fetch all places
-    result = supabase.table(PLACES_TABLE).select('id, name, latitude, longitude, location').execute()
-    rows = result.data or []
+    # Fetch all places in batches (table has 4900+ rows)
+    rows: list[dict] = []
+    start = 0
+    step = 1000
+    while True:
+        result = supabase.table(PLACES_TABLE).select('place_id, name, lat, lng, location').range(start, start + step - 1).execute()
+        batch = result.data or []
+        rows.extend(batch)
+        if len(batch) < step:
+            break
+        start += step
+
     print(f'Total places: {len(rows)}')
 
     missing = [
         r for r in rows
-        if not r.get('latitude') or not r.get('longitude')
+        if not r.get('lat') or not r.get('lng')
     ]
     print(f'Places missing coordinates: {len(missing)}')
 
@@ -61,7 +70,7 @@ def main():
     failed = 0
 
     for place in missing:
-        place_id = place['id']
+        place_id = place['place_id']
         name = place.get('name') or ''
         location_hint = place.get('location') or 'Sri Lanka'
 
@@ -77,9 +86,9 @@ def main():
             lat, lng = coords
             print(f'→ {lat:.4f}, {lng:.4f}')
             supabase.table(PLACES_TABLE).update({
-                'latitude': lat,
-                'longitude': lng,
-            }).eq('id', place_id).execute()
+                'lat': lat,
+                'lng': lng,
+            }).eq('place_id', place_id).execute()
             updated += 1
         else:
             print(f'→ FAILED')
