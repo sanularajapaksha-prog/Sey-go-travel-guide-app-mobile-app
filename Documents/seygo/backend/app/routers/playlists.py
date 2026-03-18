@@ -32,9 +32,7 @@ class AddDestinationRequest(BaseModel):
 @router.get('/')
 def get_playlists():
     """Return active public playlists normalized for the mobile app."""
-    import os
-    from supabase import create_client as _create_client
-    supabase = _create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_SERVICE_ROLE_KEY'])
+    supabase = get_supabase_client()environ['SUPABASE_SERVICE_ROLE_KEY'])
     response = (
         supabase.table(PLAYLISTS_TABLE)
         .select('*')
