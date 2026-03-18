@@ -54,7 +54,11 @@ _VECTORS_PATH = _MODELS_DIR / 'semantic_vectors.npy'
 _PLACES_PATH  = _MODELS_DIR / 'semantic_places.json'
 
 # Model — multilingual MiniLM handles EN/Sinhala/Tamil
+# Override via SEMANTIC_MODEL env var to swap in a higher-accuracy model without code changes
 _MODEL_NAME = os.getenv('SEMANTIC_MODEL', 'paraphrase-multilingual-MiniLM-L12-v2')
+
+# Minimum number of places that must change before a background rebuild is triggered
+_REBUILD_DRIFT_THRESHOLD_PCT = 0.10  # 10% of index size
 
 # ---------------------------------------------------------------------------
 # Intent keywords  (English + Sinhala romanised + Tamil romanised)
