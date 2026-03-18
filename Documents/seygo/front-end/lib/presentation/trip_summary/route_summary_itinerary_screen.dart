@@ -1,4 +1,4 @@
-import 'dart:math';
+import 'dart:math' show sqrt, sin, cos, atan2, pi, pow;
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -214,6 +214,24 @@ class RouteSummaryItineraryScreen extends StatelessWidget {
 
   String _estimateLegDistance(int index) {
     if (index == 0) return 'Start';
-    return (Random().nextDouble() * 10 + 2).toStringAsFixed(1);
+    final prev = optimizedStops[index - 1];
+    final curr = optimizedStops[index];
+    final prevLat = (prev['latitude'] as num?)?.toDouble();
+    final prevLng = (prev['longitude'] as num?)?.toDouble();
+    final currLat = (curr['latitude'] as num?)?.toDouble();
+    final currLng = (curr['longitude'] as num?)?.toDouble();
+    if (prevLat == null || prevLng == null || currLat == null || currLng == null) {
+      return '?';
+    }
+    return _haversineKm(prevLat, prevLng, currLat, currLng).toStringAsFixed(1);
+  }
+
+  double _haversineKm(double lat1, double lng1, double lat2, double lng2) {
+    const r = 6371.0;
+    final dLat = (lat2 - lat1) * pi / 180;
+    final dLng = (lng2 - lng1) * pi / 180;
+    final a = pow(sin(dLat / 2), 2) +
+        cos(lat1 * pi / 180) * cos(lat2 * pi / 180) * pow(sin(dLng / 2), 2);
+    return r * 2 * atan2(sqrt(a), sqrt(1 - a));
   }
 }
