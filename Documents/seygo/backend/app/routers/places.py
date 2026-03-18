@@ -28,7 +28,7 @@ recommender = PlaceRecommender()
 ml_recommender = MLRecommender()
 google_places_service = GooglePlacesService()
 # Default table name corrected to the expected `places`.
-PLACES_TABLE = os.getenv('SUPABASE_PLACES_TABLE', 'places')
+PLACES_TABLE = os.getenv('SUPABASE_PLACES_TABLE', 'placses')
 PHOTOS_BUCKET = os.getenv('SUPABASE_PLACE_PHOTOS_BUCKET', 'place-photos')
 SUPABASE_URL = os.getenv('SUPABASE_URL', '').rstrip('/')
 PHOTOS_PRIVATE = os.getenv('SUPABASE_PLACE_PHOTOS_PRIVATE', 'false').lower() == 'true'
