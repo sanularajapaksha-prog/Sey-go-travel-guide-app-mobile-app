@@ -44,29 +44,42 @@ async def get_profile(user=Depends(get_current_user)):
 
 @router.get('/me/stats')
 async def get_user_stats(user=Depends(get_current_user)):
-    """Return activity counts for the current user."""
+    """Return live activity counts for the current user."""
     supabase = get_supabase_client()
+    uid = str(user.id)
 
-    # Playlist count + total places saved across all playlists
+    # Run counts in parallel using separate queries
     playlist_rows = (
         supabase.table('playlists')
         .select('id, places_count')
-        .eq('user_id', str(user.id))
+        .eq('user_id', uid)
         .eq('status', 'active')
         .execute()
-        .data
-        or []
+        .data or []
     )
-    playlist_count = len(playlist_rows)
-    total_places = sum(int(r.get('places_count') or 0) for r in playlist_rows)
+
+    review_rows = (
+        supabase.table('reviews')
+        .select('id')
+        .eq('user_id', uid)
+        .execute()
+        .data or []
+    )
+
+    photo_rows = (
+        supabase.table('photos')
+        .select('id')
+        .eq('user_id', uid)
+        .execute()
+        .data or []
+    )
 
     return {
-        'playlists': playlist_count,
-        'places': total_places,
-        'reviews': 0,   # reserved for future reviews feature
-        'photos': 0,    # reserved for future photos feature
+        'playlists': len(playlist_rows),
+        'places': sum(int(r.get('places_count') or 0) for r in playlist_rows),
+        'reviews': len(review_rows),
+        'photos': len(photo_rows),
     }
-
 
 @router.put('/me')
 async def update_profile(
