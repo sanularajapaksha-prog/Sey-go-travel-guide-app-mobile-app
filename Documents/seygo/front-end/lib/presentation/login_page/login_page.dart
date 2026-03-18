@@ -52,7 +52,7 @@ class _LoginPageState extends State<LoginPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Get Started With your\nFitness Journey',
+                'Get Started With your\nTravel Journey',
                 style: GoogleFonts.poppins(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
@@ -114,12 +114,22 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 10),
               Align(
                 alignment: Alignment.centerRight,
-                child: Text(
-                  'Forgot Password?',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12.5,
-                    color: brandBlue,
-                    fontWeight: FontWeight.w600,
+                child: TextButton(
+                  onPressed: () =>
+                      Navigator.pushNamed(context, AppRoutes.forgotPassword),
+                  style: TextButton.styleFrom(
+                    foregroundColor: brandBlue,
+                    padding: EdgeInsets.zero,
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    'Forgot Password?',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12.5,
+                      color: brandBlue,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -317,8 +327,20 @@ class _LoginPageState extends State<LoginPage> {
       );
     } catch (e) {
       if (!mounted) return;
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      String displayMsg = msg;
+      if (msg.toLowerCase().contains('invalid login credentials') ||
+          msg.toLowerCase().contains('invalid credentials')) {
+        displayMsg =
+            'Incorrect email or password.\nIf you signed up with Google, use the Google button below.';
+      } else if (msg.toLowerCase().contains('email not confirmed')) {
+        displayMsg = 'Please verify your email first. Check your inbox for the OTP code.';
+      }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        SnackBar(
+          content: Text(displayMsg),
+          duration: const Duration(seconds: 4),
+        ),
       );
     } finally {
       if (mounted) {

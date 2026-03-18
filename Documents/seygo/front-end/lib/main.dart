@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +15,7 @@ import 'providers/favorites_provider.dart';
 import 'providers/locale_provider.dart';
 import 'widgets/custom_error_widget.dart';
 
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -77,8 +80,36 @@ Future<void> _initializeSupabaseSafely() async {
   }
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  StreamSubscription<AuthState>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    try {
+      _authSubscription = Supabase.instance.client.auth.onAuthStateChange
+          .listen((data) {
+            if (data.event == AuthChangeEvent.passwordRecovery) {
+              appNavigatorKey.currentState?.pushNamed(AppRoutes.resetPassword);
+            }
+          });
+    } catch (_) {
+      // Supabase may be disabled locally.
+    }
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,6 +125,7 @@ class MyApp extends StatelessWidget {
           return Consumer3<ThemeProvider, FontScaleProvider, LocaleProvider>(
             builder: (context, themeProvider, fontProvider, localeProvider, child) {
               return MaterialApp(
+                navigatorKey: appNavigatorKey,
                 title: 'seygo_travel_app',
                 debugShowCheckedModeBanner: false,
 

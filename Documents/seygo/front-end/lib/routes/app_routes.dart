@@ -8,6 +8,8 @@ import '../presentation/signup_page/signup_page.dart';
 import '../presentation/login_page/login_page.dart';
 import '../presentation/register_page/register_page.dart';
 import '../presentation/otp_page/otp_page.dart';
+import '../presentation/forgot_password_screen/forgot_password_screen.dart';
+import '../presentation/reset_password_screen/reset_password_screen.dart';
 import '../presentation/splash_screen/splash_screen.dart';
 import '../presentation/welcome_home_screen/welcome_home_screen.dart';
 import '../presentation/favorite_screen/favorites_screen.dart';
@@ -16,6 +18,7 @@ import '../presentation/playlists_screen/playlists_screen.dart';
 import '../presentation/destination_detail_screen/destination_detail_screen.dart';
 import '../presentation/route_planner_screen/route_planner_screen.dart';
 import '../presentation/map_view_screen/map_view_screen.dart';
+import '../presentation/user_preferences_screen/user_preferences_screen.dart';
 
 class AppRoutes {
   static const String initial = introLogo;
@@ -29,6 +32,8 @@ class AppRoutes {
   static const String loginPage = '/login-page';
   static const String registerPage = '/register-page';
   static const String otpPage = '/otp-page';
+  static const String forgotPassword = '/forgot-password';
+  static const String resetPassword = '/reset-password';
 
   static const String splash = '/splash-screen';
   static const String welcomeHome = '/welcome-home-screen';
@@ -39,6 +44,7 @@ class AppRoutes {
   static const String mapView = '/map-view-screen';
   static const String destinationDetail = '/destination-detail-screen';
   static const String routePlanner = '/route-planner-screen';
+  static const String userPreferences = '/user-preferences-screen';
 
   static final Map<String, WidgetBuilder> routes = {
     introLogo: (context) => const LogoIntroPage(),
@@ -49,6 +55,8 @@ class AppRoutes {
     loginPage: (context) => const LoginPage(),
     registerPage: (context) => const RegisterPage(),
     otpPage: (context) => const OtpPage(),
+    forgotPassword: (context) => const ForgotPasswordScreen(),
+    resetPassword: (context) => const ResetPasswordScreen(),
     splash: (context) => const SplashScreen(),
     welcomeHome: (context) => const WelcomeHomeScreen(),
     profile: (context) => const ProfileScreen(),
@@ -57,5 +65,6 @@ class AppRoutes {
     favorites: (context) => const FavoritesScreen(),
     destinationDetail: (context) => const DestinationDetailScreen(),
     routePlanner: (context) => const RoutePlannerScreen(),
+    userPreferences: (context) => const UserPreferencesScreen(),
   };
 }

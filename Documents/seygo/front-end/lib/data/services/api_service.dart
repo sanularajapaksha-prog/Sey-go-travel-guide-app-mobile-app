@@ -53,10 +53,7 @@ class ApiService {
           .post(
             uri,
             headers: headers,
-            body: jsonEncode({
-              'origin': origin,
-              'destinations': destinations,
-            }),
+            body: jsonEncode({'origin': origin, 'destinations': destinations}),
           )
           .timeout(const Duration(seconds: 20));
 
@@ -151,7 +148,9 @@ class ApiService {
   }
 
   static Future<String?> resolveBestPlaceImage(Place place) async {
-    final cacheKey = place.id.isNotEmpty ? place.id : (place.googleUrl ?? place.name);
+    final cacheKey = place.id.isNotEmpty
+        ? place.id
+        : (place.googleUrl ?? place.name);
     if (_resolvedPhotoCache.containsKey(cacheKey)) {
       return _resolvedPhotoCache[cacheKey];
     }
@@ -254,7 +253,9 @@ class ApiService {
         return null;
       }
 
-      final resolved = Place.withGooglePhotoWidth(decoded['photo_url']?.toString());
+      final resolved = Place.withGooglePhotoWidth(
+        decoded['photo_url']?.toString(),
+      );
       return resolved;
     } catch (_) {
       return null;
@@ -278,7 +279,7 @@ class ApiService {
       final uri = Uri.tryParse(googleUrl);
       final cid = uri?.queryParameters['cid'];
       final q = uri?.queryParameters['q'];
-      
+
       String searchInput;
       if (cid != null && cid.isNotEmpty) {
         searchInput = 'cid:$cid';
@@ -289,14 +290,17 @@ class ApiService {
       }
 
       // Step 2: Find Place using CID or Query → get place_id
-      final findPlaceUri = Uri.parse(
-        'https://maps.googleapis.com/maps/api/place/findplacefromtext/json',
-      ).replace(queryParameters: {
-        'input': searchInput,
-        'inputtype': 'textquery',
-        'fields': 'place_id',
-        'key': apiKey,
-      });
+      final findPlaceUri =
+          Uri.parse(
+            'https://maps.googleapis.com/maps/api/place/findplacefromtext/json',
+          ).replace(
+            queryParameters: {
+              'input': searchInput,
+              'inputtype': 'textquery',
+              'fields': 'place_id',
+              'key': apiKey,
+            },
+          );
 
       final findResponse = await http
           .get(findPlaceUri)
@@ -313,13 +317,16 @@ class ApiService {
       if (resolvedPlaceId == null || resolvedPlaceId.isEmpty) return null;
 
       // Step 3: Get photo_reference from Place Details
-      final detailsUri = Uri.parse(
-        'https://maps.googleapis.com/maps/api/place/details/json',
-      ).replace(queryParameters: {
-        'place_id': resolvedPlaceId,
-        'fields': 'photos',
-        'key': apiKey,
-      });
+      final detailsUri =
+          Uri.parse(
+            'https://maps.googleapis.com/maps/api/place/details/json',
+          ).replace(
+            queryParameters: {
+              'place_id': resolvedPlaceId,
+              'fields': 'photos',
+              'key': apiKey,
+            },
+          );
 
       final detailsResponse = await http
           .get(detailsUri)
@@ -333,8 +340,8 @@ class ApiService {
           (detailsData['result'] as Map<String, dynamic>?)?['photos'] as List?;
       if (photos == null || photos.isEmpty) return null;
 
-      final photoRef =
-          (photos.first as Map<String, dynamic>)['photo_reference']?.toString();
+      final photoRef = (photos.first as Map<String, dynamic>)['photo_reference']
+          ?.toString();
       if (photoRef == null || photoRef.isEmpty) return null;
 
       // Step 4: Build final photo URL
@@ -349,7 +356,6 @@ class ApiService {
       return null;
     }
   }
-
 
   static Future<Map<String, dynamic>> register({
     required String fullName,
@@ -520,6 +526,54 @@ class ApiService {
     throw Exception('Failed to verify code: ${response.statusCode}');
   }
 
+  static Future<void> forgotPassword({required String email}) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/forgot-password'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email.trim().toLowerCase()}),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return;
+    }
+
+    final bodyText = response.body.isEmpty ? '{}' : response.body;
+    final decoded = jsonDecode(bodyText);
+    if (decoded is Map<String, dynamic> && decoded['detail'] != null) {
+      throw Exception(decoded['detail'].toString());
+    }
+    throw Exception(
+      'Failed to send password reset email: ${response.statusCode}',
+    );
+  }
+
+  static Future<void> resetPassword({
+    required String accessToken,
+    required String refreshToken,
+    required String newPassword,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/reset-password'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'access_token': accessToken,
+        'refresh_token': refreshToken,
+        'new_password': newPassword,
+      }),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return;
+    }
+
+    final bodyText = response.body.isEmpty ? '{}' : response.body;
+    final decoded = jsonDecode(bodyText);
+    if (decoded is Map<String, dynamic> && decoded['detail'] != null) {
+      throw Exception(decoded['detail'].toString());
+    }
+    throw Exception('Failed to reset password: ${response.statusCode}');
+  }
+
   /// Geocode a free-text query to lat/lng using the Google Places
   /// findplacefromtext API, biased to Sri Lanka.
   /// Returns a map with keys: name, latitude, longitude, address, place_id.
@@ -527,15 +581,18 @@ class ApiService {
     final apiKey = dotenv.env['GOOGLE_PLACES_API_KEY'] ?? '';
     if (apiKey.isEmpty) return null;
     try {
-      final uri = Uri.parse(
-        'https://maps.googleapis.com/maps/api/place/findplacefromtext/json',
-      ).replace(queryParameters: {
-        'input': query,
-        'inputtype': 'textquery',
-        'fields': 'place_id,name,geometry,formatted_address',
-        'locationbias': 'rectangle:5.5,79.4|10.1,82.1',
-        'key': apiKey,
-      });
+      final uri =
+          Uri.parse(
+            'https://maps.googleapis.com/maps/api/place/findplacefromtext/json',
+          ).replace(
+            queryParameters: {
+              'input': query,
+              'inputtype': 'textquery',
+              'fields': 'place_id,name,geometry,formatted_address',
+              'locationbias': 'rectangle:5.5,79.4|10.1,82.1',
+              'key': apiKey,
+            },
+          );
       final response = await http.get(uri).timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) return null;
       final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -611,19 +668,15 @@ class ApiService {
     };
     final uri = Uri.parse('$baseUrl/users/me');
     final payload = <String, dynamic>{
-      if (fullName != null) 'full_name': fullName,
-      if (bio != null) 'bio': bio,
-      if (homeCity != null) 'home_city': homeCity,
-      if (travelStyle != null) 'travel_style': travelStyle,
-      if (avatarUrl != null) 'avatar_url': avatarUrl,
+      'full_name': ?fullName,
+      'bio': ?bio,
+      'home_city': ?homeCity,
+      'travel_style': ?travelStyle,
+      'avatar_url': ?avatarUrl,
     };
     try {
       final response = await http
-          .put(
-            uri,
-            headers: headers,
-            body: jsonEncode(payload),
-          )
+          .put(uri, headers: headers, body: jsonEncode(payload))
           .timeout(const Duration(seconds: 15));
       if (response.statusCode == 200) {
         invalidateProfileCache();
@@ -748,7 +801,7 @@ class ApiService {
             headers: headers,
             body: jsonEncode({
               'name': name,
-              if (description != null) 'description': description,
+              'description': ?description,
               'icon': icon,
             }),
           )
@@ -794,18 +847,14 @@ class ApiService {
     };
     final uri = Uri.parse('$baseUrl/playlists/$playlistId');
     final payload = <String, dynamic>{
-      if (name != null) 'name': name,
-      if (description != null) 'description': description,
-      if (icon != null) 'icon': icon,
+      'name': ?name,
+      'description': ?description,
+      'icon': ?icon,
     };
     if (payload.isEmpty) return false;
     try {
       final response = await http
-          .put(
-            uri,
-            headers: headers,
-            body: jsonEncode(payload),
-          )
+          .put(uri, headers: headers, body: jsonEncode(payload))
           .timeout(const Duration(seconds: 15));
       return response.statusCode == 200;
     } catch (_) {
