@@ -350,10 +350,22 @@ class SemanticRecommender:
         """
         self.ensure_ready(supabase)
 
-        if not self._places or self._vectors is None:
+        if not self._places:
             return []
 
         model = self._get_model()
+
+        # ── Keyword fallback when sentence_transformers is unavailable ──
+        if model is None or self._vectors is None:
+            return self._keyword_search(
+                query=query,
+                center_lat=center_lat,
+                center_lng=center_lng,
+                radius_km=radius_km,
+                top_n=top_n,
+                detected_category=detected_category,
+            )
+
         query_vec = model.encode(
             [query],
             convert_to_numpy=True,
@@ -429,17 +441,66 @@ class SemanticRecommender:
             'index_path': str(_VECTORS_PATH),
         }
 
+    def _keyword_search(self, *, query, center_lat, center_lng, radius_km, top_n, detected_category):
+        """Keyword-based fallback when sentence_transformers is not installed."""
+        keywords = [w.lower() for w in query.split() if len(w) > 2]
+        results = []
+        for place in self._places:
+            text = ' '.join(filter(None, [
+                place.get('name', ''),
+                place.get('primary_category', ''),
+                place.get('address', ''),
+                place.get('seed_area', ''),
+            ])).lower()
+
+            lat = place.get('_lat')
+            lng = place.get('_lng')
+
+            if center_lat is not None and center_lng is not None:
+                if lat is None or lng is None:
+                    continue
+                dist_km = _haversine_km(center_lat, center_lng, lat, lng)
+                if dist_km > radius_km:
+                    continue
+            else:
+                dist_km = None
+
+            keyword_score = sum(1 for kw in keywords if kw in text) / max(len(keywords), 1)
+
+            boost = 1.0
+            if detected_category:
+                pc = (place.get('primary_category') or '').lower()
+                if detected_category.lower() in pc or pc in detected_category.lower():
+                    boost = 1.4
+
+            rating = _safe_float(place.get('avg_rating'), 3.0)
+            rating_s = min(rating, 5.0) / 5.0
+
+            score = (keyword_score * 0.6 + rating_s * 0.2) * boost
+            results.append({**place, '_score': round(score, 4), '_dist_km': round(dist_km, 2) if dist_km else None})
+
+        results.sort(key=lambda x: x['_score'], reverse=True)
+        return results[:top_n]
+
     # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------
 
     def _get_model(self):
         if self._model is None:
-            logger.info('Loading sentence-transformer: %s', _MODEL_NAME)
-            from sentence_transformers import SentenceTransformer
-            self._model = SentenceTransformer(_MODEL_NAME)
-            logger.info('Model ready.')
-        return self._model
+            try:
+                logger.info('Loading sentence-transformer: %s', _MODEL_NAME)
+                from sentence_transformers import SentenceTransformer
+                self._model = SentenceTransformer(_MODEL_NAME)
+                logger.info('Model ready.')
+            except ModuleNotFoundError:
+                logger.warning(
+                    'sentence_transformers not installed — '
+                    'semantic search will fall back to keyword matching. '
+                    'Run: pip install sentence-transformers'
+                )
+                self._model = 'unavailable'
+        return None if self._model == 'unavailable' else self._model
 
     def _fetch_all_places(self, supabase) -> list[dict]:
         table = os.getenv('SUPABASE_PLACES_TABLE', 'placses')

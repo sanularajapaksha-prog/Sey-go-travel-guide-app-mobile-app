@@ -289,7 +289,7 @@ def _fetch_all_places_rows(supabase) -> list[dict]:
     start = 0
     step = 1000
     while True:
-        response = supabase.table(PLACES_TABLE).select('*').range(start, start + step - 1).execute()
+        response = supabase.table(PLACES_TABLE).select(_PLACE_COLUMNS).range(start, start + step - 1).execute()
         batch = response.data or []
         rows.extend(batch)
         if len(batch) < step:
@@ -308,13 +308,30 @@ def get_places_count():
     return {'count': resp.count}
 
 
+_PLACE_COLUMNS = (
+    'place_id,name,primary_category,categories,category_confidence,'
+    'lat,lng,latitude,longitude,address,website,google_url,'
+    'avg_rating,review_count,types,photo_storage_paths,'
+    'seed_area,status,created_at'
+)
+
+
 @router.get('/')
 def get_places(limit: int = 500, offset: int = 0):
-    supabase = get_supabase_client()
+    import os as _os
+    from supabase import create_client as _cc
+    # Use a fresh client each time — the lru_cached client's PostgREST schema
+    # cache can go stale after column additions and silently returns empty data.
+    sb = _cc(_os.environ['SUPABASE_URL'], _os.environ['SUPABASE_SERVICE_ROLE_KEY'])
     try:
-        response = supabase.table(PLACES_TABLE).select('*').range(offset, offset + limit - 1).execute()
+        response = (
+            sb.table(PLACES_TABLE)
+            .select(_PLACE_COLUMNS)
+            .range(offset, offset + limit - 1)
+            .execute()
+        )
         rows = response.data or []
-        return [_normalize_place_row(supabase, row) for row in rows]
+        return [_normalize_place_row(sb, row) for row in rows]
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
