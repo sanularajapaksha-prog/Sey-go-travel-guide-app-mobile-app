@@ -50,3 +50,16 @@ windows/flutter/ephemeral/
 **/*_backup_*/
 **/*_backup_*.zip
 
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# ML model artifacts
+**/ml_models/
+*.npy
+*.joblib
+
+# Pip artifacts
+=*
+
