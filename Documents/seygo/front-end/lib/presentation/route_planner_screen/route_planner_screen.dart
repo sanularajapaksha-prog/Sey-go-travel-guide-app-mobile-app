@@ -532,7 +532,7 @@ class _RoutePlannerScreenState extends State<RoutePlannerScreen> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    stop['category'] as String,
+                                    stop['category'] as String? ?? 'Place',
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       color:
                                           theme.colorScheme.onSurfaceVariant,
