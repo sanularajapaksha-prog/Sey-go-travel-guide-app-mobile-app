@@ -1,5 +1,6 @@
 import os
 import json
+import re
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 import httpx
@@ -172,30 +173,56 @@ def _storage_public_url(supabase, path: str) -> str | None:
         return None
 
 
+_GMAPS_COORD_RE = re.compile(r'@(-?\d+\.?\d*),(-?\d+\.?\d*)')
+
+
+def _coords_from_google_url(url: str | None) -> tuple[float | None, float | None]:
+    """Extract lat/lng from a Google Maps URL like .../place/Name/@7.2906,80.6337,17z/..."""
+    if not url:
+        return (None, None)
+    m = _GMAPS_COORD_RE.search(url)
+    if m:
+        try:
+            return (float(m.group(1)), float(m.group(2)))
+        except Exception:
+            pass
+    return (None, None)
+
+
 def _normalize_place_row(supabase, row: dict) -> dict:
     normalized = dict(row)
-    cached_image_url = _first_non_empty(row, ['image_url'])
-    photo_public_urls = _coerce_list(_first_non_empty(row, ['photo_public_urls']))
-    photo_path = _extract_photo_path(row) or _guess_photo_path_from_row(row)
-    photo_url = _storage_public_url(supabase, photo_path) if photo_path else None
-    if photo_url and not photo_public_urls:
-        photo_public_urls = [photo_url]
+    # Storage bucket was deleted — skip all storage-based photo resolution.
+    # Photos are resolved client-side via google_url using the Places API.
+    photo_public_urls: list[str] = []
 
     normalized['photo_public_urls'] = photo_public_urls
-    normalized['image_url'] = append_maxwidth(cached_image_url) if is_valid_http_url(cached_image_url) else None
+    normalized['image_url'] = None
     normalized['image_source'] = _first_non_empty(row, ['image_source'])
     normalized['photo_last_checked'] = _first_non_empty(row, ['photo_last_checked'])
-    normalized['photo_url'] = normalized['image_url'] or (photo_public_urls[0] if photo_public_urls else photo_url)
+    normalized['photo_url'] = None
     normalized['name'] = str(_first_non_empty(row, ['name', 'place_name', 'title']) or '')
     normalized['primary_category'] = _resolve_primary_category(row)
     normalized['category'] = normalized['primary_category']
     normalized['categories'] = _parse_categories(_first_non_empty(row, ['categories', 'category_list']))
     normalized['description'] = _first_non_empty(row, ['description', 'details', 'summary']) or ''
     normalized['location'] = _first_non_empty(row, ['location', 'formatted_address', 'address']) or ''
-    normalized['google_url'] = _first_non_empty(row, ['google_url'])
+    google_url = _first_non_empty(row, ['google_url'])
+    normalized['google_url'] = google_url
     normalized['tags'] = _parse_tags(_first_non_empty(row, ['tags', 'keywords', 'labels']))
-    normalized['latitude'] = _coerce_float(_first_non_empty(row, ['latitude', 'lat']))
-    normalized['longitude'] = _coerce_float(_first_non_empty(row, ['longitude', 'lng', 'lon']))
+
+    lat = _coerce_float(_first_non_empty(row, ['latitude', 'lat']))
+    lng = _coerce_float(_first_non_empty(row, ['longitude', 'lng', 'lon']))
+
+    # If coordinates missing from DB columns, try extracting from google_url
+    if lat is None or lng is None:
+        url_lat, url_lng = _coords_from_google_url(google_url)
+        if lat is None:
+            lat = url_lat
+        if lng is None:
+            lng = url_lng
+
+    normalized['latitude'] = lat
+    normalized['longitude'] = lng
     normalized['avg_rating'] = _coerce_float(_first_non_empty(row, ['avg_rating', 'rating']), 0.0) or 0.0
     normalized['review_count'] = int(_first_non_empty(row, ['review_count', 'reviews', 'user_rating_count']) or 0)
     return normalized
@@ -272,11 +299,14 @@ def _fetch_all_places_rows(supabase) -> list[dict]:
 
 
 @router.get('/')
-async def get_places():
+def get_places(limit: int = 500, offset: int = 0):
+    import os
+    from supabase import create_client as _create_client
     try:
-        supabase = get_supabase_client()
-        rows = _fetch_all_places_rows(supabase)
-        return [_normalize_place_row(supabase, row) for row in rows]
+        sb = _create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_SERVICE_ROLE_KEY'])
+        response = sb.table(PLACES_TABLE).select('*').range(offset, offset + limit - 1).execute()
+        rows = response.data or []
+        return [_normalize_place_row(sb, row) for row in rows]
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -408,7 +438,7 @@ async def ml_model_info():
 
 
 @router.get('/search')
-async def search_places(
+def search_places(
     q: str = Query(..., min_length=1),
     latitude: float | None = None,
     longitude: float | None = None,
