@@ -93,7 +93,7 @@ class ApiService {
 
     final response = await http
         .get(uri, headers: headers)
-        .timeout(const Duration(seconds: 30));
+        .timeout(const Duration(seconds: 15));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as List<dynamic>;

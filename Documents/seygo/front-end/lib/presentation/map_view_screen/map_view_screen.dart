@@ -329,11 +329,16 @@ class _MapViewScreenState extends State<MapViewScreen> {
 
   Future<void> _createMarkers() async {
     final filteredDestinations = _filteredDestinations;
-    final displayPositions = _buildDisplayPositions(filteredDestinations);
+    // Cap at 300 markers to prevent ANR on large datasets
+    const maxMarkers = 300;
+    final toRender = filteredDestinations.length > maxMarkers
+        ? filteredDestinations.sublist(0, maxMarkers)
+        : filteredDestinations;
+    final displayPositions = _buildDisplayPositions(toRender);
 
-    _markers.clear();
+    final newMarkers = <Marker>{};
 
-    for (var destination in filteredDestinations) {
+    for (var destination in toRender) {
       final displayPosition = displayPositions[destination['id'].toString()] ??
           LatLng(
             destination['latitude'] as double,
@@ -349,10 +354,16 @@ class _MapViewScreenState extends State<MapViewScreen> {
           snippet: destination['category'] as String,
         ),
       );
-      _markers.add(marker);
+      newMarkers.add(marker);
     }
 
-    setState(() {});
+    if (mounted) {
+      setState(() {
+        _markers
+          ..clear()
+          ..addAll(newMarkers);
+      });
+    }
   }
 
   Map<String, LatLng> _buildDisplayPositions(
@@ -1521,10 +1532,9 @@ class _MapViewScreenState extends State<MapViewScreen> {
           circles: Set<Circle>.from(_circles),
           onMapCreated: (controller) {
             _mapController = controller;
-            // If location was already fetched before the map finished
-            // initialising, pan there now.
             _panToCurrentLocationOnce();
           },
+          onCameraIdle: () => _createMarkers(),
           myLocationEnabled: _hasLocationPermission,
           myLocationButtonEnabled: false,
           zoomControlsEnabled: false,
