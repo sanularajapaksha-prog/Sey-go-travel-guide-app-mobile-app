@@ -4,7 +4,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_cluster_manager/google_maps_cluster_manager.dart' as clustering;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:sizer/sizer.dart';
 
@@ -14,16 +13,6 @@ import './widgets/destination_bottom_sheet_widget.dart';
 import './widgets/destination_marker_widget.dart';
 import './widgets/map_filter_widget.dart';
 
-class _PlaceItem with clustering.ClusterItem {
-  final Map<String, dynamic> place;
-  _PlaceItem(this.place);
-
-  @override
-  LatLng get location => LatLng(
-        place['latitude'] as double,
-        place['longitude'] as double,
-      );
-}
 
 class MapViewScreen extends StatefulWidget {
   const MapViewScreen({super.key});
@@ -36,7 +25,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
   static const LatLng _defaultSriLankaCenter = LatLng(7.8731, 80.7718);
   GoogleMapController? _mapController;
   Set<Marker> _markers = {};
-  clustering.ClusterManager<_PlaceItem>? _clusterManager;
+  double _currentZoom = 8.0;
   Position? _currentPosition;
   bool _hasLocationPermission = false;
   bool _isLoading = true;
@@ -236,7 +225,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
     try {
       await _loadPlacesFromBackend();
       await _getCurrentLocation();
-      _rebuildClusterManager();
+      await _createMarkers();
       setState(() => _isLoading = false);
     } catch (e) {
       setState(() => _isLoading = false);
@@ -341,54 +330,81 @@ class _MapViewScreenState extends State<MapViewScreen> {
     );
   }
 
-  void _rebuildClusterManager() {
-    final items = _filteredDestinations
-        .map((p) => _PlaceItem(p))
-        .toList();
-
-    _clusterManager = clustering.ClusterManager<_PlaceItem>(
-      items,
-      _onMarkersUpdated,
-      markerBuilder: (dynamic c) =>
-          _buildClusterMarker(c as clustering.Cluster<_PlaceItem>),
-      stopClusteringZoom: 14.0,
-    );
-
-    if (_mapController != null) {
-      _clusterManager!.setMapId(_mapController!.mapId);
-    }
+  // Grid precision per zoom level: lower zoom = coarser grid = bigger clusters
+  double _gridPrecision(double zoom) {
+    if (zoom < 7) return 1.0;
+    if (zoom < 10) return 0.5;
+    if (zoom < 12) return 0.2;
+    if (zoom < 14) return 0.05;
+    return 0.0; // no clustering at zoom 14+
   }
 
-  void _onMarkersUpdated(Set<Marker> markers) {
-    if (mounted) setState(() => _markers = markers);
-  }
+  Future<void> _createMarkers() async {
+    final places = _filteredDestinations;
+    final precision = _gridPrecision(_currentZoom);
+    final newMarkers = <Marker>{};
 
-  Future<Marker> _buildClusterMarker(
-      clustering.Cluster<_PlaceItem> cluster) async {
-    if (cluster.isMultiple) {
-      return Marker(
-        markerId: MarkerId(cluster.getId()),
-        position: cluster.location,
-        icon: await _buildClusterIcon(cluster.count),
-        onTap: () {
-          _mapController?.animateCamera(
-            CameraUpdate.newLatLngZoom(cluster.location,
-                (_clusterManager != null) ? 12.0 : 12.0),
-          );
-        },
-      );
+    if (precision == 0.0) {
+      // Zoom 14+: render individual markers (limit to 500 visible)
+      for (final place in places.take(500)) {
+        newMarkers.add(Marker(
+          markerId: MarkerId(place['id'].toString()),
+          position: LatLng(place['latitude'] as double, place['longitude'] as double),
+          icon: await _getMarkerIcon(place['category'] as String),
+          onTap: () => _onMarkerTapped(place),
+          infoWindow: InfoWindow(
+            title: place['name'] as String,
+            snippet: place['category'] as String,
+          ),
+        ));
+      }
+    } else {
+      // Cluster places into a grid
+      final grid = <String, List<Map<String, dynamic>>>{};
+      for (final place in places) {
+        final lat = place['latitude'] as double;
+        final lng = place['longitude'] as double;
+        final key =
+            '${(lat / precision).floor()}:${(lng / precision).floor()}';
+        grid.putIfAbsent(key, () => []).add(place);
+      }
+
+      for (final entry in grid.entries) {
+        final cell = entry.value;
+        final avgLat =
+            cell.map((p) => p['latitude'] as double).reduce((a, b) => a + b) /
+                cell.length;
+        final avgLng =
+            cell.map((p) => p['longitude'] as double).reduce((a, b) => a + b) /
+                cell.length;
+        final pos = LatLng(avgLat, avgLng);
+
+        if (cell.length == 1) {
+          final place = cell.first;
+          newMarkers.add(Marker(
+            markerId: MarkerId(place['id'].toString()),
+            position: pos,
+            icon: await _getMarkerIcon(place['category'] as String),
+            onTap: () => _onMarkerTapped(place),
+            infoWindow: InfoWindow(
+              title: place['name'] as String,
+              snippet: place['category'] as String,
+            ),
+          ));
+        } else {
+          newMarkers.add(Marker(
+            markerId: MarkerId('cluster_${entry.key}'),
+            position: pos,
+            icon: await _buildClusterIcon(cell.length),
+            onTap: () => _mapController?.animateCamera(
+              CameraUpdate.newLatLngZoom(pos, _currentZoom + 2),
+            ),
+          ));
+        }
+      }
     }
-    final place = cluster.items.first.place;
-    return Marker(
-      markerId: MarkerId(place['id'].toString()),
-      position: cluster.location,
-      icon: await _getMarkerIcon(place['category'] as String),
-      onTap: () => _onMarkerTapped(place),
-      infoWindow: InfoWindow(
-        title: place['name'] as String,
-        snippet: place['category'] as String,
-      ),
-    );
+
+    if (mounted) setState(() => _markers = newMarkers);
   }
 
   Future<BitmapDescriptor> _buildClusterIcon(int count) async {
@@ -414,15 +430,10 @@ class _MapViewScreenState extends State<MapViewScreen> {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    tp.paint(canvas,
-        Offset(center.dx - tp.width / 2, center.dy - tp.height / 2));
+    tp.paint(canvas, Offset(center.dx - tp.width / 2, center.dy - tp.height / 2));
     final img = await recorder.endRecording().toImage(size, size);
     final data = await img.toByteData(format: ui.ImageByteFormat.png);
     return BitmapDescriptor.fromBytes(data!.buffer.asUint8List());
-  }
-
-  Future<void> _createMarkers() async {
-    _rebuildClusterManager();
   }
 
 
@@ -1533,12 +1544,12 @@ class _MapViewScreenState extends State<MapViewScreen> {
           circles: Set<Circle>.from(_circles),
           onMapCreated: (controller) {
             _mapController = controller;
-            _clusterManager?.setMapId(controller.mapId);
             _panToCurrentLocationOnce();
           },
-          onCameraMove: (position) =>
-              _clusterManager?.onCameraMove(position),
-          onCameraIdle: () => _clusterManager?.updateMap(),
+          onCameraMove: (position) {
+            _currentZoom = position.zoom;
+          },
+          onCameraIdle: () => _createMarkers(),
           myLocationEnabled: _hasLocationPermission,
           myLocationButtonEnabled: false,
           zoomControlsEnabled: false,
