@@ -264,12 +264,17 @@ async def forgot_password(payload: ForgotPasswordRequest):
 @router.post('/reset-password')
 async def reset_password(payload: ResetPasswordRequest):
     try:
-        supabase = get_supabase_client()
-        supabase.auth.set_session(
+        import os
+        from supabase import create_client
+        temp_client = create_client(
+            os.environ['SUPABASE_URL'],
+            os.environ['SUPABASE_SERVICE_ROLE_KEY'],
+        )
+        temp_client.auth.set_session(
             payload.access_token.strip(),
             payload.refresh_token.strip(),
         )
-        supabase.auth.update_user({'password': payload.new_password})
+        temp_client.auth.update_user({'password': payload.new_password})
         return {'message': 'Password updated successfully.'}
     except Exception as exc:
         raise HTTPException(
