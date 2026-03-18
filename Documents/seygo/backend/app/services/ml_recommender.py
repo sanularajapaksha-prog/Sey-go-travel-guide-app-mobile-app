@@ -375,17 +375,30 @@ def _rows_to_place_records(place_rows: list[dict]) -> list[_PlaceRecord]:
 
 
 def _fetch_interactions(supabase) -> list[dict]:
-    """Fetch (user_id, place_id) pairs from saved_destinations."""
+    """
+    Fetch (user_id, place_id) interaction pairs from saved_destinations.
+    Tries place_id first, falls back to google_place_id.
+    These must match the place_id/id values in the places table for
+    the CF matrix to align correctly.
+    """
     try:
-        resp = supabase.table('saved_destinations').select('user_id,google_place_id').execute()
+        resp = supabase.table('saved_destinations').select(
+            'user_id, place_id, google_place_id'
+        ).execute()
         rows = resp.data or []
-        return [
-            {'user_id': str(r['user_id']), 'place_id': str(r['google_place_id'])}
-            for r in rows
-            if r.get('user_id') and r.get('google_place_id')
-        ]
+
+        interactions = []
+        for r in rows:
+            user_id = r.get('user_id')
+            place_id = r.get('place_id') or r.get('google_place_id')
+            if user_id and place_id:
+                interactions.append({
+                    'user_id': str(user_id),
+                    'place_id': str(place_id),
+                })
+        return interactions
     except Exception as exc:
-        logger.warning('Could not fetch saved_destinations: %s', exc)
+        logger.warning('Could not fetch saved_destinations for CF model: %s', exc)
         return []
 
 
