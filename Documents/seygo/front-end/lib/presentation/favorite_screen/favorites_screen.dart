@@ -5,8 +5,6 @@ import 'package:sizer/sizer.dart';
 import '../../providers/favorites_provider.dart';
 import '../../routes/app_routes.dart';
 import '../../widgets/custom_image_widget.dart';
-import '../../widgets/favorite_button.dart';
-
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -81,17 +79,19 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                       // Navigate back to the discover tab.
                       // Using pushReplacement to ensure the favorites screen isn't
                       // stacked on top of the main navigator stack.
-                      Navigator.of(context).pushReplacementNamed(
-                        AppRoutes.welcomeHomeScreen,
-                      );
+                      Navigator.of(
+                        context,
+                      ).pushReplacementNamed(AppRoutes.welcomeHomeScreen);
                     },
                   ),
                 )
               else ...[
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 4.w,
+                      vertical: 1.h,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -142,21 +142,18 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   )
                 else
                   SliverPadding(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 4.w,
+                      vertical: 1.h,
+                    ),
                     sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final place = filteredFavorites[index];
-                          return Padding(
-                            padding: EdgeInsets.only(bottom: 2.h),
-                            child: _FavoritePlaceCard(
-                              place: place,
-                            ),
-                          );
-                        },
-                        childCount: filteredFavorites.length,
-                      ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final place = filteredFavorites[index];
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: 2.h),
+                          child: _FavoritePlaceCard(place: place),
+                        );
+                      }, childCount: filteredFavorites.length),
                     ),
                   ),
               ],
@@ -168,15 +165,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   }
 }
 
-
 class _FavoritesHero extends StatelessWidget {
   final int count;
   final int locations;
 
-  const _FavoritesHero({
-    required this.count,
-    required this.locations,
-  });
+  const _FavoritesHero({required this.count, required this.locations});
 
   @override
   Widget build(BuildContext context) {
@@ -341,10 +334,7 @@ class _FavoritesSearchField extends StatelessWidget {
         hintText: 'Search by place or city',
         prefixIcon: const Icon(Icons.search),
         suffixIcon: showClear
-            ? IconButton(
-                onPressed: onClear,
-                icon: const Icon(Icons.close),
-              )
+            ? IconButton(onPressed: onClear, icon: const Icon(Icons.close))
             : null,
         filled: true,
         fillColor: theme.colorScheme.surface,
@@ -353,13 +343,10 @@ class _FavoritesSearchField extends StatelessWidget {
   }
 }
 
-
 class _FavoritesEmptyState extends StatelessWidget {
   final VoidCallback onExplorePressed;
 
-  const _FavoritesEmptyState({
-    required this.onExplorePressed,
-  });
+  const _FavoritesEmptyState({required this.onExplorePressed});
 
   @override
   Widget build(BuildContext context) {
@@ -426,9 +413,7 @@ class _FavoritesEmptyState extends StatelessWidget {
 class _FavoritePlaceCard extends StatelessWidget {
   final FavoritePlace place;
 
-  const _FavoritePlaceCard({
-    required this.place,
-  });
+  const _FavoritePlaceCard({required this.place});
 
   @override
   Widget build(BuildContext context) {
@@ -520,10 +505,7 @@ class _NoResultsState extends StatelessWidget {
   final String query;
   final VoidCallback onClear;
 
-  const _NoResultsState({
-    required this.query,
-    required this.onClear,
-  });
+  const _NoResultsState({required this.query, required this.onClear});
 
   @override
   Widget build(BuildContext context) {
@@ -540,7 +522,7 @@ class _NoResultsState extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
 
-             SizedBox(height: 2.h),
+            SizedBox(height: 2.h),
             Text(
               'No matches for "$query"',
               textAlign: TextAlign.center,
@@ -568,6 +550,3 @@ class _NoResultsState extends StatelessWidget {
     );
   }
 }
-
-
-

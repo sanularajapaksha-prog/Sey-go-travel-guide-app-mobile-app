@@ -231,12 +231,18 @@ class _MapViewScreenState extends State<MapViewScreen> {
 
   Future<void> _loadPlacesFromBackend() async {
     try {
-      var rows = await ApiService.fetchPlaces();
-      if (rows.isEmpty) {
-        await Future.delayed(const Duration(milliseconds: 300));
-        rows = await ApiService.fetchPlaces();
+      // Fetch all places in batches of 500
+      const batchSize = 500;
+      final allRows = <dynamic>[];
+      int offset = 0;
+      while (true) {
+        final batch = await ApiService.fetchPlaces(limit: batchSize, offset: offset);
+        allRows.addAll(batch);
+        if (batch.length < batchSize) break;
+        offset += batchSize;
       }
-      final mapped = rows
+
+      final mapped = allRows
           .whereType<Map>()
           .toList()
           .asMap()
