@@ -114,6 +114,8 @@ def semantic_search(req: SearchRequest):
     detected_category  = intent['detected_category']
     detected_location  = intent['detected_location']
     radius_km          = intent['radius_km'] or req.radius_km
+    logger.info('Search: query=%r category=%s location=%s radius=%.1fkm',
+                req.query, detected_category, detected_location, radius_km)
 
     # 2. Determine center
     center_lat: Optional[float] = req.latitude
