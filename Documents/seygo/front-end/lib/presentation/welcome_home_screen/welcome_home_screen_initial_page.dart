@@ -28,28 +28,30 @@ class _WelcomeHomeScreenInitialPageState
 
   List<Map<String, dynamic>> _playlists = [];
   bool _playlistsLoading = true;
-  bool _placesLoading = true;
 
-  List<Map<String, dynamic>> _featuredDestinations = [
+  final List<Map<String, dynamic>> _featuredDestinations = [
     {
       "id": 1,
       "name": "Mirissa Beach",
       "googleUrl": "https://images.unsplash.com/photo-1667723385328-06489b979a88",
-      "semanticLabel": "Aerial view of turquoise ocean waves meeting golden sandy beach",
+      "semanticLabel":
+          "Aerial view of turquoise ocean waves meeting golden sandy beach with palm trees along the coastline",
       "category": "Beach Side",
     },
     {
       "id": 2,
       "name": "Sigiriya Rock",
       "googleUrl": "https://images.unsplash.com/photo-1683295657287-86c908b256f8",
-      "semanticLabel": "Ancient rock fortress rising dramatically from green jungle",
+      "semanticLabel":
+          "Ancient rock fortress rising dramatically from green jungle landscape under blue sky",
       "category": "Mountains",
     },
     {
       "id": 3,
       "name": "Temple of Tooth",
       "googleUrl": "https://images.unsplash.com/photo-1562777578-3e432ed38f03",
-      "semanticLabel": "Traditional Buddhist temple with ornate golden roof",
+      "semanticLabel":
+          "Traditional Buddhist temple with white walls and ornate golden roof against clear sky",
       "category": "Temples",
     },
   ];
@@ -62,48 +64,53 @@ class _WelcomeHomeScreenInitialPageState
     {"id": "temples", "name": "Temples", "icon": "account_balance"},
   ];
 
-  // ignore: prefer_final_fields
-  List<Map<String, dynamic>> _destinations = [
+  final List<Map<String, dynamic>> _destinations = [
     {
       "id": 1,
       "name": "Ella",
       "googleUrl": "https://images.unsplash.com/photo-1677392988966-d730d8d506dc",
-      "semanticLabel": "Lush green tea plantations covering rolling hills",
+      "semanticLabel":
+          "Lush green tea plantations covering rolling hills with misty mountain peaks in background",
       "category": "Mountains",
     },
     {
       "id": 2,
       "name": "Kandy",
       "googleUrl": "https://images.unsplash.com/photo-1614758285266-d385e31826ca",
-      "semanticLabel": "Sacred Buddhist temple complex with golden roofs",
+      "semanticLabel":
+          "Sacred Buddhist temple complex with white buildings and golden roofs surrounded by tropical trees",
       "category": "Temples",
     },
     {
       "id": 3,
       "name": "Jaffna",
       "googleUrl": "https://images.unsplash.com/photo-1704380755697-338169070234",
-      "semanticLabel": "Pristine beach with crystal clear turquoise water",
+      "semanticLabel":
+          "Pristine beach with crystal clear turquoise water and white sand under bright sunny sky",
       "category": "Beach Side",
     },
     {
       "id": 4,
       "name": "Yala National Park",
       "googleUrl": "https://images.unsplash.com/photo-1595653413391-b8bb647b8fba",
-      "semanticLabel": "Wild safari landscape under golden sunset light",
+      "semanticLabel":
+          "Wild safari landscape with acacia trees and grasslands under golden sunset light",
       "category": "Camping",
     },
     {
       "id": 5,
       "name": "Arugam Bay",
       "googleUrl": "https://images.unsplash.com/photo-1665581362630-cd036ac8f1a5",
-      "semanticLabel": "Tropical beach with palm trees and turquoise waves",
+      "semanticLabel":
+          "Tropical beach with palm trees bending over turquoise waves perfect for surfing",
       "category": "Beach Side",
     },
     {
       "id": 6,
       "name": "Adam's Peak",
       "googleUrl": "https://images.unsplash.com/photo-1567336975218-31c977ee0a03",
-      "semanticLabel": "Majestic mountain peak rising above clouds at sunrise",
+      "semanticLabel":
+          "Majestic mountain peak rising above clouds during sunrise with pilgrimage path visible",
       "category": "Mountains",
     },
   ];
@@ -121,61 +128,6 @@ class _WelcomeHomeScreenInitialPageState
   void initState() {
     super.initState();
     _loadPlaylists();
-    _loadPlaces();
-  }
-
-  Future<void> _loadPlaces() async {
-    try {
-      final token = Supabase.instance.client.auth.currentSession?.accessToken;
-      final rows = await ApiService.fetchPlaces(accessToken: token);
-      if (rows.isEmpty || !mounted) return;
-
-      final mapped = rows
-          .whereType<Map>()
-          .map((row) {
-            final r = Map<String, dynamic>.from(row);
-            final name = (r['name'] ?? 'Unknown').toString();
-            final category = _resolveCategory(r['primary_category'] ?? r['category']);
-            final googleUrl = r['google_url']?.toString() ?? r['googleUrl']?.toString() ?? r['image_url']?.toString();
-            final id = r['place_id'] ?? r['id'] ?? name;
-            return {
-              'id': id,
-              'name': name,
-              'category': category,
-              'googleUrl': googleUrl,
-              'google_url': googleUrl,
-              'image_url': r['image_url'],
-              'photo_public_urls': r['photo_public_urls'] ?? [],
-              'imageSource': r['image_source'],
-              'semanticLabel': 'Photo of $name',
-              'description': (r['description'] ?? r['location'] ?? '').toString(),
-              'latitude': r['latitude'],
-              'longitude': r['longitude'],
-              'rating': r['avg_rating'] ?? r['rating'] ?? 0.0,
-              'reviews': r['review_count'] ?? 0,
-              'location': (r['location'] ?? r['address'] ?? '').toString(),
-            };
-          })
-          .toList();
-
-      if (!mounted) return;
-      setState(() {
-        _destinations = List<Map<String, dynamic>>.from(mapped);
-        _featuredDestinations = mapped.take(3).toList();
-        _placesLoading = false;
-      });
-    } catch (_) {
-      if (mounted) setState(() => _placesLoading = false);
-    }
-  }
-
-  String _resolveCategory(dynamic raw) {
-    final s = (raw ?? '').toString().trim().toLowerCase();
-    if (s.contains('beach') || s.contains('coast')) return 'Beach Side';
-    if (s.contains('mountain') || s.contains('hill') || s.contains('peak')) return 'Mountains';
-    if (s.contains('temple') || s.contains('religious') || s.contains('heritage')) return 'Temples';
-    if (s.contains('camp') || s.contains('wild') || s.contains('park') || s.contains('forest')) return 'Camping';
-    return raw?.toString() ?? 'Other';
   }
 
   @override
