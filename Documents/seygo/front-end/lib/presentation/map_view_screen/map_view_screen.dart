@@ -1010,15 +1010,36 @@ class _MapViewScreenState extends State<MapViewScreen> {
       }
       final ranked = _rankSearchResults(dedup.values.toList(), query);
 
+      // Use the semantic center returned by the backend (geocoded from query)
+      final centerMap = searchResp['center'] as Map?;
+      final detectedRadiusKm =
+          (searchResp['radius_km'] as num?)?.toDouble() ?? _selectedRadiusKm;
+      LatLng? semanticCenter;
+      if (centerMap != null) {
+        semanticCenter = LatLng(
+          (centerMap['lat'] as num).toDouble(),
+          (centerMap['lng'] as num).toDouble(),
+        );
+      }
+
       if (!mounted) return;
       setState(() {
         _apiSearchPlaces = ranked;
         _searchSuggestions = [];
         _geocodedPin = null;
+        if (semanticCenter != null) _searchCenter = semanticCenter;
       });
       await _createMarkers();
 
-      if (ranked.isNotEmpty && _mapController != null) {
+      if (semanticCenter != null && _mapController != null) {
+        if (_showRadiusCircle) _updateRadiusCircle();
+        _mapController?.animateCamera(
+          CameraUpdate.newLatLngZoom(
+            semanticCenter,
+            _zoomForRadius(detectedRadiusKm),
+          ),
+        );
+      } else if (ranked.isNotEmpty && _mapController != null) {
         final first = ranked.first;
         final lat = first['latitude'] as double;
         final lon = first['longitude'] as double;
