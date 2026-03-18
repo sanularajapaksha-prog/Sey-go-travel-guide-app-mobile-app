@@ -300,12 +300,14 @@ def _fetch_all_places_rows(supabase) -> list[dict]:
 
 @router.get('/')
 def get_places(limit: int = 500, offset: int = 0):
-    supabase = get_supabase_client()
+    import os as _os
+    from supabase import create_client as _cc
+    sb = _cc(_os.environ['SUPABASE_URL'], _os.environ['SUPABASE_SERVICE_ROLE_KEY'])
     try:
-        sb = _create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_SERVICE_ROLE_KEY'])
         response = sb.table(PLACES_TABLE).select('*').range(offset, offset + limit - 1).execute()
         rows = response.data or []
-        return [_normalize_place_row(sb, row) for row in rows]
+        supabase = get_supabase_client()
+        return [_normalize_place_row(supabase, row) for row in rows]
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
