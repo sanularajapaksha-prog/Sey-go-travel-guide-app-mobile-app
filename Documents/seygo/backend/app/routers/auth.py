@@ -23,7 +23,7 @@ class LoginOtpRequest(BaseModel):
 
 class VerifyLoginOtpRequest(BaseModel):
     email: EmailStr
-    code: str = Field(min_length=6, max_length=6)
+    code: str = Field(min_length=6, max_length=8)
 
 
 class ResendVerificationRequest(BaseModel):
@@ -32,7 +32,17 @@ class ResendVerificationRequest(BaseModel):
 
 class VerifyOtpRequest(BaseModel):
     email: EmailStr
-    code: str = Field(min_length=6, max_length=6)
+    code: str = Field(min_length=6, max_length=8)
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    access_token: str = Field(min_length=1)
+    refresh_token: str = Field(min_length=1)
+    new_password: str = Field(min_length=6, max_length=128)
 
 
 def _resend_signup_verification(supabase, email: str) -> bool:
@@ -230,4 +240,39 @@ async def verify_otp(payload: VerifyOtpRequest):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Failed to verify OTP: {exc}',
+        ) from exc
+
+
+@router.post('/forgot-password')
+async def forgot_password(payload: ForgotPasswordRequest):
+    try:
+        supabase = get_supabase_client()
+        supabase.auth.reset_password_for_email(
+            payload.email.lower().strip(),
+            {
+                'redirect_to': 'io.supabase.flutter://login-callback/',
+            },
+        )
+        return {'message': 'Password reset email sent.'}
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Failed to send password reset email: {exc}',
+        ) from exc
+
+
+@router.post('/reset-password')
+async def reset_password(payload: ResetPasswordRequest):
+    try:
+        supabase = get_supabase_client()
+        supabase.auth.set_session(
+            payload.access_token.strip(),
+            payload.refresh_token.strip(),
+        )
+        supabase.auth.update_user({'password': payload.new_password})
+        return {'message': 'Password updated successfully.'}
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Failed to reset password: {exc}',
         ) from exc
