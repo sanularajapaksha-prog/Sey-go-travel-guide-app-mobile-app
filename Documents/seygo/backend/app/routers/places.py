@@ -298,6 +298,16 @@ def _fetch_all_places_rows(supabase) -> list[dict]:
     return rows
 
 
+@router.get('/count')
+def get_places_count():
+    """Returns the total number of places in the database."""
+    import os as _os
+    from supabase import create_client as _cc
+    sb = _cc(_os.environ['SUPABASE_URL'], _os.environ['SUPABASE_SERVICE_ROLE_KEY'])
+    resp = sb.table(PLACES_TABLE).select('place_id', count='exact').execute()
+    return {'count': resp.count}
+
+
 @router.get('/')
 def get_places(limit: int = 500, offset: int = 0):
     import os as _os
