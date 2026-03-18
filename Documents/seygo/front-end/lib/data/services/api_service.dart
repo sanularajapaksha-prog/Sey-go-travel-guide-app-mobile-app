@@ -104,6 +104,41 @@ class ApiService {
     );
   }
 
+  /// Semantic ML search — uses sentence-transformers on the backend.
+  /// Returns full response map with: query, center, detected_category,
+  /// radius_km, count, low_confidence, results[].
+  static Future<Map<String, dynamic>> semanticSearch({
+    required String query,
+    double? latitude,
+    double? longitude,
+    double radiusKm = 10.0,
+    int topN = 20,
+    String? accessToken,
+  }) async {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      if (accessToken != null && accessToken.isNotEmpty)
+        'Authorization': 'Bearer $accessToken',
+    };
+    final body = jsonEncode({
+      'query': query,
+      'latitude': latitude,
+      'longitude': longitude,
+      'radius_km': radiusKm,
+      'top_n': topN,
+    });
+    final uri = Uri.parse('$baseUrl/search/');
+    final response = await http
+        .post(uri, headers: headers, body: body)
+        .timeout(const Duration(seconds: 20));
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception(
+      'Semantic search failed: ${response.statusCode} ${response.body}',
+    );
+  }
+
   static Future<List<dynamic>> searchPlacesFromDb({
     required String query,
     double? latitude,
