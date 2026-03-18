@@ -27,7 +27,7 @@ router = APIRouter(prefix='/places', tags=['places'])
 recommender = PlaceRecommender()
 ml_recommender = MLRecommender()
 google_places_service = GooglePlacesService()
-# Default table name corrected to the expected `places`.
+# Table name in Supabase (typo in original migration, kept as-is).
 PLACES_TABLE = os.getenv('SUPABASE_PLACES_TABLE', 'placses')
 PHOTOS_BUCKET = os.getenv('SUPABASE_PLACE_PHOTOS_BUCKET', 'place-photos')
 SUPABASE_URL = os.getenv('SUPABASE_URL', '').rstrip('/')
