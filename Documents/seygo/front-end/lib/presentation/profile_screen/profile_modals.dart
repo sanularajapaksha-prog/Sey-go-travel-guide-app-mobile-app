@@ -972,8 +972,14 @@ class _WriteReviewDialog extends StatefulWidget {
 
 class _WriteReviewDialogState extends State<_WriteReviewDialog> {
   int rating = 0;
-  String selectedPlace = 'Sigiriya Rock Fortress';
+  final _placeController = TextEditingController();
   bool _submitting = false;
+
+  @override
+  void dispose() {
+    _placeController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1004,41 +1010,26 @@ class _WriteReviewDialogState extends State<_WriteReviewDialog> {
                 ),
                 SizedBox(height: 1.h),
                 Text(
-                  'Select Place',
+                  'Place Name',
                   style: TextStyle(
                     fontSize: 13.5.sp,
                     color: const Color(0xFF5C6579),
                   ),
                 ),
                 SizedBox(height: 1.h),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 2.w),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFDCE0E8)),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: selectedPlace,
-                      isExpanded: true,
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'Sigiriya Rock Fortress',
-                          child: Text('Sigiriya Rock Fortress'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Ella Rock Hike',
-                          child: Text('Ella Rock Hike'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Yala National Park',
-                          child: Text('Yala National Park'),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() => selectedPlace = value);
-                      },
+                TextField(
+                  controller: _placeController,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    hintText: 'e.g. Sigiriya Rock Fortress',
+                    hintStyle: const TextStyle(color: Color(0xFF8A90A1)),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: Color(0xFFDCE0E8)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: Color(0xFF9FBDE6)),
                     ),
                   ),
                 ),
@@ -1124,13 +1115,13 @@ class _WriteReviewDialogState extends State<_WriteReviewDialog> {
                 const Spacer(),
                 SizedBox(height: 1.8.h),
                 ElevatedButton.icon(
-                  onPressed: (rating == 0 || _submitting)
+                  onPressed: (rating == 0 || _placeController.text.trim().isEmpty || _submitting)
                       ? null
                       : () async {
                           setState(() => _submitting = true);
                           final token = Supabase.instance.client.auth.currentSession?.accessToken;
                           final ok = await ApiService.submitReview(
-                            placeName: selectedPlace,
+                            placeName: _placeController.text.trim(),
                             rating: rating,
                             reviewText: widget.controller.text.trim().isEmpty ? null : widget.controller.text.trim(),
                             accessToken: token,
@@ -1142,7 +1133,7 @@ class _WriteReviewDialogState extends State<_WriteReviewDialog> {
                         },
                   style: ElevatedButton.styleFrom(
                     minimumSize: Size(double.infinity, 6.h),
-                    backgroundColor: rating == 0 ? const Color(0xFFA6ACB6) : const Color(0xFF2F7BF2),
+                    backgroundColor: (rating == 0 || _placeController.text.trim().isEmpty) ? const Color(0xFFA6ACB6) : const Color(0xFF2F7BF2),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(18),
