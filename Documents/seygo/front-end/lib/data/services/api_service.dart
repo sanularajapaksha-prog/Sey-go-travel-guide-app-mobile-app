@@ -161,20 +161,15 @@ class ApiService {
       return immediate;
     }
 
-    final googleUrl = place.googleUrl;
-    if (googleUrl == null || googleUrl.isEmpty) {
-      _resolvedPhotoCache[cacheKey] = null;
-      return null;
-    }
-
     final pending = _pendingPhotoRequests[cacheKey];
     if (pending != null) {
       return pending;
     }
 
     final future = _resolvePhotoFromGoogleUrl(
-      googleUrl: googleUrl,
+      googleUrl: place.googleUrl,
       placeId: place.id,
+      placeName: place.name,
     );
     _pendingPhotoRequests[cacheKey] = future;
 
@@ -215,20 +210,22 @@ class ApiService {
   }
 
   static Future<String?> _resolvePhotoFromGoogleUrl({
-    required String googleUrl,
+    String? googleUrl,
     String? placeId,
+    String? placeName,
   }) async {
-    // --- Direct Google Places API resolution using GOOGLE_PLACES_API_KEY ---
     final apiKey = dotenv.env['GOOGLE_PLACES_API_KEY'] ?? '';
 
     if (apiKey.isNotEmpty) {
-      // Try resolving directly via Google Places API (no backend needed)
       final directUrl = await _resolveViaGooglePlacesApi(
         googleUrl: googleUrl,
+        placeName: placeName,
         apiKey: apiKey,
       );
       if (directUrl != null) return directUrl;
     }
+
+    if (googleUrl == null || googleUrl.isEmpty) return null;
 
     // --- Fallback: use backend endpoint ---
     final uri = Uri.parse('$baseUrl/places/photo-from-google-url').replace(
@@ -240,23 +237,14 @@ class ApiService {
 
     try {
       final response = await http.get(uri).timeout(const Duration(seconds: 15));
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        return null;
-      }
+      if (response.statusCode < 200 || response.statusCode >= 300) return null;
 
       final bodyText = response.body.isEmpty ? '{}' : response.body;
       final decoded = jsonDecode(bodyText);
-      if (decoded is! Map<String, dynamic>) {
-        return null;
-      }
-      if (decoded['success'] != true) {
-        return null;
-      }
+      if (decoded is! Map<String, dynamic>) return null;
+      if (decoded['success'] != true) return null;
 
-      final resolved = Place.withGooglePhotoWidth(
-        decoded['photo_url']?.toString(),
-      );
-      return resolved;
+      return Place.withGooglePhotoWidth(decoded['photo_url']?.toString());
     } catch (_) {
       return null;
     }
@@ -271,23 +259,46 @@ class ApiService {
   ///   3. Use Place Details API to get a photo_reference
   ///   4. Build the photo URL from the photo_reference
   static Future<String?> _resolveViaGooglePlacesApi({
-    required String googleUrl,
+    String? googleUrl,
+    String? placeName,
     required String apiKey,
   }) async {
     try {
-      // Step 1: Extract CID or Query from URL
-      final uri = Uri.tryParse(googleUrl);
-      final cid = uri?.queryParameters['cid'];
-      final q = uri?.queryParameters['q'];
+      // Step 1: Extract search input from URL or fall back to place name
+      String? searchInput;
 
-      String searchInput;
-      if (cid != null && cid.isNotEmpty) {
-        searchInput = 'cid:$cid';
-      } else if (q != null && q.isNotEmpty) {
-        searchInput = q;
-      } else {
-        return null;
+      if (googleUrl != null && googleUrl.isNotEmpty) {
+        final uri = Uri.tryParse(googleUrl);
+        final cid = uri?.queryParameters['cid'];
+        final q = uri?.queryParameters['q'];
+
+        if (cid != null && cid.isNotEmpty) {
+          searchInput = 'cid:$cid';
+        } else if (q != null && q.isNotEmpty) {
+          searchInput = q;
+        } else {
+          // Extract place name from path: /maps/place/Mirissa+Beach/
+          final pathSegments = uri?.pathSegments ?? [];
+          final placeIdx = pathSegments.indexOf('place');
+          if (placeIdx != -1 && placeIdx + 1 < pathSegments.length) {
+            final extracted = Uri.decodeComponent(
+              pathSegments[placeIdx + 1].replaceAll('+', ' '),
+            );
+            if (extracted.isNotEmpty) {
+              searchInput = '$extracted Sri Lanka';
+            }
+          }
+        }
       }
+
+      // Final fallback: use place name directly
+      if ((searchInput == null || searchInput.isEmpty) &&
+          placeName != null &&
+          placeName.isNotEmpty) {
+        searchInput = '$placeName Sri Lanka';
+      }
+
+      if (searchInput == null || searchInput.isEmpty) return null;
 
       // Step 2: Find Place using CID or Query → get place_id
       final findPlaceUri =
