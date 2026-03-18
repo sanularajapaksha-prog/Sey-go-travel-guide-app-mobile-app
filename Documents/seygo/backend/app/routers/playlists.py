@@ -31,7 +31,16 @@ class UpdatePlaylistRequest(BaseModel):
 
 
 class AddDestinationRequest(BaseModel):
-    destination_id: int
+    destination_id: int | None = None
+    place_id: str | None = None
+
+    @property
+    def resolved_place_id(self) -> str | None:
+        if self.place_id:
+            return self.place_id
+        if self.destination_id is not None:
+            return str(self.destination_id)
+        return None
 
 
 @router.get('/')
@@ -124,15 +133,32 @@ async def create_playlist(
     supabase = get_supabase_client()
     payload = body.model_dump()
     payload['user_id'] = str(user.id)
-    try:
-        response = supabase.table(PLAYLISTS_TABLE).insert(payload).execute()
-    except Exception as exc:
-        exc_msg = str(exc)
-        if 'user_id' in exc_msg:
-            payload_no_uid = {k: v for k, v in payload.items() if k != 'user_id'}
-            response = supabase.table(PLAYLISTS_TABLE).insert(payload_no_uid).execute()
-        else:
-            raise
+
+    # Retry loop: drop cosmetic columns rejected by PGRST204 (missing from schema cache).
+    # NEVER strip 'user_id' — without it the playlist can't be queried back for this user.
+    import re as _re
+    _REQUIRED_COLS = {'name', 'user_id'}
+    for _ in range(10):
+        try:
+            response = supabase.table(PLAYLISTS_TABLE).insert(payload).execute()
+            break
+        except Exception as exc:
+            exc_msg = str(exc)
+            missing = _re.search(r"find the '(\w+)' column", exc_msg)
+            if missing:
+                col = missing.group(1)
+                if col in _REQUIRED_COLS:
+                    raise  # can't proceed without this column
+                logger.debug('create_playlist: dropping unknown column %r', col)
+                payload.pop(col, None)
+            else:
+                raise
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail='Could not insert playlist after stripping unknown columns.',
+        )
+
     if not response.data:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -190,11 +216,18 @@ async def add_destination(
     supabase = get_supabase_client()
     _assert_owner(supabase, playlist_id, user)
 
+    pid = body.resolved_place_id
+    if not pid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Provide place_id or destination_id.',
+        )
+
     existing = (
         supabase.table(PLAYLIST_DESTINATIONS_TABLE)
         .select('id')
         .eq('playlist_id', playlist_id)
-        .eq('place_id', body.destination_id)
+        .eq('place_id', pid)
         .execute()
     )
     if existing.data:
@@ -205,7 +238,7 @@ async def add_destination(
 
     response = (
         supabase.table(PLAYLIST_DESTINATIONS_TABLE)
-        .insert({'playlist_id': playlist_id, 'place_id': str(body.destination_id)})
+        .insert({'playlist_id': playlist_id, 'place_id': pid})
         .execute()
     )
     if not response.data:

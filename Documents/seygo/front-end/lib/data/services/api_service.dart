@@ -852,7 +852,7 @@ class ApiService {
 
   static Future<bool> addDestinationToPlaylist({
     required String playlistId,
-    required int destinationId,
+    required String placeId,
     String? accessToken,
   }) async {
     final headers = <String, String>{
@@ -863,7 +863,7 @@ class ApiService {
     final uri = Uri.parse('$baseUrl/playlists/$playlistId/destinations');
     try {
       final response = await http
-          .post(uri, headers: headers, body: jsonEncode({'destination_id': destinationId}))
+          .post(uri, headers: headers, body: jsonEncode({'place_id': placeId}))
           .timeout(const Duration(seconds: 15));
       return response.statusCode == 201;
     } catch (_) {

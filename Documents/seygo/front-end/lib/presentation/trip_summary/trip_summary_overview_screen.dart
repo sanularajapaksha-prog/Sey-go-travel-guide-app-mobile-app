@@ -513,12 +513,12 @@ class _TripSummaryOverviewScreenState extends State<TripSummaryOverviewScreen> {
     final playlistId = playlist['id']?.toString() ?? '';
     int saved = 0;
     for (final stop in widget.optimizedStops) {
-      final rawId = stop['id'];
-      final parsed = int.tryParse(rawId?.toString() ?? '');
-      if (parsed != null) {
+      final rawId = stop['place_id'] ?? stop['id'];
+      final pid = rawId?.toString() ?? '';
+      if (pid.isNotEmpty) {
         final ok = await ApiService.addDestinationToPlaylist(
           playlistId: playlistId,
-          destinationId: parsed,
+          placeId: pid,
           accessToken: token,
         );
         if (ok) saved++;
