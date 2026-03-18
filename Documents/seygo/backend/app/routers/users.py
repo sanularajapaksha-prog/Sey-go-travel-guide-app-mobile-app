@@ -42,37 +42,39 @@ async def get_profile(user=Depends(get_current_user)):
     }
 
 
+def _safe_count(supabase, table: str, filters: dict) -> list:
+    try:
+        q = supabase.table(table).select('id')
+        for col, val in filters.items():
+            q = q.eq(col, val)
+        return q.execute().data or []
+    except Exception:
+        return []
+
+
+def _safe_playlist_rows(supabase, uid: str) -> list:
+    try:
+        return (
+            supabase.table('playlists')
+            .select('id, places_count')
+            .eq('user_id', uid)
+            .eq('status', 'active')
+            .execute()
+            .data or []
+        )
+    except Exception:
+        return []
+
+
 @router.get('/me/stats')
 async def get_user_stats(user=Depends(get_current_user)):
     """Return live activity counts for the current user."""
     supabase = get_supabase_client()
     uid = str(user.id)
 
-    # Run counts in parallel using separate queries
-    playlist_rows = (
-        supabase.table('playlists')
-        .select('id, places_count')
-        .eq('user_id', uid)
-        .eq('status', 'active')
-        .execute()
-        .data or []
-    )
-
-    review_rows = (
-        supabase.table('reviews')
-        .select('id')
-        .eq('user_id', uid)
-        .execute()
-        .data or []
-    )
-
-    photo_rows = (
-        supabase.table('photos')
-        .select('id')
-        .eq('user_id', uid)
-        .execute()
-        .data or []
-    )
+    playlist_rows = _safe_playlist_rows(supabase, uid)
+    review_rows  = _safe_count(supabase, 'reviews', {'user_id': uid})
+    photo_rows   = _safe_count(supabase, 'photos',  {'user_id': uid})
 
     return {
         'playlists': len(playlist_rows),

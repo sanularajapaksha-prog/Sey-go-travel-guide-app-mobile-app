@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../data/services/api_service.dart';
 import '../../data/services/offline_trip_service.dart';
 import '../../widgets/custom_image_widget.dart';
 
@@ -49,6 +51,7 @@ class _TripSummaryOverviewScreenState extends State<TripSummaryOverviewScreen> {
 
   bool _offlineMode = false;
   bool _offlineReady = false;
+  bool _isSavingPlaylist = false;
 
   @override
   void initState() {
@@ -282,6 +285,38 @@ class _TripSummaryOverviewScreenState extends State<TripSummaryOverviewScreen> {
                   SizedBox(
                     width: double.infinity,
                     height: 7.h,
+                    child: OutlinedButton.icon(
+                      onPressed: _isSavingPlaylist ? null : _saveAsPlaylist,
+                      icon: _isSavingPlaylist
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: theme.colorScheme.primary,
+                              ),
+                            )
+                          : const Icon(Icons.playlist_add),
+                      label: Text(
+                        'Save as Playlist',
+                        style: TextStyle(
+                          fontSize: 17.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: theme.colorScheme.primary,
+                        side: BorderSide(color: theme.colorScheme.primary),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 7.h,
                     child: ElevatedButton.icon(
                       onPressed: _startJourney,
                       icon: const Icon(Icons.play_arrow_rounded, size: 28),
@@ -391,6 +426,110 @@ class _TripSummaryOverviewScreenState extends State<TripSummaryOverviewScreen> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _saveAsPlaylist() async {
+    final nameController = TextEditingController(text: widget.tripName);
+    final descController = TextEditingController(
+      text: '${widget.stops} stops · ${widget.totalDistanceKm.toStringAsFixed(0)} km',
+    );
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (ctx) {
+        bool isPublic = false;
+        return StatefulBuilder(
+          builder: (ctx, setLocal) => AlertDialog(
+            title: const Text('Save as Playlist'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Name'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descController,
+                  decoration: const InputDecoration(labelText: 'Description (optional)'),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(isPublic ? 'Public' : 'Private'),
+                    Switch(
+                      value: isPublic,
+                      onChanged: (v) => setLocal(() => isPublic = v),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, {'isPublic': isPublic}),
+                child: const Text('Save'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (result == null) return;
+    final isPublic = result['isPublic'] as bool? ?? false;
+
+    final name = nameController.text.trim();
+    if (name.isEmpty) return;
+
+    setState(() => _isSavingPlaylist = true);
+
+    final token = Supabase.instance.client.auth.currentSession?.accessToken;
+
+    final playlist = await ApiService.createPlaylist(
+      name: name,
+      description: descController.text.trim().isNotEmpty ? descController.text.trim() : null,
+      icon: 'route',
+      visibility: isPublic ? 'public' : 'private',
+      accessToken: token,
+    );
+
+    if (playlist == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to create playlist.')),
+        );
+        setState(() => _isSavingPlaylist = false);
+      }
+      return;
+    }
+
+    final playlistId = playlist['id']?.toString() ?? '';
+    int saved = 0;
+    for (final stop in widget.optimizedStops) {
+      final rawId = stop['id'];
+      final parsed = int.tryParse(rawId?.toString() ?? '');
+      if (parsed != null) {
+        final ok = await ApiService.addDestinationToPlaylist(
+          playlistId: playlistId,
+          destinationId: parsed,
+          accessToken: token,
+        );
+        if (ok) saved++;
+      }
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Trip saved as playlist! ($saved stops added)')),
+      );
+      setState(() => _isSavingPlaylist = false);
     }
   }
 

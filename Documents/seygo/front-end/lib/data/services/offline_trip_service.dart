@@ -60,4 +60,15 @@ class OfflineTripService {
     final prefs = await SharedPreferences.getInstance();
     return prefs.containsKey(_offlineTripKey);
   }
+
+  static Future<Map<String, dynamic>?> loadTrip() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_offlineTripKey);
+    if (raw == null) return null;
+    try {
+      return jsonDecode(raw) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
 }

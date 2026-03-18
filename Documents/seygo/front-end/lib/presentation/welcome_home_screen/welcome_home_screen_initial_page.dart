@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:sizer/sizer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_export.dart';
 import '../../data/models/place.dart';
 import '../../data/services/api_service.dart';
+import '../../data/services/offline_trip_service.dart';
 import '../../widgets/custom_icon_widget.dart';
+import '../trip_summary/trip_summary_overview_screen.dart';
 import './widgets/category_pill_widget.dart';
 import './widgets/destination_card_widget.dart';
 import './widgets/featured_carousel_widget.dart';
@@ -28,6 +31,7 @@ class _WelcomeHomeScreenInitialPageState
 
   List<Map<String, dynamic>> _playlists = [];
   bool _playlistsLoading = true;
+  Map<String, dynamic>? _offlineTrip;
 
   final List<Map<String, dynamic>> _featuredDestinations = [
     {
@@ -128,6 +132,55 @@ class _WelcomeHomeScreenInitialPageState
   void initState() {
     super.initState();
     _loadPlaylists();
+    _checkOfflineTrip();
+  }
+
+  Future<void> _checkOfflineTrip() async {
+    final trip = await OfflineTripService.loadTrip();
+    if (!mounted) return;
+    setState(() => _offlineTrip = trip);
+  }
+
+  void _openOfflineTrip() {
+    final trip = _offlineTrip;
+    if (trip == null) return;
+    final originMap = trip['origin'] as Map?;
+    final origin = originMap != null
+        ? LatLng(
+            (originMap['latitude'] as num).toDouble(),
+            (originMap['longitude'] as num).toDouble(),
+          )
+        : const LatLng(7.8731, 80.7718);
+    final routePoints = ((trip['routePoints'] as List?) ?? [])
+        .whereType<Map>()
+        .map((p) => LatLng(
+              (p['latitude'] as num).toDouble(),
+              (p['longitude'] as num).toDouble(),
+            ))
+        .toList();
+    final optimizedStops = ((trip['optimizedStops'] as List?) ?? [])
+        .whereType<Map>()
+        .map((s) => s.cast<String, dynamic>())
+        .toList();
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (_) => TripSummaryOverviewScreen(
+          tripName: trip['tripName'] as String? ?? 'Saved Trip',
+          tripGoogleUrl: trip['tripGoogleUrl'] as String? ?? '',
+          dateRange: trip['dateRange'] as String? ?? '',
+          days: (trip['days'] as num?)?.toInt() ?? optimizedStops.length,
+          totalBudgetLKR: (trip['totalBudgetLKR'] as num?)?.toDouble() ?? 0,
+          totalDistanceKm: (trip['totalDistanceKm'] as num?)?.toDouble() ?? 0,
+          transportMode: trip['transportMode'] as String? ?? 'Car',
+          travelTime: trip['travelTime'] as String? ?? '',
+          stops: (trip['stops'] as num?)?.toInt() ?? optimizedStops.length,
+          emergencyContact: trip['emergencyContact'] as String? ?? '',
+          origin: origin,
+          routePoints: routePoints,
+          optimizedStops: optimizedStops,
+        ),
+      ),
+    );
   }
 
   @override
@@ -352,6 +405,50 @@ class _WelcomeHomeScreenInitialPageState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (_offlineTrip != null)
+                    GestureDetector(
+                      onTap: _openOfflineTrip,
+                      child: Container(
+                        margin: EdgeInsets.symmetric(
+                          horizontal: 4.w,
+                          vertical: 1.h,
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 4.w,
+                          vertical: 1.5.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: theme.colorScheme.primary.withValues(alpha: 0.35),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.offline_bolt_outlined,
+                              color: theme.colorScheme.primary,
+                              size: 22,
+                            ),
+                            SizedBox(width: 3.w),
+                            Expanded(
+                              child: Text(
+                                'You have a saved offline trip — tap to view',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              Icons.chevron_right,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   SizedBox(height: 2.h),
                   FeaturedCarouselWidget(
                     destinations: _featuredDestinations,

@@ -821,6 +821,7 @@ class ApiService {
     required String name,
     String? description,
     String icon = 'playlist_play',
+    String visibility = 'public',
     String? accessToken,
   }) async {
     final headers = <String, String>{
@@ -838,6 +839,7 @@ class ApiService {
               'name': name,
               'description': ?description,
               'icon': icon,
+              'visibility': visibility,
             }),
           )
           .timeout(const Duration(seconds: 15));
@@ -846,6 +848,27 @@ class ApiService {
       }
     } catch (_) {}
     return null;
+  }
+
+  static Future<bool> addDestinationToPlaylist({
+    required String playlistId,
+    required int destinationId,
+    String? accessToken,
+  }) async {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      if (accessToken != null && accessToken.isNotEmpty)
+        'Authorization': 'Bearer $accessToken',
+    };
+    final uri = Uri.parse('$baseUrl/playlists/$playlistId/destinations');
+    try {
+      final response = await http
+          .post(uri, headers: headers, body: jsonEncode({'destination_id': destinationId}))
+          .timeout(const Duration(seconds: 15));
+      return response.statusCode == 201;
+    } catch (_) {
+      return false;
+    }
   }
 
   static Future<bool> deletePlaylist({

@@ -21,6 +21,7 @@ class CreatePlaylistRequest(BaseModel):
     description: str | None = None
     icon: str = 'playlist_play'
     is_default: bool = False
+    visibility: str = 'public'
 
 
 class UpdatePlaylistRequest(BaseModel):
@@ -56,15 +57,19 @@ def get_playlists():
 async def get_my_playlists(user=Depends(get_current_user)):
     """Return all playlists owned by the current user."""
     supabase = get_supabase_client()
-    response = (
-        supabase.table(PLAYLISTS_TABLE)
-        .select('*')
-        .eq('user_id', str(user.id))
-        .order('created_at', desc=True)
-        .execute()
-    )
+    try:
+        response = (
+            supabase.table(PLAYLISTS_TABLE)
+            .select('*')
+            .eq('user_id', str(user.id))
+            .order('created_at', desc=True)
+            .execute()
+        )
+        rows = response.data or []
+    except Exception:
+        rows = []
     playlists = []
-    for row in (response.data or []):
+    for row in rows:
         p = _normalize_playlist_row(row)
         p['is_editable'] = True
         p['is_deletable'] = not bool(row.get('is_default'))
@@ -119,7 +124,15 @@ async def create_playlist(
     supabase = get_supabase_client()
     payload = body.model_dump()
     payload['user_id'] = str(user.id)
-    response = supabase.table(PLAYLISTS_TABLE).insert(payload).execute()
+    try:
+        response = supabase.table(PLAYLISTS_TABLE).insert(payload).execute()
+    except Exception as exc:
+        exc_msg = str(exc)
+        if 'user_id' in exc_msg:
+            payload_no_uid = {k: v for k, v in payload.items() if k != 'user_id'}
+            response = supabase.table(PLAYLISTS_TABLE).insert(payload_no_uid).execute()
+        else:
+            raise
     if not response.data:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
