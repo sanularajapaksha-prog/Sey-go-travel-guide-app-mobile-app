@@ -319,7 +319,7 @@ def get_places(limit: int = 500, offset: int = 0):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Failed to fetch places: {exc}',
-        ) from exc exc
+        ) from exc
 
 
 @router.post('/')

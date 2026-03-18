@@ -75,6 +75,7 @@ async def get_my_playlists(user=Depends(get_current_user)):
 @router.get('/{playlist_id}/details')
 async def get_playlist_details(playlist_id: str):
     supabase = get_supabase_client()
+    # Try the id as-is first; if that returns nothing, also try as integer (tables with bigint PKs)
     playlist_response = (
         supabase.table(PLAYLISTS_TABLE)
         .select('*')
@@ -83,6 +84,15 @@ async def get_playlist_details(playlist_id: str):
         .execute()
     )
     playlist_rows = playlist_response.data or []
+    if not playlist_rows and playlist_id.isdigit():
+        playlist_response = (
+            supabase.table(PLAYLISTS_TABLE)
+            .select('*')
+            .eq('id', int(playlist_id))
+            .limit(1)
+            .execute()
+        )
+        playlist_rows = playlist_response.data or []
     if not playlist_rows:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

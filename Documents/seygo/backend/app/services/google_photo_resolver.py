@@ -213,7 +213,10 @@ def update_place_photo_cache(
     try:
         supabase.table(table_name).update(payload).eq('place_id', place_id).execute()
     except Exception as exc:
-        logger.warning('Failed to update photo cache for %s: %s', place_id, exc)
+        if is_missing_column_error(exc):
+            logger.debug('Photo cache columns missing in %s — skipping cache write', table_name)
+        else:
+            logger.warning('Failed to update photo cache for %s: %s', place_id, exc)
 
 
 def is_missing_column_error(exc: Exception) -> bool:

@@ -27,7 +27,7 @@ async def get_profile(user=Depends(get_current_user)):
         .maybe_single()
         .execute()
     )
-    profile = result.data or {}
+    profile = (result.data if result is not None else None) or {}
 
     # Fall back to auth user_metadata if profile row is sparse
     meta = getattr(user, 'user_metadata', {}) or {}
