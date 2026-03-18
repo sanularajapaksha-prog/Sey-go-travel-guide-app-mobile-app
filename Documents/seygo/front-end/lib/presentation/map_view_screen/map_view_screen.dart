@@ -43,6 +43,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
   final List<double> _radiusOptionsKm = [1, 3, 5, 10, 15, 20, 30, 40, 50, 60];
   bool _usingBackendPlaces = false;
   String? _placesLoadError;
+  String? _detectedCategory;
 
   // Prevents the initial "pan to my location" from firing more than once
   bool _didInitialLocationPan = false;
@@ -1037,6 +1038,9 @@ class _MapViewScreenState extends State<MapViewScreen> {
         _apiSearchPlaces = ranked;
         _searchSuggestions = [];
         _geocodedPin = null;
+        _detectedCategory = (searchResp['detected_category'] as String?)?.isNotEmpty == true
+            ? searchResp['detected_category'] as String
+            : null;
         if (semanticCenter != null) _searchCenter = semanticCenter;
       });
       await _createMarkers();
