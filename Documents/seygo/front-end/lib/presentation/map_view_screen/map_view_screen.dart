@@ -985,15 +985,15 @@ class _MapViewScreenState extends State<MapViewScreen> {
 
       final local = _localSuggestions(query, limit: 20);
 
-      final places = await ApiService.searchPlacesFromDb(
+      final searchResp = await ApiService.semanticSearch(
         query: query,
-        latitude: null,
-        longitude: null,
-        radiusKm: 500,
-        limit: 100,
+        latitude: _currentPosition?.latitude,
+        longitude: _currentPosition?.longitude,
+        radiusKm: _selectedRadiusKm,
+        topN: 100,
       );
-      final mapped = places
-          .whereType<Map>()
+      final rawPlaces = (searchResp['results'] as List?)?.cast<Map>() ?? [];
+      final mapped = rawPlaces
           .map((item) => _mapPlaceRow(Map<String, dynamic>.from(item), 0))
           .whereType<Map<String, dynamic>>()
           .toList();
