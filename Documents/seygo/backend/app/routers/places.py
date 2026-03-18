@@ -300,8 +300,7 @@ def _fetch_all_places_rows(supabase) -> list[dict]:
 
 @router.get('/')
 def get_places(limit: int = 500, offset: int = 0):
-    import os
-    from supabase import create_client as _create_client
+    supabase = get_supabase_client()
     try:
         sb = _create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_SERVICE_ROLE_KEY'])
         response = sb.table(PLACES_TABLE).select('*').range(offset, offset + limit - 1).execute()
@@ -438,7 +437,7 @@ async def ml_model_info():
 
 
 @router.get('/search')
-def search_places(
+async def search_places(
     q: str = Query(..., min_length=1),
     latitude: float | None = None,
     longitude: float | None = None,
@@ -447,43 +446,50 @@ def search_places(
 ):
     try:
         supabase = get_supabase_client()
-        rows = _fetch_all_places_rows(supabase)
-        normalized_rows = [_normalize_place_row(supabase, row) for row in rows]
-        query_text = q.lower().strip()
-        matched_rows = []
-        for row in normalized_rows:
-            search_text = ' '.join(
-                [
-                    str(row.get('name', '')),
-                    str(row.get('category', '')),
-                    str(row.get('description', '')),
-                    str(row.get('location', '')),
-                    ' '.join(row.get('tags', [])),
-                ]
-            ).lower()
-            if query_text in search_text:
-                matched_rows.append(row)
-        normalized_rows = matched_rows
+        limit = max(1, min(limit, 100))
+        query_text = q.strip()
+
+        try:
+            response = (
+                supabase.table(PLACES_TABLE)
+                .select('*')
+                .text_search('search_vector', query_text, config='english')
+                .limit(limit * 3)  
+                .execute()
+            )
+            rows = response.data or []
+        except Exception:
+            
+            response = (
+                supabase.table(PLACES_TABLE)
+                .select('*')
+                .ilike('name', f'%{query_text}%')
+                .limit(limit * 3)
+                .execute()
+            )
+            rows = response.data or []
+
+        supabase_client = get_supabase_client()
+        normalized = [_normalize_place_row(supabase_client, row) for row in rows]
 
         if latitude is not None and longitude is not None:
-            filtered = []
-            for row in normalized_rows:
-                lat = row.get('latitude')
-                lon = row.get('longitude')
-                if lat is None or lon is None:
-                    continue
-                if _haversine_km(float(latitude), float(longitude), float(lat), float(lon)) <= radius_km:
-                    filtered.append(row)
-            normalized_rows = filtered
+            normalized = [
+                row for row in normalized
+                if row.get('latitude') is not None
+                and row.get('longitude') is not None
+                and _haversine_km(
+                    float(latitude), float(longitude),
+                    float(row['latitude']), float(row['longitude'])
+                ) <= radius_km
+            ]
 
-        normalized_rows = normalized_rows[: max(1, min(limit, 100))]
-        return {'count': len(normalized_rows), 'places': normalized_rows}
+        return {'count': len(normalized[:limit]), 'places': normalized[:limit]}
+
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'Failed to search places from Supabase: {exc}',
+            detail=f'Search failed: {exc}',
         ) from exc
-
 
 @router.post('/google/search')
 async def google_places_search(request: GooglePlacesSearchRequest):
