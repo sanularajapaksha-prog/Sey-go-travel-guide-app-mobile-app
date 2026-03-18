@@ -1,13 +1,20 @@
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
+from supabase import create_client
 
-from ..dependencies import get_current_user, get_supabase_client
+from ..dependencies import get_current_user
 from ..services.google_places import GooglePlacesService
 from ..services.place_taxonomy import infer_taxonomy
 
 google_places_service = GooglePlacesService()
 
 router = APIRouter(prefix='/destinations', tags=['destinations'])
+
+
+def _sb():
+    return create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_SERVICE_ROLE_KEY'])
 
 SAVED_TABLE = 'saved_destinations'
 
@@ -42,7 +49,7 @@ async def save_destination(
     place: SaveDestinationRequest,
     user=Depends(get_current_user),
 ):
-    supabase = get_supabase_client()
+    supabase = _sb()
     payload = place.model_dump()
     payload['user_id'] = str(user.id)
 
@@ -65,7 +72,7 @@ async def save_from_google(
             detail=f'Failed to fetch place details from Google: {exc}',
         )
 
-    supabase = get_supabase_client()
+    supabase = _sb()
     existing = (
         supabase.table(SAVED_TABLE)
         .select('id')
@@ -103,7 +110,7 @@ async def save_from_google(
 
 @router.get('/me')
 async def get_my_destinations(user=Depends(get_current_user)):
-    supabase = get_supabase_client()
+    supabase = _sb()
     response = supabase.table(SAVED_TABLE).select('*').eq('user_id', str(user.id)).execute()
     return {'destinations': response.data}
 
@@ -114,7 +121,7 @@ async def get_my_destinations_paginated(
     limit: int = 10,
     user=Depends(get_current_user),
 ):
-    supabase = get_supabase_client()
+    supabase = _sb()
     start = (page - 1) * limit
     end = start + limit - 1
     response = (
@@ -133,7 +140,7 @@ async def update_destination(
     update: UpdateDestinationRequest,
     user=Depends(get_current_user),
 ):
-    supabase = get_supabase_client()
+    supabase = _sb()
 
     existing = (
         supabase.table(SAVED_TABLE)
@@ -164,7 +171,7 @@ async def delete_destination(
     destination_id: int,
     user=Depends(get_current_user),
 ):
-    supabase = get_supabase_client()
+    supabase = _sb()
 
     existing = (
         supabase.table(SAVED_TABLE)

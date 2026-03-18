@@ -1,12 +1,19 @@
 import logging
 import math
+import os
 from urllib.parse import quote_plus
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
+from supabase import create_client
 
-from ..dependencies import get_current_user, get_supabase_client
+from ..dependencies import get_current_user
 from .places import PLACES_TABLE, _first_non_empty, _normalize_place_row
+
+
+def _sb():
+    """Fresh service-role client — bypasses RLS on every request."""
+    return create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_SERVICE_ROLE_KEY'])
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +72,7 @@ def get_playlists():
 @router.get('/mine')
 async def get_my_playlists(user=Depends(get_current_user)):
     """Return all playlists owned by the current user."""
-    supabase = get_supabase_client()
+    supabase = _sb()
     try:
         response = (
             supabase.table(PLAYLISTS_TABLE)
@@ -88,7 +95,7 @@ async def get_my_playlists(user=Depends(get_current_user)):
 
 @router.get('/{playlist_id}/details')
 async def get_playlist_details(playlist_id: str):
-    supabase = get_supabase_client()
+    supabase = _sb()
     # Try the id as-is first; if that returns nothing, also try as integer (tables with bigint PKs)
     playlist_response = (
         supabase.table(PLAYLISTS_TABLE)
@@ -130,13 +137,13 @@ async def create_playlist(
     body: CreatePlaylistRequest,
     user=Depends(get_current_user),
 ):
-    supabase = get_supabase_client()
+    import re as _re
+    supabase = _sb()
     payload = body.model_dump()
     payload['user_id'] = str(user.id)
 
     # Retry loop: drop cosmetic columns rejected by PGRST204 (missing from schema cache).
     # NEVER strip 'user_id' — without it the playlist can't be queried back for this user.
-    import re as _re
     _REQUIRED_COLS = {'name', 'user_id'}
     for _ in range(10):
         try:
@@ -173,7 +180,7 @@ async def update_playlist(
     body: UpdatePlaylistRequest,
     user=Depends(get_current_user),
 ):
-    supabase = get_supabase_client()
+    supabase = _sb()
     _assert_owner(supabase, playlist_id, user)
 
     fields = {k: v for k, v in body.model_dump().items() if v is not None}
@@ -197,7 +204,7 @@ async def delete_playlist(
     playlist_id: str,
     user=Depends(get_current_user),
 ):
-    supabase = get_supabase_client()
+    supabase = _sb()
     row = _assert_owner(supabase, playlist_id, user)
     if row.get('is_default'):
         raise HTTPException(
@@ -213,7 +220,7 @@ async def add_destination(
     body: AddDestinationRequest,
     user=Depends(get_current_user),
 ):
-    supabase = get_supabase_client()
+    supabase = _sb()
     _assert_owner(supabase, playlist_id, user)
 
     pid = body.resolved_place_id
@@ -255,7 +262,7 @@ async def remove_destination(
     destination_id: int,
     user=Depends(get_current_user),
 ):
-    supabase = get_supabase_client()
+    supabase = _sb()
     _assert_owner(supabase, playlist_id, user)
     supabase.table(PLAYLIST_DESTINATIONS_TABLE).delete().eq('playlist_id', playlist_id).eq('place_id', str(destination_id)).execute()
 
@@ -265,7 +272,7 @@ async def get_playlist_destinations(
     playlist_id: str,
     user=Depends(get_current_user),
 ):
-    supabase = get_supabase_client()
+    supabase = _sb()
     _assert_owner(supabase, playlist_id, user)
     response = (
         supabase.table(PLAYLIST_DESTINATIONS_TABLE)

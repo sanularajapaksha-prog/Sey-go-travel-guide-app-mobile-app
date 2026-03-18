@@ -1,9 +1,16 @@
+import os
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+from supabase import create_client
 
-from ..dependencies import get_current_user, get_supabase_client
+from ..dependencies import get_current_user
 
 router = APIRouter(prefix='/users', tags=['users'])
+
+
+def _sb():
+    return create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_SERVICE_ROLE_KEY'])
 
 PROFILES_TABLE = 'profiles'
 
@@ -19,7 +26,7 @@ class UpdateProfileRequest(BaseModel):
 @router.get('/me')
 async def get_profile(user=Depends(get_current_user)):
     """Return the current user's profile row plus auth metadata."""
-    supabase = get_supabase_client()
+    supabase = _sb()
     result = (
         supabase.table(PROFILES_TABLE)
         .select('*')
@@ -69,7 +76,7 @@ def _safe_playlist_rows(supabase, uid: str) -> list:
 @router.get('/me/stats')
 async def get_user_stats(user=Depends(get_current_user)):
     """Return live activity counts for the current user."""
-    supabase = get_supabase_client()
+    supabase = _sb()
     uid = str(user.id)
 
     playlist_rows = _safe_playlist_rows(supabase, uid)
@@ -88,7 +95,7 @@ async def update_profile(
     body: UpdateProfileRequest,
     user=Depends(get_current_user),
 ):
-    supabase = get_supabase_client()
+    supabase = _sb()
     fields = {k: v for k, v in body.model_dump().items() if v is not None}
 
     # Upsert so the row is created if it doesn't exist yet

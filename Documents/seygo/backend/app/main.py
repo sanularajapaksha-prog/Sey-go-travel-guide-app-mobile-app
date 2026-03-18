@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .routers import auth, places, playlists, route, users
 from .routers import search as search_router
+from .routers import reviews as reviews_router
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,7 @@ app.include_router(playlists.router)
 app.include_router(route.router)
 app.include_router(users.router)
 app.include_router(search_router.router)
+app.include_router(reviews_router.router)
 
 
 @app.get('/health')

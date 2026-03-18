@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sizer/sizer.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../data/services/api_service.dart';
 
 void showAvatarPicker(BuildContext context, ValueChanged<String> onPicked) {
   showModalBottomSheet(
@@ -57,131 +59,187 @@ void showAvatarPicker(BuildContext context, ValueChanged<String> onPicked) {
 }
 
 void showSavedRoutesModal(BuildContext context) {
-  final routes = <_SavedRoute>[
-    const _SavedRoute(
-      imageUrl: 'https://images.unsplash.com/photo-1548013146-72479768bada',
-      title: 'Kandy to Nuwara Eliya',
-      date: '12 Aug\n2025',
-      distance: '124\nkm',
-      duration: '3h\n10m',
-      tag: 'Hill Country',
-      stops: '5 stops',
-      isPublic: true,
-      meta: '342 views | 28\nlikes',
-    ),
-    const _SavedRoute(
-      imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e',
-      title: 'Colombo to Galle',
-      date: '18 Aug\n2025',
-      distance: '156\nkm',
-      duration: '2h\n45m',
-      tag: 'Coastal Drive',
-      stops: '7 stops',
-      isPublic: false,
-      meta: 'Only you can see this',
-    ),
-    const _SavedRoute(
-      imageUrl: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee',
-      title: 'Ella to Arugam Bay',
-      date: '25 Aug\n2025',
-      distance: '198\nkm',
-      duration: '4h\n20m',
-      tag: 'Weekend Trip',
-      stops: '8 stops',
-      isPublic: true,
-      meta: '567 views | 45\nlikes',
-    ),
-  ];
-
   _showProfileDialog(
     context,
     width: 84.w,
     height: 68.h,
-    child: StatefulBuilder(
-      builder: (context, setState) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _dialogHeader(
-              context,
-              title: 'Saved Routes',
-              icon: Icons.route_outlined,
-              iconColor: const Color(0xFF2F7BF2),
-            ),
-            SizedBox(height: 2.h),
-            Expanded(
-              child: ListView.separated(
-                itemCount: routes.length,
-                separatorBuilder: (_, __) => SizedBox(height: 1.7.h),
-                itemBuilder: (context, index) {
-                  final route = routes[index];
-                  return _savedRouteCard(
-                    route,
-                    onToggle: () => setState(() {
-                      routes[index] = route.copyWith(isPublic: !route.isPublic);
-                    }),
-                  );
-                },
-              ),
-            ),
-          ],
-        );
-      },
-    ),
+    child: _SavedRoutesContent(),
   );
 }
 
-void showAchievementsModal(BuildContext context) {
-  const achievements = [
-    _AchievementData(
-      title: 'Mountain Explorer',
-      subtitle: 'Level 2 | 8/10 places',
-      progress: 0.7,
-      color: Color(0xFFFF7308),
-      icon: Icons.landscape_outlined,
-    ),
-    _AchievementData(
-      title: 'Beach Lover',
-      subtitle: 'Level 3 | 12/15 places',
-      progress: 0.68,
-      color: Color(0xFF19B5D8),
-      icon: Icons.beach_access_outlined,
-    ),
-    _AchievementData(
-      title: 'City Hopper',
-      subtitle: 'Level 1 | 4/5 places',
-      progress: 0.7,
-      color: Color(0xFF9D46F8),
-      icon: Icons.apartment_outlined,
-    ),
-    _AchievementData(
-      title: 'Local Guide',
-      subtitle: 'Level 2 | 6/8 places',
-      progress: 0.68,
-      color: Color(0xFF11C0B2),
-      icon: Icons.explore_outlined,
-    ),
-    _AchievementData(
-      title: 'Hidden Gem Finder',
-      subtitle: 'Level 1 | 3/6 places',
-      progress: 0.52,
-      color: Color(0xFFFFA008),
-      icon: Icons.workspace_premium_outlined,
-    ),
-    _AchievementData(
-      title: 'Route Master',
-      subtitle: 'Level 2 | 7/10 places',
-      progress: 0.68,
-      color: Color(0xFF367AF1),
-      icon: Icons.map_outlined,
-    ),
-  ];
+class _SavedRoutesContent extends StatefulWidget {
+  @override
+  State<_SavedRoutesContent> createState() => _SavedRoutesContentState();
+}
 
+class _SavedRoutesContentState extends State<_SavedRoutesContent> {
+  List<Map<String, dynamic>> _playlists = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final token = Supabase.instance.client.auth.currentSession?.accessToken;
+    final data = await ApiService.fetchMyPlaylists(accessToken: token);
+    if (mounted) setState(() { _playlists = data; _loading = false; });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _dialogHeader(context, title: 'Saved Routes', icon: Icons.route_outlined, iconColor: const Color(0xFF2F7BF2)),
+        SizedBox(height: 2.h),
+        if (_loading)
+          const Expanded(child: Center(child: CircularProgressIndicator(strokeWidth: 2)))
+        else if (_playlists.isEmpty)
+          Expanded(child: Center(child: Text('No saved routes yet.\nCreate one from a trip.', textAlign: TextAlign.center, style: TextStyle(fontSize: 14.sp, color: const Color(0xFF6D7587), height: 1.6))))
+        else
+          Expanded(
+            child: ListView.separated(
+              itemCount: _playlists.length,
+              separatorBuilder: (context, i) => SizedBox(height: 1.7.h),
+              itemBuilder: (context, i) {
+                final p = _playlists[i];
+                final isPublic = (p['visibility'] ?? 'public') == 'public';
+                final stops = p['places_count'] ?? p['destination_count'] ?? 0;
+                final name = p['name'] as String? ?? 'Route';
+                final desc = p['description'] as String? ?? '';
+                return Container(
+                  padding: EdgeInsets.all(3.5.w),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFE3E7ED)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 12.w, height: 12.w,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD8E6FB),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(Icons.route_outlined, color: const Color(0xFF2F7BF2), size: 6.w),
+                          ),
+                          SizedBox(width: 3.w),
+                          Expanded(child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(name, style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600, color: const Color(0xFF1F2639))),
+                              if (desc.isNotEmpty) Text(desc, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.sp, color: const Color(0xFF6D7587))),
+                            ],
+                          )),
+                          const Icon(Icons.chevron_right_rounded, color: Color(0xFF9BA4B6)),
+                        ],
+                      ),
+                      SizedBox(height: 1.2.h),
+                      Row(
+                        children: [
+                          Icon(isPublic ? Icons.public : Icons.lock_outline_rounded,
+                            color: isPublic ? const Color(0xFF337AF3) : const Color(0xFF737B8E), size: 3.8.w),
+                          SizedBox(width: 1.5.w),
+                          Text(isPublic ? 'Public' : 'Private',
+                            style: TextStyle(fontSize: 13.sp, color: isPublic ? const Color(0xFF337AF3) : const Color(0xFF737B8E))),
+                          const Spacer(),
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.5.h),
+                            decoration: BoxDecoration(color: const Color(0xFFD8E6FB), borderRadius: BorderRadius.circular(12)),
+                            child: Text('$stops stops', style: TextStyle(fontSize: 12.sp, color: const Color(0xFF1855E5))),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+void showAchievementsModal(BuildContext context) {
   _showProfileDialog(
     context,
     width: 84.w,
     height: 70.h,
-    child: Column(
+    child: _AchievementsContent(),
+  );
+}
+
+class _AchievementsContent extends StatefulWidget {
+  @override
+  State<_AchievementsContent> createState() => _AchievementsContentState();
+}
+
+class _AchievementsContentState extends State<_AchievementsContent> {
+  Map<String, dynamic> _stats = {};
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final token = Supabase.instance.client.auth.currentSession?.accessToken;
+    final data = await ApiService.fetchUserStats(accessToken: token);
+    if (mounted) setState(() { _stats = data; _loading = false; });
+  }
+
+  List<_AchievementData> _buildAchievements() {
+    final playlists = (_stats['playlists'] ?? 0) as int;
+    final places = (_stats['places'] ?? 0) as int;
+    final reviews = (_stats['reviews'] ?? 0) as int;
+    final trips = (_stats['photos'] ?? 0) as int;
+
+    return [
+      _AchievementData(
+        title: 'Route Master',
+        subtitle: '$playlists / 10 routes',
+        progress: (playlists / 10).clamp(0.0, 1.0),
+        color: const Color(0xFF367AF1),
+        icon: Icons.map_outlined,
+      ),
+      _AchievementData(
+        title: 'Explorer',
+        subtitle: '$places / 20 places',
+        progress: (places / 20).clamp(0.0, 1.0),
+        color: const Color(0xFF11C0B2),
+        icon: Icons.explore_outlined,
+      ),
+      _AchievementData(
+        title: 'Critic',
+        subtitle: '$reviews / 10 reviews',
+        progress: (reviews / 10).clamp(0.0, 1.0),
+        color: const Color(0xFFFF7308),
+        icon: Icons.rate_review_outlined,
+      ),
+      _AchievementData(
+        title: 'Traveller',
+        subtitle: '$trips / 5 trips',
+        progress: (trips / 5).clamp(0.0, 1.0),
+        color: const Color(0xFF9D46F8),
+        icon: Icons.luggage_outlined,
+      ),
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final achievements = _buildAchievements();
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _dialogHeader(
@@ -191,53 +249,56 @@ void showAchievementsModal(BuildContext context) {
           iconColor: const Color(0xFFFF9800),
         ),
         SizedBox(height: 2.h),
-        Expanded(
-          child: GridView.builder(
-            itemCount: achievements.length,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 1.8.h,
-              crossAxisSpacing: 4.w,
-              childAspectRatio: 0.83,
-            ),
-            itemBuilder: (context, index) => _achievementCard(achievements[index]),
-          ),
-        ),
-        SizedBox(height: 1.h),
-        Text(
-          'Next milestone',
-          style: TextStyle(fontSize: 16.sp, color: const Color(0xFF6F788D)),
-        ),
-        SizedBox(height: 0.8.h),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Visit 2 more mountains',
-              style: TextStyle(
-                fontSize: 16.5.sp,
-                color: const Color(0xFF334055),
+        if (_loading)
+          const Expanded(child: Center(child: CircularProgressIndicator(strokeWidth: 2)))
+        else ...[
+          Expanded(
+            child: GridView.builder(
+              itemCount: achievements.length,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 1.8.h,
+                crossAxisSpacing: 4.w,
+                childAspectRatio: 0.83,
               ),
+              itemBuilder: (context, index) => _achievementCard(achievements[index]),
             ),
-            Text(
-              '80%',
-              style: TextStyle(fontSize: 16.sp, color: const Color(0xFF6F788D)),
-            ),
-          ],
-        ),
-        SizedBox(height: 1.1.h),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(100),
-          child: LinearProgressIndicator(
-            minHeight: 1.1.h,
-            value: 0.8,
-            backgroundColor: const Color(0xFFD0D3DB),
-            valueColor: const AlwaysStoppedAnimation(Color(0xFF0E0B29)),
           ),
-        ),
+          SizedBox(height: 1.h),
+          () {
+            final best = achievements.reduce((a, b) => a.progress > b.progress ? a : b);
+            final remaining = ((1.0 - best.progress) * 10).ceil();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Next milestone', style: TextStyle(fontSize: 16.sp, color: const Color(0xFF6F788D))),
+                SizedBox(height: 0.8.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('$remaining more to complete ${best.title}',
+                      style: TextStyle(fontSize: 14.sp, color: const Color(0xFF334055))),
+                    Text('${(best.progress * 100).round()}%',
+                      style: TextStyle(fontSize: 16.sp, color: const Color(0xFF6F788D))),
+                  ],
+                ),
+                SizedBox(height: 1.1.h),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(100),
+                  child: LinearProgressIndicator(
+                    minHeight: 1.1.h,
+                    value: best.progress,
+                    backgroundColor: const Color(0xFFD0D3DB),
+                    valueColor: const AlwaysStoppedAnimation(Color(0xFF0E0B29)),
+                  ),
+                ),
+              ],
+            );
+          }(),
+        ],
       ],
-    ),
-  );
+    );
+  }
 }
 
 void showMyReviewsModal(BuildContext context) {
@@ -322,88 +383,277 @@ void _closeOverlay(BuildContext context) {
 }
 
 void _showReviewsModal(BuildContext context, {required int initialTab}) {
-  const myReviews = [
-    _MyReview(
-      imageUrl: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa',
-      place: 'Sigiriya Rock Fortress',
-      rating: 5,
-      review:
-          'Absolutely breathtaking views from the top! The climb is worth every step.',
-      date: '15 Dec 2024',
-      likes: '24',
-      comments: '5',
-    ),
-    _MyReview(
-      imageUrl: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429',
-      place: 'Ella Rock Hike',
-      rating: 4,
-      review:
-          'Beautiful trail through tea plantations. Early morning start recommended.',
-      date: '08 Dec 2024',
-      likes: '18',
-      comments: '3',
-    ),
-    _MyReview(
-      imageUrl: 'https://images.unsplash.com/photo-1470770841072-f978cf4d019e',
-      place: 'Yala National Park',
-      rating: 4,
-      review:
-          'Saw leopards and elephants! Great safari experience with knowledgeable guide.',
-      date: '28 Nov 2024',
-      likes: '42',
-      comments: '9',
-    ),
-  ];
-
-  const community = [
-    _CommunityReview(
-      user: 'Sarah Johnson',
-      badge: 'Explorer',
-      timeAgo: '2 days ago',
-      title: "Adam's Peak (Sri Paada)",
-      body:
-          "Started the climb at 2 AM to catch sunrise. The view from the top is absolutely worth the challenging hike. Don't miss it.",
-      imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e',
-      likes: '127',
-      comments: '23',
-      rating: 5,
-    ),
-    _CommunityReview(
-      user: 'Mike Chen',
-      badge: 'Adventurer',
-      timeAgo: '5 days ago',
-      title: 'Horton Plains',
-      body:
-          "World's End is spectacular! Arrive early to avoid crowds and mist. Saw endemic wildlife. The cloud forest is magical.",
-      imageUrl: 'https://images.unsplash.com/photo-1504593811423-6dd665756598',
-      likes: '89',
-      comments: '15',
-      rating: 5,
-    ),
-    _CommunityReview(
-      user: 'Emma Williams',
-      badge: 'Local Guide',
-      timeAgo: '1 week ago',
-      title: 'Sigiriya Rock Fortress',
-      body:
-          'Ancient fortress is impressive! The frescoes halfway up are stunning. Can get crowded, so arrive early. Bring water and sun protection.',
-      imageUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d',
-      likes: '156',
-      comments: '31',
-      rating: 4,
-    ),
-  ];
-
   _showProfileDialog(
     context,
     width: 84.w,
     height: 69.h,
-    child: _ReviewsDialog(
-      initialTab: initialTab,
-      myReviews: myReviews,
-      communityReviews: community,
-    ),
+    child: _ReviewsContent(initialTab: initialTab),
   );
+}
+
+class _ReviewsContent extends StatefulWidget {
+  final int initialTab;
+  const _ReviewsContent({required this.initialTab});
+
+  @override
+  State<_ReviewsContent> createState() => _ReviewsContentState();
+}
+
+class _ReviewsContentState extends State<_ReviewsContent> {
+  late int activeTab = widget.initialTab;
+  List<Map<String, dynamic>> _myReviews = [];
+  List<Map<String, dynamic>> _communityReviews = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final token = Supabase.instance.client.auth.currentSession?.accessToken;
+    final results = await Future.wait([
+      ApiService.fetchMyReviews(accessToken: token),
+      ApiService.fetchCommunityReviews(),
+    ]);
+    if (mounted) {
+      setState(() {
+        _myReviews = results[0];
+        _communityReviews = results[1];
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _tabButton('My Reviews', 0),
+            SizedBox(width: 6.w),
+            _tabButton('Community Reviews', 1),
+            const Spacer(),
+            IconButton(
+              onPressed: () => _closeOverlay(context),
+              icon: const Icon(Icons.close_rounded),
+            ),
+          ],
+        ),
+        SizedBox(height: 1.5.h),
+        if (_loading)
+          const Expanded(child: Center(child: CircularProgressIndicator(strokeWidth: 2)))
+        else if (activeTab == 0) ...[
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 3.w,
+            runSpacing: 1.2.h,
+            children: [
+              Text(
+                'Your Reviews',
+                style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.w700, color: const Color(0xFF1D2538)),
+              ),
+              ElevatedButton.icon(
+                onPressed: () {
+                  _closeOverlay(context);
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    showWriteReviewModal(context);
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF3A485F),
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 2.8.w, vertical: 1.h),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: Text('Write Review', style: TextStyle(fontSize: 12.sp)),
+              ),
+            ],
+          ),
+          SizedBox(height: 2.h),
+          if (_myReviews.isEmpty)
+            Expanded(child: Center(child: Text('No reviews yet.\nWrite one after a trip.', textAlign: TextAlign.center, style: TextStyle(fontSize: 14.sp, color: const Color(0xFF6D7587), height: 1.6))))
+          else
+            Expanded(
+              child: ListView.separated(
+                itemCount: _myReviews.length,
+                separatorBuilder: (_, _) => SizedBox(height: 2.2.h),
+                itemBuilder: (context, index) => _myReviewCardFromMap(_myReviews[index]),
+              ),
+            ),
+        ] else ...[
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Community Reviews',
+              style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.w700, color: const Color(0xFF1D2538)),
+            ),
+          ),
+          SizedBox(height: 1.2.h),
+          if (_communityReviews.isEmpty)
+            Expanded(child: Center(child: Text('No community reviews yet.', textAlign: TextAlign.center, style: TextStyle(fontSize: 14.sp, color: const Color(0xFF6D7587)))))
+          else
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 6))],
+                ),
+                child: ListView.separated(
+                  padding: EdgeInsets.all(3.2.w),
+                  itemCount: _communityReviews.length,
+                  separatorBuilder: (_, _) => Divider(height: 3.h, color: const Color(0xFFE6E8ED)),
+                  itemBuilder: (context, index) => _communityReviewCardFromMap(_communityReviews[index]),
+                ),
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+
+  Widget _tabButton(String label, int index) {
+    final selected = activeTab == index;
+    return GestureDetector(
+      onTap: () => setState(() => activeTab = index),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14.5.sp,
+              fontWeight: FontWeight.w700,
+              color: selected ? const Color(0xFF4783BC) : const Color(0xFF35363B),
+            ),
+          ),
+          SizedBox(height: 0.7.h),
+          Container(
+            width: 8.w,
+            height: 0.5.h,
+            decoration: BoxDecoration(
+              color: selected ? const Color(0xFF4783BC) : Colors.transparent,
+              borderRadius: BorderRadius.circular(100),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _myReviewCardFromMap(Map<String, dynamic> r) {
+    final rating = (r['rating'] as num?)?.toInt() ?? 0;
+    final date = (r['created_at'] as String? ?? '').split('T').first;
+    final likes = (r['likes_count'] ?? 0).toString();
+    final comments = (r['comments_count'] ?? 0).toString();
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 20.w,
+          height: 10.5.h,
+          decoration: BoxDecoration(
+            color: const Color(0xFFD8E6FB),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Icon(Icons.place_outlined, color: const Color(0xFF2F7BF2), size: 8.w),
+        ),
+        SizedBox(width: 3.2.w),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(r['place_name'] as String? ?? 'Place',
+                style: TextStyle(fontSize: 18.sp, color: const Color(0xFF1D2438))),
+              SizedBox(height: 0.6.h),
+              Row(children: List.generate(5, (i) => Icon(Icons.star_rounded, size: 2.5.w,
+                color: i < rating ? const Color(0xFFFFC107) : const Color(0xFFE4E7ED)))),
+              SizedBox(height: 0.8.h),
+              Text(r['review_text'] as String? ?? '',
+                style: TextStyle(fontSize: 13.7.sp, height: 1.45, color: const Color(0xFF576276))),
+              SizedBox(height: 0.8.h),
+              Row(children: [
+                Text(date, style: TextStyle(fontSize: 11.7.sp, color: const Color(0xFF98A2B5))),
+                SizedBox(width: 4.w),
+                const Icon(Icons.thumb_up_alt_outlined, color: Color(0xFF9DA7B8)),
+                SizedBox(width: 1.w),
+                Text(likes, style: const TextStyle(color: Color(0xFF8A94A7))),
+                SizedBox(width: 3.w),
+                const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF9DA7B8)),
+                SizedBox(width: 1.w),
+                Text(comments, style: const TextStyle(color: Color(0xFF8A94A7))),
+              ]),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _communityReviewCardFromMap(Map<String, dynamic> r) {
+    final rating = (r['rating'] as num?)?.toInt() ?? 0;
+    final likes = (r['likes_count'] ?? 0).toString();
+    final comments = (r['comments_count'] ?? 0).toString();
+    final createdAt = r['created_at'] as String? ?? '';
+    final timeAgo = createdAt.isEmpty ? '' : createdAt.split('T').first;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          Text(r['user_name'] as String? ?? 'User',
+            style: TextStyle(fontSize: 15.3.sp, color: const Color(0xFF1B2234))),
+          SizedBox(width: 1.6.w),
+          const CircleAvatar(radius: 10, backgroundColor: Color(0xFF347AF1),
+            child: Icon(Icons.check, color: Colors.white, size: 14)),
+          const Spacer(),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.4.h),
+            decoration: BoxDecoration(color: const Color(0xFFF0F1F5), borderRadius: BorderRadius.circular(14)),
+            child: Text(r['user_badge'] as String? ?? 'Explorer',
+              style: TextStyle(fontSize: 10.8.sp, color: const Color(0xFF556075))),
+          ),
+          SizedBox(width: 3.w),
+          Text(timeAgo, style: TextStyle(fontSize: 11.8.sp, color: const Color(0xFF96A0B2))),
+        ]),
+        SizedBox(height: 1.2.h),
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            width: 18.w, height: 9.4.h,
+            decoration: BoxDecoration(color: const Color(0xFFD8E6FB), borderRadius: BorderRadius.circular(16)),
+            child: Icon(Icons.place_outlined, color: const Color(0xFF2F7BF2), size: 7.w),
+          ),
+          SizedBox(width: 3.w),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(r['place_name'] as String? ?? 'Place',
+              style: TextStyle(fontSize: 16.8.sp, color: const Color(0xFF20283A))),
+            SizedBox(height: 0.5.h),
+            Row(children: List.generate(5, (i) => Icon(Icons.star_rounded, size: 2.3.w,
+              color: i < rating ? const Color(0xFFFFC107) : const Color(0xFFE4E7ED)))),
+            SizedBox(height: 0.6.h),
+            Text(r['review_text'] as String? ?? '', maxLines: 4, overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 13.4.sp, height: 1.45, color: const Color(0xFF556075))),
+          ])),
+        ]),
+        SizedBox(height: 1.1.h),
+        Row(children: [
+          const Icon(Icons.thumb_up_alt_outlined, color: Color(0xFF717B91)),
+          SizedBox(width: 1.2.w),
+          Text(likes, style: const TextStyle(color: Color(0xFF717B91))),
+          SizedBox(width: 5.w),
+          const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF717B91)),
+          SizedBox(width: 1.2.w),
+          Text(comments, style: const TextStyle(color: Color(0xFF717B91))),
+        ]),
+      ],
+    );
+  }
 }
 
 Future<void> _showProfileDialog(
@@ -665,10 +915,7 @@ Widget _achievementCard(_AchievementData item) {
         SizedBox(height: 2.2.h),
         Text(
           item.title,
-          style: TextStyle(
-            fontSize: 15.sp,
-            color: const Color(0xFF20283A),
-          ),
+          style: TextStyle(fontSize: 15.sp, color: const Color(0xFF20283A)),
         ),
         SizedBox(height: 0.8.h),
         Text(
@@ -690,209 +937,7 @@ Widget _achievementCard(_AchievementData item) {
   );
 }
 
-Widget _myReviewCard(_MyReview review) {
-  return Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: Image.network(
-          review.imageUrl,
-          width: 20.w,
-          height: 10.5.h,
-          fit: BoxFit.cover,
-        ),
-      ),
-      SizedBox(width: 3.2.w),
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              review.place,
-              style: TextStyle(
-                fontSize: 18.sp,
-                color: const Color(0xFF1D2438),
-              ),
-            ),
-            SizedBox(height: 0.6.h),
-            Row(
-              children: List.generate(5, (index) {
-                return Icon(
-                  Icons.star_rounded,
-                  size: 2.5.w,
-                  color: index < review.rating
-                      ? const Color(0xFFFFC107)
-                      : const Color(0xFFE4E7ED),
-                );
-              }),
-            ),
-            SizedBox(height: 0.8.h),
-            Text(
-              review.review,
-              style: TextStyle(
-                fontSize: 13.7.sp,
-                height: 1.45,
-                color: const Color(0xFF576276),
-              ),
-            ),
-            SizedBox(height: 0.8.h),
-            Row(
-              children: [
-                Text(
-                  review.date,
-                  style: TextStyle(
-                    fontSize: 11.7.sp,
-                    color: const Color(0xFF98A2B5),
-                  ),
-                ),
-                SizedBox(width: 4.w),
-                const Icon(
-                  Icons.thumb_up_alt_outlined,
-                  color: Color(0xFF9DA7B8),
-                ),
-                SizedBox(width: 1.w),
-                Text(
-                  review.likes,
-                  style: const TextStyle(color: Color(0xFF8A94A7)),
-                ),
-                SizedBox(width: 3.w),
-                const Icon(
-                  Icons.chat_bubble_outline_rounded,
-                  color: Color(0xFF9DA7B8),
-                ),
-                SizedBox(width: 1.w),
-                Text(
-                  review.comments,
-                  style: const TextStyle(color: Color(0xFF8A94A7)),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    ],
-  );
-}
 
-Widget _communityReviewCard(_CommunityReview review) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Row(
-        children: [
-          Text(
-            review.user,
-            style: TextStyle(
-              fontSize: 15.3.sp,
-              color: const Color(0xFF1B2234),
-            ),
-          ),
-          SizedBox(width: 1.6.w),
-          const CircleAvatar(
-            radius: 10,
-            backgroundColor: Color(0xFF347AF1),
-            child: Icon(Icons.check, color: Colors.white, size: 14),
-          ),
-          const Spacer(),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.4.h),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0F1F5),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Text(
-              review.badge,
-              style: TextStyle(
-                fontSize: 10.8.sp,
-                color: const Color(0xFF556075),
-              ),
-            ),
-          ),
-          SizedBox(width: 3.w),
-          Text(
-            review.timeAgo,
-            style: TextStyle(
-              fontSize: 11.8.sp,
-              color: const Color(0xFF96A0B2),
-            ),
-          ),
-        ],
-      ),
-      SizedBox(height: 1.2.h),
-      Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Image.network(
-              review.imageUrl,
-              width: 18.w,
-              height: 9.4.h,
-              fit: BoxFit.cover,
-            ),
-          ),
-          SizedBox(width: 3.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  review.title,
-                  style: TextStyle(
-                    fontSize: 16.8.sp,
-                    color: const Color(0xFF20283A),
-                  ),
-                ),
-                SizedBox(height: 0.5.h),
-                Row(
-                  children: List.generate(5, (index) {
-                    return Icon(
-                      Icons.star_rounded,
-                      size: 2.3.w,
-                      color: index < review.rating
-                          ? const Color(0xFFFFC107)
-                          : const Color(0xFFE4E7ED),
-                    );
-                  }),
-                ),
-                SizedBox(height: 0.6.h),
-                Text(
-                  review.body,
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13.4.sp,
-                    height: 1.45,
-                    color: const Color(0xFF556075),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-      SizedBox(height: 1.1.h),
-      Row(
-        children: [
-          const Icon(Icons.thumb_up_alt_outlined, color: Color(0xFF717B91)),
-          SizedBox(width: 1.2.w),
-          Text(review.likes, style: const TextStyle(color: Color(0xFF717B91))),
-          SizedBox(width: 5.w),
-          const Icon(
-            Icons.chat_bubble_outline_rounded,
-            color: Color(0xFF717B91),
-          ),
-          SizedBox(width: 1.2.w),
-          Text(
-            review.comments,
-            style: const TextStyle(color: Color(0xFF717B91)),
-          ),
-        ],
-      ),
-    ],
-  );
-}
 
 Widget _routeMetric(IconData? icon, String value) {
   return Row(
@@ -916,170 +961,6 @@ Widget _dot() {
   );
 }
 
-class _ReviewsDialog extends StatefulWidget {
-  final int initialTab;
-  final List<_MyReview> myReviews;
-  final List<_CommunityReview> communityReviews;
-
-  const _ReviewsDialog({
-    required this.initialTab,
-    required this.myReviews,
-    required this.communityReviews,
-  });
-
-  @override
-  State<_ReviewsDialog> createState() => _ReviewsDialogState();
-}
-
-class _ReviewsDialogState extends State<_ReviewsDialog> {
-  late int activeTab = widget.initialTab;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _tabButton('My Reviews', 0),
-            SizedBox(width: 6.w),
-            _tabButton('Community Reviews', 1),
-            const Spacer(),
-            IconButton(
-              onPressed: () => _closeOverlay(context),
-              icon: const Icon(Icons.close_rounded),
-            ),
-          ],
-        ),
-        SizedBox(height: 1.5.h),
-        if (activeTab == 0) ...[
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 3.w,
-            runSpacing: 1.2.h,
-            children: [
-              Text(
-                'Your Reviews',
-                style: TextStyle(
-                  fontSize: 22.sp,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF1D2538),
-                ),
-              ),
-              ElevatedButton.icon(
-                onPressed: () {
-                  _closeOverlay(context);
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    showWriteReviewModal(context);
-                  });
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3A485F),
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 2.8.w,
-                    vertical: 1.h,
-                  ),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  visualDensity: VisualDensity.compact,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                icon: const Icon(Icons.add_rounded, size: 18),
-                label: Text(
-                  'Write Review',
-                  style: TextStyle(fontSize: 12.sp),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 2.h),
-          Expanded(
-            child: ListView.separated(
-              itemCount: widget.myReviews.length,
-              separatorBuilder: (_, __) => SizedBox(height: 2.2.h),
-              itemBuilder: (context, index) =>
-                  _myReviewCard(widget.myReviews[index]),
-            ),
-          ),
-        ] else ...[
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Community Reviews',
-              style: TextStyle(
-                fontSize: 22.sp,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF1D2538),
-              ),
-            ),
-          ),
-          SizedBox(height: 1.2.h),
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: ListView.separated(
-                padding: EdgeInsets.all(3.2.w),
-                itemCount: widget.communityReviews.length,
-                separatorBuilder: (_, __) => Divider(
-                  height: 3.h,
-                  color: const Color(0xFFE6E8ED),
-                ),
-                itemBuilder: (context, index) =>
-                    _communityReviewCard(widget.communityReviews[index]),
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _tabButton(String label, int index) {
-    final selected = activeTab == index;
-    return GestureDetector(
-      onTap: () => setState(() => activeTab = index),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 14.5.sp,
-              fontWeight: FontWeight.w700,
-              color: selected
-                  ? const Color(0xFF4783BC)
-                  : const Color(0xFF35363B),
-            ),
-          ),
-          SizedBox(height: 0.7.h),
-          Container(
-            width: 8.w,
-            height: 0.5.h,
-            decoration: BoxDecoration(
-              color: selected
-                  ? const Color(0xFF4783BC)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(100),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _WriteReviewDialog extends StatefulWidget {
   final TextEditingController controller;
 
@@ -1092,6 +973,7 @@ class _WriteReviewDialog extends StatefulWidget {
 class _WriteReviewDialogState extends State<_WriteReviewDialog> {
   int rating = 0;
   String selectedPlace = 'Sigiriya Rock Fortress';
+  bool _submitting = false;
 
   @override
   Widget build(BuildContext context) {
@@ -1123,7 +1005,10 @@ class _WriteReviewDialogState extends State<_WriteReviewDialog> {
                 SizedBox(height: 1.h),
                 Text(
                   'Select Place',
-                  style: TextStyle(fontSize: 13.5.sp, color: const Color(0xFF5C6579)),
+                  style: TextStyle(
+                    fontSize: 13.5.sp,
+                    color: const Color(0xFF5C6579),
+                  ),
                 ),
                 SizedBox(height: 1.h),
                 Container(
@@ -1160,7 +1045,10 @@ class _WriteReviewDialogState extends State<_WriteReviewDialog> {
                 SizedBox(height: 2.4.h),
                 Text(
                   'Rating',
-                  style: TextStyle(fontSize: 13.5.sp, color: const Color(0xFF5C6579)),
+                  style: TextStyle(
+                    fontSize: 13.5.sp,
+                    color: const Color(0xFF5C6579),
+                  ),
                 ),
                 SizedBox(height: 1.h),
                 Row(
@@ -1184,7 +1072,10 @@ class _WriteReviewDialogState extends State<_WriteReviewDialog> {
                 SizedBox(height: 2.2.h),
                 Text(
                   'Your Review',
-                  style: TextStyle(fontSize: 13.5.sp, color: const Color(0xFF5C6579)),
+                  style: TextStyle(
+                    fontSize: 13.5.sp,
+                    color: const Color(0xFF5C6579),
+                  ),
                 ),
                 SizedBox(height: 1.h),
                 TextField(
@@ -1209,7 +1100,10 @@ class _WriteReviewDialogState extends State<_WriteReviewDialog> {
                 SizedBox(height: 0.6.h),
                 Text(
                   '${widget.controller.text.length}/500 characters',
-                  style: TextStyle(fontSize: 10.5.sp, color: const Color(0xFF7F8798)),
+                  style: TextStyle(
+                    fontSize: 10.5.sp,
+                    color: const Color(0xFF7F8798),
+                  ),
                 ),
                 SizedBox(height: 1.7.h),
                 OutlinedButton.icon(
@@ -1230,21 +1124,33 @@ class _WriteReviewDialogState extends State<_WriteReviewDialog> {
                 const Spacer(),
                 SizedBox(height: 1.8.h),
                 ElevatedButton.icon(
-                  onPressed: rating == 0
+                  onPressed: (rating == 0 || _submitting)
                       ? null
-                      : () {
+                      : () async {
+                          setState(() => _submitting = true);
+                          final token = Supabase.instance.client.auth.currentSession?.accessToken;
+                          final ok = await ApiService.submitReview(
+                            placeName: selectedPlace,
+                            rating: rating,
+                            reviewText: widget.controller.text.trim().isEmpty ? null : widget.controller.text.trim(),
+                            accessToken: token,
+                          );
+                          if (!mounted) return;
+                          setState(() => _submitting = false);
                           _closeOverlay(context);
-                          showSnackBar(context, 'Review published');
+                          showSnackBar(context, ok ? 'Review submitted for approval!' : 'Failed to submit review.');
                         },
                   style: ElevatedButton.styleFrom(
                     minimumSize: Size(double.infinity, 6.h),
-                    backgroundColor: const Color(0xFFA6ACB6),
+                    backgroundColor: rating == 0 ? const Color(0xFFA6ACB6) : const Color(0xFF2F7BF2),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(18),
                     ),
                   ),
-                  icon: const Icon(Icons.send_outlined),
+                  icon: _submitting
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.send_outlined),
                   label: Text(
                     'Publish Review',
                     style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w700),
@@ -1314,46 +1220,3 @@ class _AchievementData {
   });
 }
 
-class _MyReview {
-  final String imageUrl;
-  final String place;
-  final int rating;
-  final String review;
-  final String date;
-  final String likes;
-  final String comments;
-
-  const _MyReview({
-    required this.imageUrl,
-    required this.place,
-    required this.rating,
-    required this.review,
-    required this.date,
-    required this.likes,
-    required this.comments,
-  });
-}
-
-class _CommunityReview {
-  final String user;
-  final String badge;
-  final String timeAgo;
-  final String title;
-  final String body;
-  final String imageUrl;
-  final String likes;
-  final String comments;
-  final int rating;
-
-  const _CommunityReview({
-    required this.user,
-    required this.badge,
-    required this.timeAgo,
-    required this.title,
-    required this.body,
-    required this.imageUrl,
-    required this.likes,
-    required this.comments,
-    required this.rating,
-  });
-}

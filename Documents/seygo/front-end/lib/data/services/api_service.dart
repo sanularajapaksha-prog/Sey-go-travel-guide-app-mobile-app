@@ -919,4 +919,59 @@ class ApiService {
       return false;
     }
   }
+
+  static Future<List<Map<String, dynamic>>> fetchMyReviews({String? accessToken}) async {
+    final uri = Uri.parse('$baseUrl/reviews/mine');
+    try {
+      final response = await http.get(uri, headers: {
+        'Content-Type': 'application/json',
+        if (accessToken != null && accessToken.isNotEmpty) 'Authorization': 'Bearer $accessToken',
+      }).timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) {
+        final list = jsonDecode(response.body) as List<dynamic>;
+        return list.whereType<Map<String, dynamic>>().toList();
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  static Future<List<Map<String, dynamic>>> fetchCommunityReviews({int limit = 20}) async {
+    final uri = Uri.parse('$baseUrl/reviews/').replace(queryParameters: {'limit': '$limit'});
+    try {
+      final response = await http.get(uri, headers: {'Content-Type': 'application/json'})
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) {
+        final list = jsonDecode(response.body) as List<dynamic>;
+        return list.whereType<Map<String, dynamic>>().toList();
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  static Future<bool> submitReview({
+    required String placeName,
+    required int rating,
+    String? placeId,
+    String? reviewText,
+    String? accessToken,
+  }) async {
+    final uri = Uri.parse('$baseUrl/reviews/');
+    try {
+      final response = await http.post(uri,
+        headers: {
+          'Content-Type': 'application/json',
+          if (accessToken != null && accessToken.isNotEmpty) 'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode({
+          'place_name': placeName,
+          'rating': rating,
+          'place_id': ?placeId,
+          'review_text': ?reviewText,
+        }),
+      ).timeout(const Duration(seconds: 15));
+      return response.statusCode == 201;
+    } catch (_) {
+      return false;
+    }
+  }
 }
