@@ -974,6 +974,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
         _searchCenter = null;
         _searchSuggestions = [];
         _geocodedPin = null;
+        _detectedCategory = null;
         _circles = {};
         _showRadiusCircle = false;
       });
