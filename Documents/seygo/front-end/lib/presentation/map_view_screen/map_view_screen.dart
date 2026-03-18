@@ -1022,7 +1022,17 @@ class _MapViewScreenState extends State<MapViewScreen> {
         );
       }
 
+      final isLowConfidence = searchResp['low_confidence'] == true;
+
       if (!mounted) return;
+      if (isLowConfidence && ranked.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Showing closest matches — try a more specific search'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
       setState(() {
         _apiSearchPlaces = ranked;
         _searchSuggestions = [];
