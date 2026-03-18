@@ -47,6 +47,8 @@ class SearchRequest(BaseModel):
                              description='Search radius in km')
     top_n: int = Field(default=20, ge=1, le=100,
                        description='Max results to return')
+    min_score: float = Field(default=0.0, ge=0.0, le=1.0,
+                             description='Minimum semantic score threshold (0 = no filter)')
 
 
 # ---------------------------------------------------------------------------
@@ -165,7 +167,11 @@ def semantic_search(req: SearchRequest):
             detected_category=detected_category,
         )
 
-    # 6. Confidence flag
+    # 6. Apply optional min_score filter
+    if req.min_score > 0:
+        results = [r for r in results if r.get('_score', 0) >= req.min_score]
+
+    # 7. Confidence flag
     top_semantic   = results[0].get('_semantic', 1.0) if results else 1.0
     low_confidence = top_semantic < 0.20
 
