@@ -20,6 +20,8 @@ class _LoginPageState extends State<LoginPage> {
   String? _passwordError;
   bool _isSubmitting = false;
   bool _isPasswordVisible = false;
+  // ignore: prefer_final_fields
+  bool _isGoogleLoading = false;
 
   String? _validateEmail(String value) {
     final normalized = value.trim().toLowerCase();
@@ -227,6 +229,8 @@ class _LoginPageState extends State<LoginPage> {
                         height: 18,
                         fit: BoxFit.contain,
                       ),
+                      onTap: _signInWithGoogle,
+                      isLoading: _isGoogleLoading,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -351,6 +355,24 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isGoogleLoading = true);
+    try {
+      await Supabase.instance.client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: 'io.supabase.flutter://login-callback/',
+      );
+      // Auth state listener in main.dart handles navigation after redirect
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Google sign-in failed: ${e.toString().replaceFirst('Exception: ', '')}')),
+      );
+    } finally {
+      if (mounted) setState(() => _isGoogleLoading = false);
+    }
+  }
+
   Future<void> _sendLoginOtp() async {
     final email = _emailController.text.trim();
     final emailError = email.isEmpty ? 'Email is required' : _validateEmail(email);
@@ -398,17 +420,19 @@ class _LoginPageState extends State<LoginPage> {
 }
 
 class _SocialPill extends StatelessWidget {
-  const _SocialPill({required this.label, required this.leading});
+  const _SocialPill({required this.label, required this.leading, this.onTap, this.isLoading = false});
 
   final String label;
   final Widget leading;
+  final VoidCallback? onTap;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 50,
       child: ElevatedButton(
-        onPressed: () {},
+        onPressed: isLoading ? null : onTap,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
           elevation: 2,
@@ -418,21 +442,27 @@ class _SocialPill extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(width: 20, height: 20, child: Center(child: leading)),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF1F1F1F),
+        child: isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF2B84B4)),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(width: 20, height: 20, child: Center(child: leading)),
+                  const SizedBox(width: 8),
+                  Text(
+                    label,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF1F1F1F),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }
