@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_cluster_manager/google_maps_cluster_manager.dart' as clustering;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:sizer/sizer.dart';
 
@@ -11,6 +13,17 @@ import '../../data/services/api_service.dart';
 import './widgets/destination_bottom_sheet_widget.dart';
 import './widgets/destination_marker_widget.dart';
 import './widgets/map_filter_widget.dart';
+
+class _PlaceItem with clustering.ClusterItem {
+  final Map<String, dynamic> place;
+  _PlaceItem(this.place);
+
+  @override
+  LatLng get location => LatLng(
+        place['latitude'] as double,
+        place['longitude'] as double,
+      );
+}
 
 class MapViewScreen extends StatefulWidget {
   const MapViewScreen({super.key});
@@ -22,7 +35,8 @@ class MapViewScreen extends StatefulWidget {
 class _MapViewScreenState extends State<MapViewScreen> {
   static const LatLng _defaultSriLankaCenter = LatLng(7.8731, 80.7718);
   GoogleMapController? _mapController;
-  final Set<Marker> _markers = {};
+  Set<Marker> _markers = {};
+  clustering.ClusterManager<_PlaceItem>? _clusterManager;
   Position? _currentPosition;
   bool _hasLocationPermission = false;
   bool _isLoading = true;
@@ -222,7 +236,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
     try {
       await _loadPlacesFromBackend();
       await _getCurrentLocation();
-      await _createMarkers();
+      _rebuildClusterManager();
       setState(() => _isLoading = false);
     } catch (e) {
       setState(() => _isLoading = false);
@@ -327,103 +341,90 @@ class _MapViewScreenState extends State<MapViewScreen> {
     );
   }
 
-  Future<void> _createMarkers() async {
-    final filteredDestinations = _filteredDestinations;
-    // Cap at 300 markers to prevent ANR on large datasets
-    const maxMarkers = 300;
-    final toRender = filteredDestinations.length > maxMarkers
-        ? filteredDestinations.sublist(0, maxMarkers)
-        : filteredDestinations;
-    final displayPositions = _buildDisplayPositions(toRender);
+  void _rebuildClusterManager() {
+    final items = _filteredDestinations
+        .map((p) => _PlaceItem(p))
+        .toList();
 
-    final newMarkers = <Marker>{};
+    _clusterManager = clustering.ClusterManager<_PlaceItem>(
+      items,
+      _onMarkersUpdated,
+      markerBuilder: (dynamic c) =>
+          _buildClusterMarker(c as clustering.Cluster<_PlaceItem>),
+      stopClusteringZoom: 14.0,
+    );
 
-    for (var destination in toRender) {
-      final displayPosition = displayPositions[destination['id'].toString()] ??
-          LatLng(
-            destination['latitude'] as double,
-            destination['longitude'] as double,
+    if (_mapController != null) {
+      _clusterManager!.setMapId(_mapController!.mapId);
+    }
+  }
+
+  void _onMarkersUpdated(Set<Marker> markers) {
+    if (mounted) setState(() => _markers = markers);
+  }
+
+  Future<Marker> _buildClusterMarker(
+      clustering.Cluster<_PlaceItem> cluster) async {
+    if (cluster.isMultiple) {
+      return Marker(
+        markerId: MarkerId(cluster.getId()),
+        position: cluster.location,
+        icon: await _buildClusterIcon(cluster.count),
+        onTap: () {
+          _mapController?.animateCamera(
+            CameraUpdate.newLatLngZoom(cluster.location,
+                (_clusterManager != null) ? 12.0 : 12.0),
           );
-      final marker = Marker(
-        markerId: MarkerId(destination['id'].toString()),
-        position: displayPosition,
-        icon: await _getMarkerIcon(destination['category'] as String),
-        onTap: () => _onMarkerTapped(destination),
-        infoWindow: InfoWindow(
-          title: destination['name'] as String,
-          snippet: destination['category'] as String,
-        ),
+        },
       );
-      newMarkers.add(marker);
     }
-
-    if (mounted) {
-      setState(() {
-        _markers
-          ..clear()
-          ..addAll(newMarkers);
-      });
-    }
+    final place = cluster.items.first.place;
+    return Marker(
+      markerId: MarkerId(place['id'].toString()),
+      position: cluster.location,
+      icon: await _getMarkerIcon(place['category'] as String),
+      onTap: () => _onMarkerTapped(place),
+      infoWindow: InfoWindow(
+        title: place['name'] as String,
+        snippet: place['category'] as String,
+      ),
+    );
   }
 
-  Map<String, LatLng> _buildDisplayPositions(
-    List<Map<String, dynamic>> places,
-  ) {
-    final grouped = <String, List<Map<String, dynamic>>>{};
-    for (final place in places) {
-      final latitude = place['latitude'] as double;
-      final longitude = place['longitude'] as double;
-      final bucket =
-          '${latitude.toStringAsFixed(2)}:${longitude.toStringAsFixed(2)}';
-      grouped.putIfAbsent(bucket, () => []).add(place);
-    }
-
-    final positions = <String, LatLng>{};
-    for (final group in grouped.values) {
-      if (group.length == 1) {
-        final place = group.first;
-        positions[place['id'].toString()] = LatLng(
-          place['latitude'] as double,
-          place['longitude'] as double,
-        );
-        continue;
-      }
-
-      for (var i = 0; i < group.length; i++) {
-        final place = group[i];
-        positions[place['id'].toString()] = _spreadMarkerPosition(
-          latitude: place['latitude'] as double,
-          longitude: place['longitude'] as double,
-          index: i,
-        );
-      }
-    }
-
-    return positions;
+  Future<BitmapDescriptor> _buildClusterIcon(int count) async {
+    final size = count > 99 ? 72 : count > 9 ? 64 : 56;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final paint = Paint()..color = const Color(0xFF0288D1);
+    final ringPaint = Paint()
+      ..color = const Color(0xFF0288D1).withOpacity(0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6;
+    final center = Offset(size / 2.0, size / 2.0);
+    canvas.drawCircle(center, size / 2.0, ringPaint);
+    canvas.drawCircle(center, size / 2.7, paint);
+    final tp = TextPainter(
+      text: TextSpan(
+        text: count > 999 ? '999+' : '$count',
+        style: TextStyle(
+          fontSize: size / 3.2,
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas,
+        Offset(center.dx - tp.width / 2, center.dy - tp.height / 2));
+    final img = await recorder.endRecording().toImage(size, size);
+    final data = await img.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.fromBytes(data!.buffer.asUint8List());
   }
 
-  LatLng _spreadMarkerPosition({
-    required double latitude,
-    required double longitude,
-    required int index,
-  }) {
-    if (index == 0) {
-      return LatLng(latitude, longitude);
-    }
-
-    const slotsPerRing = 8;
-    const baseRadiusKm = 1.4;
-    const ringStepKm = 0.9;
-    final ring = ((index - 1) ~/ slotsPerRing) + 1;
-    final positionInRing = (index - 1) % slotsPerRing;
-    final angle = (2 * math.pi * positionInRing) / slotsPerRing;
-    final radiusKm = baseRadiusKm + ((ring - 1) * ringStepKm);
-    final latOffset = (radiusKm / 111.32) * math.sin(angle);
-    final lonScale = math.cos(_toRadians(latitude)).abs().clamp(0.2, 1.0);
-    final lonOffset = (radiusKm / (111.32 * lonScale)) * math.cos(angle);
-
-    return LatLng(latitude + latOffset, longitude + lonOffset);
+  Future<void> _createMarkers() async {
+    _rebuildClusterManager();
   }
+
 
   Map<String, dynamic>? _mapPlaceRow(Map<String, dynamic> row, int index) {
     final parsedCoords = _parseCoordinates(row['coordinates']);
@@ -1532,9 +1533,12 @@ class _MapViewScreenState extends State<MapViewScreen> {
           circles: Set<Circle>.from(_circles),
           onMapCreated: (controller) {
             _mapController = controller;
+            _clusterManager?.setMapId(controller.mapId);
             _panToCurrentLocationOnce();
           },
-          onCameraIdle: () => _createMarkers(),
+          onCameraMove: (position) =>
+              _clusterManager?.onCameraMove(position),
+          onCameraIdle: () => _clusterManager?.updateMap(),
           myLocationEnabled: _hasLocationPermission,
           myLocationButtonEnabled: false,
           zoomControlsEnabled: false,
