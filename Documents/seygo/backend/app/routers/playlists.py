@@ -1,3 +1,5 @@
+import logging
+import math
 from urllib.parse import quote_plus
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -5,6 +7,8 @@ from pydantic import BaseModel, Field
 
 from ..dependencies import get_current_user, get_supabase_client
 from .places import PLACES_TABLE, _first_non_empty, _normalize_place_row
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix='/playlists', tags=['playlists'])
 
@@ -88,6 +92,7 @@ async def get_playlist_details(playlist_id: str):
     playlist = _normalize_playlist_row(playlist_rows[0])
     raw_stops = _fetch_playlist_places(supabase, playlist_id)
     stops = [_normalize_playlist_stop(stop, index) for index, stop in enumerate(raw_stops)]
+    _fill_leg_distances(stops)
 
     return {
         'playlist': playlist,
@@ -292,7 +297,8 @@ def _fetch_playlist_places(supabase, playlist_id: str) -> list[dict]:
             .data
             or []
         )
-    except Exception:
+    except Exception as exc:
+        logger.warning('playlist_places query failed for %s: %s', playlist_id, exc)
         return []
 
     if not relation_rows:
@@ -399,6 +405,31 @@ def _playlist_stop_cover_image(name: str, category: str, description: str | None
 
     query = quote_plus(f'{name} sri lanka')
     return f'https://source.unsplash.com/featured/1200x800/?{query}'
+
+
+def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    r = 6371.0
+    d_lat = math.radians(lat2 - lat1)
+    d_lng = math.radians(lng2 - lng1)
+    a = math.sin(d_lat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(d_lng / 2) ** 2
+    return r * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def _fill_leg_distances(stops: list[dict]) -> None:
+    """Compute haversine distance from the previous stop and write it into each stop dict."""
+    for i, stop in enumerate(stops):
+        if i == 0:
+            stop['distance_km'] = 0.0
+            continue
+        prev = stops[i - 1]
+        try:
+            lat1 = float(prev['latitude'])
+            lng1 = float(prev['longitude'])
+            lat2 = float(stop['latitude'])
+            lng2 = float(stop['longitude'])
+            stop['distance_km'] = round(_haversine_km(lat1, lng1, lat2, lng2), 2)
+        except (TypeError, ValueError):
+            stop['distance_km'] = 0.0
 
 
 def _sum_stop_distance(stops: list[dict]) -> float:
