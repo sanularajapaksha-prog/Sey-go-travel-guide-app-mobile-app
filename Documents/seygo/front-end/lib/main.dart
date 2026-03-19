@@ -98,6 +98,12 @@ class _MyAppState extends State<MyApp> {
           .listen((data) {
             if (data.event == AuthChangeEvent.passwordRecovery) {
               appNavigatorKey.currentState?.pushNamed(AppRoutes.resetPassword);
+            } else if (data.event == AuthChangeEvent.signedOut ||
+                data.event == AuthChangeEvent.userDeleted) {
+              appNavigatorKey.currentState?.pushNamedAndRemoveUntil(
+                AppRoutes.loginPage,
+                (route) => false,
+              );
             }
           });
     } catch (_) {

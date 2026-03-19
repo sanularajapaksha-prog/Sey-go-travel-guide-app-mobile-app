@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -20,16 +21,51 @@ class _LoginPageState extends State<LoginPage> {
   String? _passwordError;
   bool _isSubmitting = false;
   bool _isPasswordVisible = false;
+  bool _isGoogleLoading = false;
+  bool _isAppleLoading = false;
 
   String? _validateEmail(String value) {
     final normalized = value.trim().toLowerCase();
-    if (normalized.isEmpty) {
-      return null;
-    }
-    if (!normalized.endsWith('@gmail.com')) {
-      return 'Email must end with @gmail.com';
+    if (normalized.isEmpty) return null;
+    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+    if (!emailRegex.hasMatch(normalized)) {
+      return 'Please enter a valid email address';
     }
     return null;
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isGoogleLoading = true);
+    try {
+      await Supabase.instance.client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: kIsWeb ? null : 'io.supabase.flutter://login-callback/',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => _isGoogleLoading = false);
+    }
+  }
+
+  Future<void> _signInWithApple() async {
+    setState(() => _isAppleLoading = true);
+    try {
+      await Supabase.instance.client.auth.signInWithOAuth(
+        OAuthProvider.apple,
+        redirectTo: kIsWeb ? null : 'io.supabase.flutter://login-callback/',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => _isAppleLoading = false);
+    }
   }
 
   @override
@@ -220,7 +256,8 @@ class _LoginPageState extends State<LoginPage> {
                 children: [
                   Expanded(
                     child: _SocialPill(
-                      label: 'Google',
+                      label: _isGoogleLoading ? 'Loading…' : 'Google',
+                      onPressed: _isGoogleLoading ? null : _signInWithGoogle,
                       leading: Image.asset(
                         'assets/images/google_logo.png',
                         width: 18,
@@ -232,7 +269,8 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _SocialPill(
-                      label: 'Apple',
+                      label: _isAppleLoading ? 'Loading…' : 'Apple',
+                      onPressed: _isAppleLoading ? null : _signInWithApple,
                       leading: Image.asset(
                         'assets/images/apple_logo.png',
                         width: 18,
@@ -398,17 +436,22 @@ class _LoginPageState extends State<LoginPage> {
 }
 
 class _SocialPill extends StatelessWidget {
-  const _SocialPill({required this.label, required this.leading});
+  const _SocialPill({
+    required this.label,
+    required this.leading,
+    required this.onPressed,
+  });
 
   final String label;
   final Widget leading;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 50,
       child: ElevatedButton(
-        onPressed: () {},
+        onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
           elevation: 2,

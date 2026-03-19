@@ -37,11 +37,10 @@ class _RegisterPageState extends State<RegisterPage> {
 
   String? _validateEmail(String value) {
     final normalized = value.trim().toLowerCase();
-    if (normalized.isEmpty) {
-      return null;
-    }
-    if (!normalized.endsWith('@gmail.com')) {
-      return 'Email must end with @gmail.com';
+    if (normalized.isEmpty) return null;
+    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+    if (!emailRegex.hasMatch(normalized)) {
+      return 'Please enter a valid email address';
     }
     return null;
   }
