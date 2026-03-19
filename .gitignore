@@ -1,3 +1,9 @@
+# ── Secrets / environment ────────────────────────────────────
+.env
+.env.*
+!.env.example
+# ─────────────────────────────────────────────────────────────
+
 # Node / general
 node_modules/
 npm-debug.log*
