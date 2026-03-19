@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../routes/app_routes.dart';
 
@@ -48,7 +49,11 @@ class _LogoIntroPageState extends State<LogoIntroPage>
 
     Future.delayed(const Duration(milliseconds: 2600), () {
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, AppRoutes.introWelcome);
+      final session = Supabase.instance.client.auth.currentSession;
+      Navigator.pushReplacementNamed(
+        context,
+        session != null ? AppRoutes.welcomeHome : AppRoutes.introWelcome,
+      );
     });
   }
 

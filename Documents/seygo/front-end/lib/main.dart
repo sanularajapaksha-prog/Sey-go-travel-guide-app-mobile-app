@@ -98,6 +98,17 @@ class _MyAppState extends State<MyApp> {
           .listen((data) {
             if (data.event == AuthChangeEvent.passwordRecovery) {
               appNavigatorKey.currentState?.pushNamed(AppRoutes.resetPassword);
+            } else if (data.event == AuthChangeEvent.signedIn) {
+              // Navigate to home after OAuth (Google/Apple) or any sign-in
+              final route = ModalRoute.of(
+                appNavigatorKey.currentContext!,
+              )?.settings.name;
+              if (route != AppRoutes.welcomeHome) {
+                appNavigatorKey.currentState?.pushNamedAndRemoveUntil(
+                  AppRoutes.welcomeHome,
+                  (route) => false,
+                );
+              }
             } else if (data.event == AuthChangeEvent.signedOut ||
                 data.event == AuthChangeEvent.userDeleted) {
               appNavigatorKey.currentState?.pushNamedAndRemoveUntil(
