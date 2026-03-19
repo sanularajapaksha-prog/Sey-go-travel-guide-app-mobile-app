@@ -102,7 +102,7 @@ def _format_result(r: dict) -> dict:
 
 def _keyword_search(sb, query: str, top_n: int) -> list[dict]:
     """Simple ilike keyword search used when semantic model is not loaded."""
-    from ..services.place_taxonomy import PLACES_TABLE
+    from ..routers.places import PLACES_TABLE
     term = f'%{query.strip()}%'
     try:
         resp = (
