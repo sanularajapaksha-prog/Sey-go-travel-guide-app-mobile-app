@@ -25,28 +25,30 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    Startup: warm up the semantic index so the first search is instant.
-    The model (~118 MB) is downloaded once and cached by sentence-transformers.
-    Index is built from Supabase and persisted to ml_models/ on disk.
-    Subsequent restarts load from disk in ~1 second.
+    Startup: optionally warm up the semantic index.
+    Set SEMANTIC_ENABLED=true to enable (requires sentence-transformers installed).
+    Disabled by default to keep memory within Railway free-tier limits.
     """
-    import asyncio
+    if os.getenv('SEMANTIC_ENABLED', 'false').lower() == 'true':
+        import asyncio
 
-    def _warmup():
-        try:
-            from supabase import create_client as _cc
-            sb = _cc(
-                os.environ['SUPABASE_URL'],
-                os.environ['SUPABASE_SERVICE_ROLE_KEY'],
-            )
-            from .services.semantic_recommender import semantic_recommender
-            semantic_recommender.ensure_ready(sb)
-            logger.info('Semantic index ready.')
-        except Exception as exc:
-            logger.warning('Semantic warmup failed (non-fatal): %s', exc)
+        def _warmup():
+            try:
+                from supabase import create_client as _cc
+                sb = _cc(
+                    os.environ['SUPABASE_URL'],
+                    os.environ['SUPABASE_SERVICE_ROLE_KEY'],
+                )
+                from .services.semantic_recommender import semantic_recommender
+                semantic_recommender.ensure_ready(sb)
+                logger.info('Semantic index ready.')
+            except Exception as exc:
+                logger.warning('Semantic warmup failed (non-fatal): %s', exc)
 
-    loop = asyncio.get_event_loop()
-    loop.run_in_executor(None, _warmup)
+        loop = asyncio.get_event_loop()
+        loop.run_in_executor(None, _warmup)
+    else:
+        logger.info('Semantic search disabled (SEMANTIC_ENABLED != true). Using keyword search.')
 
     yield  # server runs here
 
@@ -81,8 +83,13 @@ app.include_router(reviews_router.router)
 
 @app.get('/health')
 async def health_check():
-    from .services.semantic_recommender import semantic_recommender
-    return {
-        'status': 'ok',
-        'semantic_index': semantic_recommender.index_info(),
-    }
+    semantic_enabled = os.getenv('SEMANTIC_ENABLED', 'false').lower() == 'true'
+    info: dict = {'ready': False, 'mode': 'keyword'}
+    if semantic_enabled:
+        try:
+            from .services.semantic_recommender import semantic_recommender
+            info = semantic_recommender.index_info()
+            info['mode'] = 'semantic'
+        except Exception:
+            pass
+    return {'status': 'ok', 'semantic_index': info}

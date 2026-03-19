@@ -22,11 +22,21 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from ..dependencies import get_current_user
-from ..services.semantic_recommender import (
-    semantic_recommender,
-    parse_intent,
-    geocode_location,
-)
+
+_SEMANTIC_ENABLED = os.getenv('SEMANTIC_ENABLED', 'false').lower() == 'true'
+
+if _SEMANTIC_ENABLED:
+    from ..services.semantic_recommender import (
+        semantic_recommender,
+        parse_intent,
+        geocode_location,
+    )
+else:
+    semantic_recommender = None  # type: ignore
+    def parse_intent(query: str) -> dict:
+        return {'detected_category': None, 'detected_location': None, 'radius_km': None}
+    def geocode_location(location: str):
+        return None
 
 logger = logging.getLogger(__name__)
 
@@ -90,17 +100,37 @@ def _format_result(r: dict) -> dict:
 # Endpoints
 # ---------------------------------------------------------------------------
 
+def _keyword_search(sb, query: str, top_n: int) -> list[dict]:
+    """Simple ilike keyword search used when semantic model is not loaded."""
+    from ..services.place_taxonomy import PLACES_TABLE
+    term = f'%{query.strip()}%'
+    try:
+        resp = (
+            sb.table(PLACES_TABLE)
+            .select('*')
+            .or_(f'name.ilike.{term},description.ilike.{term},location.ilike.{term}')
+            .limit(top_n)
+            .execute()
+        )
+        rows = resp.data or []
+    except Exception:
+        rows = []
+    for r in rows:
+        r['_score'] = 1.0
+        r['_semantic'] = None
+        r['_dist_km'] = None
+        r['_category_boosted'] = False
+        # normalise lat/lng keys
+        r['_lat'] = r.get('latitude') or r.get('lat')
+        r['_lng'] = r.get('longitude') or r.get('lng')
+    return rows
+
+
 @router.post('/')
 def semantic_search(req: SearchRequest):
     """
-    Semantic place search with radius filtering and intent detection.
-
-    Examples:
-      { "query": "best cafe near Yakkala", "radius_km": 5 }
-      { "query": "temple near Kandy", "radius_km": 10 }
-      { "query": "garden in Gampaha" }
-      { "query": "Kurunegala" }
-      { "query": "historical place around Anuradhapura", "radius_km": 20 }
+    Place search. Uses semantic vector search when SEMANTIC_ENABLED=true,
+    otherwise falls back to fast keyword (ilike) search.
     """
     try:
         sb = _make_supabase()
@@ -110,7 +140,23 @@ def semantic_search(req: SearchRequest):
             detail='Database connection failed.',
         )
 
-    # 1. Parse intent
+    # --- Keyword-only mode (default on Railway free tier) ---
+    if not _SEMANTIC_ENABLED:
+        results = _keyword_search(sb, req.query, req.top_n)
+        return {
+            'query':             req.query,
+            'detected_category': None,
+            'detected_location': None,
+            'center':            None,
+            'center_name':       None,
+            'radius_km':         req.radius_km,
+            'count':             len(results),
+            'low_confidence':    False,
+            'mode':              'keyword',
+            'results':           [_format_result(r) for r in results],
+        }
+
+    # --- Semantic mode ---
     intent             = parse_intent(req.query)
     detected_category  = intent['detected_category']
     detected_location  = intent['detected_location']
@@ -118,7 +164,6 @@ def semantic_search(req: SearchRequest):
     logger.info('Search: query=%r category=%s location=%s radius=%.1fkm',
                 req.query, detected_category, detected_location, radius_km)
 
-    # 2. Determine center
     center_lat: Optional[float] = req.latitude
     center_lng: Optional[float] = req.longitude
     center_name: Optional[str]  = None
@@ -128,68 +173,39 @@ def semantic_search(req: SearchRequest):
         if coords:
             center_lat, center_lng = coords
             center_name = detected_location
-            logger.info('Geocoded "%s" → (%.4f, %.4f)', detected_location, center_lat, center_lng)
 
-    # 3. Primary search
     semantic_recommender.ensure_ready(sb)
+    results = semantic_recommender.search(sb, query=req.query, center_lat=center_lat,
+        center_lng=center_lng, radius_km=radius_km, top_n=req.top_n,
+        detected_category=detected_category)
 
-    results = semantic_recommender.search(
-        sb,
-        query=req.query,
-        center_lat=center_lat,
-        center_lng=center_lng,
-        radius_km=radius_km,
-        top_n=req.top_n,
-        detected_category=detected_category,
-    )
-
-    # 4. Fallback: expand radius ×3 if fewer than 3 results
     if len(results) < 3 and center_lat is not None:
         expanded = radius_km * 3
-        results   = semantic_recommender.search(
-            sb,
-            query=req.query,
-            center_lat=center_lat,
-            center_lng=center_lng,
-            radius_km=expanded,
-            top_n=req.top_n,
-            detected_category=detected_category,
-        )
-        if results:
-            radius_km = expanded
+        r2 = semantic_recommender.search(sb, query=req.query, center_lat=center_lat,
+            center_lng=center_lng, radius_km=expanded, top_n=req.top_n,
+            detected_category=detected_category)
+        if r2:
+            results, radius_km = r2, expanded
 
-    # 5. Fallback: pure semantic — no geographic filter
     if not results:
-        results = semantic_recommender.search(
-            sb,
-            query=req.query,
-            center_lat=None,
-            center_lng=None,
-            radius_km=radius_km,
-            top_n=req.top_n,
-            detected_category=detected_category,
-        )
+        results = semantic_recommender.search(sb, query=req.query, center_lat=None,
+            center_lng=None, radius_km=radius_km, top_n=req.top_n,
+            detected_category=detected_category)
 
-    # 6. Apply optional min_score filter
     if req.min_score > 0:
         results = [r for r in results if r.get('_score', 0) >= req.min_score]
 
-    # 7. Confidence flag
     top_semantic   = results[0].get('_semantic', 1.0) if results else 1.0
-    low_confidence = top_semantic < 0.20
-
     return {
         'query':              req.query,
         'detected_category':  detected_category,
         'detected_location':  detected_location,
-        'center': (
-            {'lat': center_lat, 'lng': center_lng}
-            if center_lat is not None else None
-        ),
+        'center': ({'lat': center_lat, 'lng': center_lng} if center_lat is not None else None),
         'center_name':        center_name,
         'radius_km':          radius_km,
         'count':              len(results),
-        'low_confidence':     low_confidence,
+        'low_confidence':     top_semantic < 0.20,
+        'mode':               'semantic',
         'results':            [_format_result(r) for r in results],
     }
 
