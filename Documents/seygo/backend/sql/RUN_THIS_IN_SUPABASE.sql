@@ -1,11 +1,11 @@
 -- ============================================================
 -- SeyGo — Run this entire file once in Supabase SQL Editor
--- Safe to run multiple times (all statements use IF NOT EXISTS)
+-- Safe to run multiple times
 -- ============================================================
 
 
 -- ============================================================
--- 1. profiles table
+-- 1. profiles
 -- ============================================================
 create table if not exists public.profiles (
   id            uuid primary key references auth.users(id) on delete cascade,
@@ -19,21 +19,17 @@ create table if not exists public.profiles (
 
 alter table public.profiles enable row level security;
 
-do $$ begin
-  if not exists (select 1 from pg_policies where tablename='profiles' and policyname='Users can read own profile') then
-    create policy "Users can read own profile" on public.profiles for select using (auth.uid() = id);
-  end if;
-  if not exists (select 1 from pg_policies where tablename='profiles' and policyname='Users can insert own profile') then
-    create policy "Users can insert own profile" on public.profiles for insert with check (auth.uid() = id);
-  end if;
-  if not exists (select 1 from pg_policies where tablename='profiles' and policyname='Users can update own profile') then
-    create policy "Users can update own profile" on public.profiles for update using (auth.uid() = id);
-  end if;
-end $$;
+drop policy if exists "Users can read own profile"   on public.profiles;
+drop policy if exists "Users can insert own profile" on public.profiles;
+drop policy if exists "Users can update own profile" on public.profiles;
+
+create policy "Users can read own profile"   on public.profiles for select using (auth.uid() = id);
+create policy "Users can insert own profile" on public.profiles for insert with check (auth.uid() = id);
+create policy "Users can update own profile" on public.profiles for update using (auth.uid() = id);
 
 
 -- ============================================================
--- 2. playlists table + columns
+-- 2. playlists
 -- ============================================================
 create table if not exists public.playlists (
   id             uuid primary key default gen_random_uuid(),
@@ -50,15 +46,14 @@ create table if not exists public.playlists (
   created_at     timestamptz default now()
 );
 
--- Add any missing columns (safe on existing tables)
-alter table public.playlists add column if not exists user_id        uuid references auth.users(id) on delete cascade;
-alter table public.playlists add column if not exists icon           text default 'playlist_play';
-alter table public.playlists add column if not exists status         text default 'active';
-alter table public.playlists add column if not exists is_default     boolean default false;
-alter table public.playlists add column if not exists is_featured    boolean default false;
-alter table public.playlists add column if not exists visibility     text default 'public';
-alter table public.playlists add column if not exists creator_name   text;
-alter table public.playlists add column if not exists places_count   int default 0;
+alter table public.playlists add column if not exists user_id      uuid references auth.users(id) on delete cascade;
+alter table public.playlists add column if not exists icon         text default 'playlist_play';
+alter table public.playlists add column if not exists status       text default 'active';
+alter table public.playlists add column if not exists is_default   boolean default false;
+alter table public.playlists add column if not exists is_featured  boolean default false;
+alter table public.playlists add column if not exists visibility   text default 'public';
+alter table public.playlists add column if not exists creator_name text;
+alter table public.playlists add column if not exists places_count int default 0;
 
 create index if not exists idx_playlists_user_id     on public.playlists (user_id);
 create index if not exists idx_playlists_status      on public.playlists (status);
@@ -66,32 +61,26 @@ create index if not exists idx_playlists_is_featured on public.playlists (is_fea
 
 alter table public.playlists enable row level security;
 
-do $$ begin
-  if not exists (select 1 from pg_policies where tablename='playlists' and policyname='Public playlists are readable by all') then
-    create policy "Public playlists are readable by all" on public.playlists for select
-      using (status = 'active' and visibility = 'public');
-  end if;
-  if not exists (select 1 from pg_policies where tablename='playlists' and policyname='Owners can read own playlists') then
-    create policy "Owners can read own playlists" on public.playlists for select
-      using (auth.uid() = user_id);
-  end if;
-  if not exists (select 1 from pg_policies where tablename='playlists' and policyname='Owners can insert playlists') then
-    create policy "Owners can insert playlists" on public.playlists for insert
-      with check (auth.uid() = user_id);
-  end if;
-  if not exists (select 1 from pg_policies where tablename='playlists' and policyname='Owners can update playlists') then
-    create policy "Owners can update playlists" on public.playlists for update
-      using (auth.uid() = user_id);
-  end if;
-  if not exists (select 1 from pg_policies where tablename='playlists' and policyname='Owners can delete playlists') then
-    create policy "Owners can delete playlists" on public.playlists for delete
-      using (auth.uid() = user_id);
-  end if;
-end $$;
+drop policy if exists "Public playlists are readable by all" on public.playlists;
+drop policy if exists "Owners can read own playlists"        on public.playlists;
+drop policy if exists "Owners can insert playlists"          on public.playlists;
+drop policy if exists "Owners can update playlists"          on public.playlists;
+drop policy if exists "Owners can delete playlists"          on public.playlists;
+
+create policy "Public playlists are readable by all" on public.playlists for select
+  using (status = 'active' and visibility = 'public');
+create policy "Owners can read own playlists" on public.playlists for select
+  using (auth.uid() = user_id);
+create policy "Owners can insert playlists" on public.playlists for insert
+  with check (auth.uid() = user_id);
+create policy "Owners can update playlists" on public.playlists for update
+  using (auth.uid() = user_id);
+create policy "Owners can delete playlists" on public.playlists for delete
+  using (auth.uid() = user_id);
 
 
 -- ============================================================
--- 3. playlist_places junction table
+-- 3. playlist_places
 -- ============================================================
 create table if not exists public.playlist_places (
   id           uuid primary key default gen_random_uuid(),
@@ -109,22 +98,22 @@ create unique index if not exists uq_playlist_places on public.playlist_places (
 
 alter table public.playlist_places enable row level security;
 
-do $$ begin
-  if not exists (select 1 from pg_policies where tablename='playlist_places' and policyname='Playlist places inherit playlist read access') then
-    create policy "Playlist places inherit playlist read access" on public.playlist_places for select
-      using (exists (
-        select 1 from public.playlists pl
-        where pl.id = playlist_id
-          and ((pl.status = 'active' and pl.visibility = 'public') or pl.user_id = auth.uid())
-      ));
-  end if;
-  if not exists (select 1 from pg_policies where tablename='playlist_places' and policyname='Playlist owners can manage places') then
-    create policy "Playlist owners can manage places" on public.playlist_places for all
-      using (exists (select 1 from public.playlists pl where pl.id = playlist_id and pl.user_id = auth.uid()));
-  end if;
-end $$;
+drop policy if exists "Playlist places inherit playlist read access" on public.playlist_places;
+drop policy if exists "Playlist owners can manage places"            on public.playlist_places;
 
--- Auto-sync places_count when stops added/removed
+create policy "Playlist places inherit playlist read access" on public.playlist_places for select
+  using (exists (
+    select 1 from public.playlists pl
+    where pl.id = playlist_id
+      and ((pl.status = 'active' and pl.visibility = 'public') or pl.user_id = auth.uid())
+  ));
+create policy "Playlist owners can manage places" on public.playlist_places for all
+  using (exists (
+    select 1 from public.playlists pl
+    where pl.id = playlist_id and pl.user_id = auth.uid()
+  ));
+
+-- Auto-sync places_count
 create or replace function public.sync_playlist_places_count()
 returns trigger language plpgsql security definer as $$
 begin
@@ -144,8 +133,20 @@ create trigger playlist_places_count_sync
 
 
 -- ============================================================
--- 4. reviews table
+-- 4. reviews
+-- Drop and recreate if user_id has wrong type (bigint instead of uuid)
 -- ============================================================
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'reviews'
+      and column_name = 'user_id' and data_type != 'uuid'
+  ) then
+    drop table public.reviews cascade;
+  end if;
+end $$;
+
 create table if not exists public.reviews (
   id             uuid primary key default gen_random_uuid(),
   user_id        uuid references auth.users(id) on delete cascade,
@@ -153,7 +154,7 @@ create table if not exists public.reviews (
   place_name     text not null,
   rating         int check (rating between 1 and 5),
   review_text    text,
-  status         text default 'pending',   -- pending | approved
+  status         text default 'pending',
   user_name      text,
   user_badge     text default 'Explorer',
   likes_count    int default 0,
@@ -161,34 +162,41 @@ create table if not exists public.reviews (
   created_at     timestamptz default now()
 );
 
+alter table public.reviews add column if not exists user_id        uuid references auth.users(id) on delete cascade;
+alter table public.reviews add column if not exists place_id       text;
+alter table public.reviews add column if not exists place_name     text;
+alter table public.reviews add column if not exists rating         int;
+alter table public.reviews add column if not exists review_text    text;
+alter table public.reviews add column if not exists status         text default 'pending';
+alter table public.reviews add column if not exists user_name      text;
+alter table public.reviews add column if not exists user_badge     text default 'Explorer';
+alter table public.reviews add column if not exists likes_count    int default 0;
+alter table public.reviews add column if not exists comments_count int default 0;
+alter table public.reviews add column if not exists created_at     timestamptz default now();
+
 create index if not exists idx_reviews_user_id  on public.reviews (user_id);
 create index if not exists idx_reviews_status   on public.reviews (status);
 create index if not exists idx_reviews_place_id on public.reviews (place_id);
 
 alter table public.reviews enable row level security;
 
-do $$ begin
-  if not exists (select 1 from pg_policies where tablename='reviews' and policyname='Approved reviews readable by all') then
-    create policy "Approved reviews readable by all" on public.reviews for select
-      using (status = 'approved');
-  end if;
-  if not exists (select 1 from pg_policies where tablename='reviews' and policyname='Users can read own reviews') then
-    create policy "Users can read own reviews" on public.reviews for select
-      using (auth.uid() = user_id);
-  end if;
-  if not exists (select 1 from pg_policies where tablename='reviews' and policyname='Users can insert reviews') then
-    create policy "Users can insert reviews" on public.reviews for insert
-      with check (auth.uid() = user_id);
-  end if;
-  if not exists (select 1 from pg_policies where tablename='reviews' and policyname='Users can update own reviews') then
-    create policy "Users can update own reviews" on public.reviews for update
-      using (auth.uid() = user_id);
-  end if;
-end $$;
+drop policy if exists "Approved reviews readable by all" on public.reviews;
+drop policy if exists "Users can read own reviews"       on public.reviews;
+drop policy if exists "Users can insert reviews"         on public.reviews;
+drop policy if exists "Users can update own reviews"     on public.reviews;
+
+create policy "Approved reviews readable by all" on public.reviews for select
+  using (status = 'approved');
+create policy "Users can read own reviews" on public.reviews for select
+  using (auth.uid() = user_id);
+create policy "Users can insert reviews" on public.reviews for insert
+  with check (auth.uid() = user_id);
+create policy "Users can update own reviews" on public.reviews for update
+  using (auth.uid() = user_id);
 
 
 -- ============================================================
--- 5. photos table (for stats tracking)
+-- 5. photos (for stats tracking)
 -- ============================================================
 create table if not exists public.photos (
   id         uuid primary key default gen_random_uuid(),
@@ -198,18 +206,20 @@ create table if not exists public.photos (
   created_at timestamptz default now()
 );
 
+alter table public.photos add column if not exists user_id    uuid references auth.users(id) on delete cascade;
+alter table public.photos add column if not exists place_id   text;
+alter table public.photos add column if not exists url        text;
+alter table public.photos add column if not exists created_at timestamptz default now();
+
 create index if not exists idx_photos_user_id on public.photos (user_id);
 
 alter table public.photos enable row level security;
 
-do $$ begin
-  if not exists (select 1 from pg_policies where tablename='photos' and policyname='Users can manage own photos') then
-    create policy "Users can manage own photos" on public.photos for all
-      using (auth.uid() = user_id);
-  end if;
-end $$;
+drop policy if exists "Users can manage own photos" on public.photos;
+create policy "Users can manage own photos" on public.photos for all
+  using (auth.uid() = user_id);
 
 
 -- ============================================================
--- Done! All tables are ready.
+-- Done!
 -- ============================================================
