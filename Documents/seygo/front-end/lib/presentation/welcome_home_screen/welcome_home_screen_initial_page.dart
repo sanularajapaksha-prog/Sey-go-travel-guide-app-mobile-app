@@ -360,10 +360,13 @@ class _WelcomeHomeScreenInitialPageState
                                   right: 1.w,
                                   child: GestureDetector(
                                     onTap: () {
-                                      final query = _searchController.text
-                                          .trim();
-                                      print("Search pressed: '$query'");
-                                      // TODO: real search logic here
+                                      final query = _searchController.text.trim();
+                                      if (query.isEmpty) return;
+                                      Navigator.of(context, rootNavigator: true)
+                                          .pushNamed(
+                                        '/map-view-screen',
+                                        arguments: {'query': query},
+                                      );
                                     },
                                     child: Container(
                                       width: 11.w,

@@ -103,13 +103,15 @@ class HelpSupportPopup extends StatelessWidget {
             context,
             icon: Icons.chat_bubble_outline_rounded,
             title: "WhatsApp Support",
-            subtitle: "+94 XXX XXX XXXX",
-            onTap: () async {
-              final Uri waUri = Uri.parse(
-                "https://wa.me/94XXXXXXXXXX?text=Hello%20SeyGo%20Support",
-              );
-              if (await canLaunchUrl(waUri)) {
-                await launchUrl(waUri);
+            subtitle: "Coming soon",
+            onTap: () {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('WhatsApp support coming soon'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
               }
             },
           ),
@@ -117,11 +119,15 @@ class HelpSupportPopup extends StatelessWidget {
             context,
             icon: Icons.phone_outlined,
             title: "Phone Support",
-            subtitle: "Mon-Sat 9AM - 6PM",
-            onTap: () async {
-              final Uri phoneUri = Uri(scheme: 'tel', path: '94XXXXXXXXXX');
-              if (await canLaunchUrl(phoneUri)) {
-                await launchUrl(phoneUri);
+            subtitle: "Coming soon",
+            onTap: () {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Phone support coming soon'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
               }
             },
           ),

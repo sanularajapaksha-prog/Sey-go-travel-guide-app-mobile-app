@@ -248,7 +248,7 @@ class _TripSummaryOfflineScreenState extends State<TripSummaryOfflineScreen> {
                               children: [
                                 Text('Emergency Contact'),
                                 Text(
-                                  '+94 11 XXX XXXX',
+                                  'Add emergency contact',
                                   style: TextStyle(color: Colors.grey),
                                 ),
                               ],

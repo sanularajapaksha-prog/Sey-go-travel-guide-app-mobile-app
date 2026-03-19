@@ -2,8 +2,74 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
-class NotificationsPanel extends StatelessWidget {
+class _NotificationItem {
+  _NotificationItem({
+    required this.title,
+    required this.subtitle,
+    required this.imageUrl,
+    required this.isUnread,
+  });
+  final String title;
+  final String subtitle;
+  final String imageUrl;
+  final bool isUnread;
+}
+
+class NotificationsPanel extends StatefulWidget {
   const NotificationsPanel({super.key});
+
+  @override
+  State<NotificationsPanel> createState() => _NotificationsPanelState();
+}
+
+class _NotificationsPanelState extends State<NotificationsPanel> {
+  bool _showUnread = true;
+
+  final List<_NotificationItem> _unread = [
+    _NotificationItem(
+      title: 'Safety Alert: Check local weather',
+      subtitle: 'Dambulla',
+      imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=200&q=80&fit=crop',
+      isUnread: true,
+    ),
+    _NotificationItem(
+      title: 'Newly Added Spot: Coral Beach',
+      subtitle: 'Hikkaduwa',
+      imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=200&q=80&fit=crop',
+      isUnread: true,
+    ),
+  ];
+
+  final List<_NotificationItem> _read = [
+    _NotificationItem(
+      title: 'New place added near you',
+      subtitle: 'Kandy',
+      imageUrl: 'https://images.unsplash.com/photo-1548013146-72479768bada?w=200&q=80&fit=crop',
+      isUnread: false,
+    ),
+    _NotificationItem(
+      title: 'Your review was approved',
+      subtitle: 'Sigiriya',
+      imageUrl: 'https://images.unsplash.com/photo-1683295657287-86c908b256f8?w=200&q=80&fit=crop',
+      isUnread: false,
+    ),
+    _NotificationItem(
+      title: 'Weekend travel tip: Ella',
+      subtitle: 'Ella',
+      imageUrl: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=200&q=80&fit=crop',
+      isUnread: false,
+    ),
+  ];
+
+  List<_NotificationItem> get _active => _showUnread ? _unread : _read;
+
+  void _deleteItem(int index) {
+    setState(() => _active.removeAt(index));
+  }
+
+  void _clearAll() {
+    setState(() => _active.clear());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -12,108 +78,109 @@ class NotificationsPanel extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
             color: theme.colorScheme.shadow,
             blurRadius: 16,
-            offset: Offset(0, -4),
+            offset: const Offset(0, -4),
           ),
         ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Header with close button
+          // Header
           Padding(
             padding: EdgeInsets.fromLTRB(5.w, 2.h, 4.w, 1.h),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "Notifications",
+                  'Notifications',
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 IconButton(
-                  icon: Icon(
-                    Icons.close,
-                    size: 28,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+                  icon: Icon(Icons.close, size: 28,
+                      color: theme.colorScheme.onSurfaceVariant),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
             ),
           ),
 
-          // Unread / Read tabs
+          // Tabs
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 4.w),
             child: Row(
               children: [
-                _buildTabButton(context, label: "Unread (2)", isSelected: true),
+                _buildTabButton(
+                  context,
+                  label: 'Unread (${_unread.length})',
+                  isSelected: _showUnread,
+                  onTap: () => setState(() => _showUnread = true),
+                ),
                 SizedBox(width: 4.w),
-                _buildTabButton(context, label: "Read (3)", isSelected: false),
+                _buildTabButton(
+                  context,
+                  label: 'Read (${_read.length})',
+                  isSelected: !_showUnread,
+                  onTap: () => setState(() => _showUnread = false),
+                ),
               ],
             ),
           ),
 
           SizedBox(height: 1.5.h),
 
-          // Notifications list
+          // List
           Flexible(
-            child: ListView(
-              shrinkWrap: true,
-              padding: EdgeInsets.symmetric(horizontal: 4.w),
-              children: [
-                _buildNotificationItem(
-                  context,
-                  title: "Safety Alert: Check local weather",
-                  subtitle: "Dambulla",
-                  time: "•",
-                  imageUrl:
-                      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4", // placeholder
-                  isUnread: true,
-                ),
-                SizedBox(height: 1.2.h),
-                _buildNotificationItem(
-                  context,
-                  title: "Newly Added Spot: Coral Beach",
-                  subtitle: "Hikkaduwa",
-                  time: "•",
-                  imageUrl:
-                      "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
-                  isUnread: true,
-                ),
-                // Add more items here...
-              ],
-            ),
+            child: _active.isEmpty
+                ? Padding(
+                    padding: EdgeInsets.symmetric(vertical: 4.h),
+                    child: Text(
+                      'No notifications',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  )
+                : ListView.separated(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.symmetric(horizontal: 4.w),
+                    itemCount: _active.length,
+                    separatorBuilder: (_, _) => SizedBox(height: 1.2.h),
+                    itemBuilder: (context, index) => _buildNotificationItem(
+                      context,
+                      item: _active[index],
+                      onDelete: () => _deleteItem(index),
+                    ),
+                  ),
           ),
 
-          // Bottom clear button
-          Padding(
-            padding: EdgeInsets.all(4.w),
-            child: ElevatedButton(
-              onPressed: () {
-                // Clear action hook for notifications list state.
-                Navigator.pop(context);
-              },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.primary,
-                    foregroundColor: theme.colorScheme.onPrimary,
-                    minimumSize: Size(double.infinity, 6.h),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+          // Clear all button
+          if (_active.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.all(4.w),
+              child: ElevatedButton(
+                onPressed: _clearAll,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  minimumSize: Size(double.infinity, 6.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Text(
+                  'Clear All Notifications',
+                  style: TextStyle(
+                      fontSize: 16.sp, fontWeight: FontWeight.w600),
                 ),
               ),
-              child: Text(
-                "Clear All Notifications",
-                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
-              ),
             ),
-          ),
         ],
       ),
     );
@@ -123,13 +190,12 @@ class NotificationsPanel extends StatelessWidget {
     BuildContext context, {
     required String label,
     required bool isSelected,
+    required VoidCallback onTap,
   }) {
     final theme = Theme.of(context);
     return Expanded(
       child: GestureDetector(
-        onTap: () {
-          // TODO: switch tab logic (if you want real tabs later)
-        },
+        onTap: onTap,
         child: Container(
           padding: EdgeInsets.symmetric(vertical: 1.2.h),
           decoration: BoxDecoration(
@@ -140,10 +206,11 @@ class NotificationsPanel extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-            color: isSelected
-                ? theme.colorScheme.onPrimary
-                : theme.colorScheme.onSurfaceVariant,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: isSelected
+                    ? theme.colorScheme.onPrimary
+                    : theme.colorScheme.onSurfaceVariant,
+                fontWeight:
+                    isSelected ? FontWeight.w600 : FontWeight.w500,
                 fontSize: 14.sp,
               ),
             ),
@@ -155,17 +222,14 @@ class NotificationsPanel extends StatelessWidget {
 
   Widget _buildNotificationItem(
     BuildContext context, {
-    required String title,
-    required String subtitle,
-    required String time,
-    required String imageUrl,
-    required bool isUnread,
+    required _NotificationItem item,
+    required VoidCallback onDelete,
   }) {
     final theme = Theme.of(context);
     return Container(
       padding: EdgeInsets.all(3.w),
       decoration: BoxDecoration(
-        color: isUnread
+        color: item.isUnread
             ? theme.colorScheme.primary.withValues(alpha: 0.08)
             : null,
         borderRadius: BorderRadius.circular(16),
@@ -176,10 +240,17 @@ class NotificationsPanel extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Image.network(
-              imageUrl,
+              item.imageUrl,
               width: 14.w,
               height: 14.w,
               fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Container(
+                width: 14.w,
+                height: 14.w,
+                color: theme.colorScheme.surfaceContainerHighest,
+                child: Icon(Icons.image_not_supported_outlined,
+                    size: 20, color: theme.colorScheme.onSurfaceVariant),
+              ),
             ),
           ),
           SizedBox(width: 3.w),
@@ -189,7 +260,7 @@ class NotificationsPanel extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    if (isUnread)
+                    if (item.isUnread)
                       Container(
                         width: 8,
                         height: 8,
@@ -201,9 +272,9 @@ class NotificationsPanel extends StatelessWidget {
                       ),
                     Expanded(
                       child: Text(
-                        title,
+                        item.title,
                         style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: isUnread
+                          fontWeight: item.isUnread
                               ? FontWeight.w600
                               : FontWeight.w500,
                         ),
@@ -215,7 +286,7 @@ class NotificationsPanel extends StatelessWidget {
                 ),
                 SizedBox(height: 0.4.h),
                 Text(
-                  "$time $subtitle",
+                  item.subtitle,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -224,14 +295,9 @@ class NotificationsPanel extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: Icon(
-              Icons.delete_outline,
-              size: 20,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            onPressed: () {
-              // TODO: delete single notification
-            },
+            icon: Icon(Icons.delete_outline,
+                size: 20, color: theme.colorScheme.onSurfaceVariant),
+            onPressed: onDelete,
           ),
         ],
       ),
