@@ -6,6 +6,14 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+from dotenv import load_dotenv
+
+load_dotenv()
+
+limiter = Limiter(key_func=get_remote_address)
 
 from .routers import auth, places, playlists, route, users
 from .routers import search as search_router
@@ -44,10 +52,19 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title='SeyGo Backend', lifespan=lifespan)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+_raw_origins = os.getenv('ALLOWED_ORIGINS', '')
+_allowed_origins: list[str] = (
+    [o.strip() for o in _raw_origins.split(',') if o.strip()]
+    if _raw_origins
+    else ['http://localhost:3000', 'http://10.0.2.2:8000']
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['*'],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=['*'],
     allow_headers=['*'],

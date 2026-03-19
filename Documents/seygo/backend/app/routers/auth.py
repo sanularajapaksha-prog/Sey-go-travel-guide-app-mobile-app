@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr, Field
 
 from ..dependencies import get_supabase_client
+from ..main import limiter
 
 router = APIRouter(prefix='/auth', tags=['auth'])
 
@@ -59,7 +60,8 @@ def _resend_signup_verification(supabase, email: str) -> bool:
 
 
 @router.post('/register')
-async def register(payload: RegisterRequest):
+@limiter.limit('5/minute')
+async def register(request: Request, payload: RegisterRequest):
     try:
         supabase = get_supabase_client()
         normalized_email = payload.email.lower().strip()
@@ -96,12 +98,13 @@ async def register(payload: RegisterRequest):
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Failed to register user: {exc}',
+            detail='Registration failed. Please try again.',
         ) from exc
 
 
 @router.post('/login')
-async def login(payload: LoginRequest):
+@limiter.limit('10/minute')
+async def login(request: Request, payload: LoginRequest):
     try:
         supabase = get_supabase_client()
         result = supabase.auth.sign_in_with_password(
@@ -130,12 +133,13 @@ async def login(payload: LoginRequest):
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f'Failed to login: {exc}',
+            detail='Invalid email or password.',
         ) from exc
 
 
 @router.post('/login/send-otp')
-async def send_login_otp(payload: LoginOtpRequest):
+@limiter.limit('5/minute')
+async def send_login_otp(request: Request, payload: LoginOtpRequest):
     try:
         supabase = get_supabase_client()
         supabase.auth.sign_in_with_otp(
@@ -150,12 +154,13 @@ async def send_login_otp(payload: LoginOtpRequest):
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Failed to send login code: {exc}',
+            detail='Failed to send login code.',
         ) from exc
 
 
 @router.post('/login/verify-otp')
-async def verify_login_otp(payload: VerifyLoginOtpRequest):
+@limiter.limit('5/minute')
+async def verify_login_otp(request: Request, payload: VerifyLoginOtpRequest):
     try:
         supabase = get_supabase_client()
         result = supabase.auth.verify_otp(
@@ -185,12 +190,13 @@ async def verify_login_otp(payload: VerifyLoginOtpRequest):
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f'Failed to verify login code: {exc}',
+            detail='Invalid or expired login code.',
         ) from exc
 
 
 @router.post('/resend-verification')
-async def resend_verification(payload: ResendVerificationRequest):
+@limiter.limit('3/minute')
+async def resend_verification(request: Request, payload: ResendVerificationRequest):
     try:
         supabase = get_supabase_client()
         sent = _resend_signup_verification(supabase, payload.email.lower().strip())
@@ -205,12 +211,13 @@ async def resend_verification(payload: ResendVerificationRequest):
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Failed to resend verification code: {exc}',
+            detail='Failed to resend verification code.',
         ) from exc
 
 
 @router.post('/verify-otp')
-async def verify_otp(payload: VerifyOtpRequest):
+@limiter.limit('5/minute')
+async def verify_otp(request: Request, payload: VerifyOtpRequest):
     try:
         supabase = get_supabase_client()
         result = supabase.auth.verify_otp(
@@ -239,12 +246,13 @@ async def verify_otp(payload: VerifyOtpRequest):
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Failed to verify OTP: {exc}',
+            detail='Invalid or expired OTP.',
         ) from exc
 
 
 @router.post('/forgot-password')
-async def forgot_password(payload: ForgotPasswordRequest):
+@limiter.limit('3/minute')
+async def forgot_password(request: Request, payload: ForgotPasswordRequest):
     try:
         supabase = get_supabase_client()
         supabase.auth.reset_password_for_email(
@@ -257,7 +265,7 @@ async def forgot_password(payload: ForgotPasswordRequest):
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Failed to send password reset email: {exc}',
+            detail='Failed to send password reset email.',
         ) from exc
 
 
@@ -279,5 +287,5 @@ async def reset_password(payload: ResetPasswordRequest):
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Failed to reset password: {exc}',
+            detail='Failed to reset password. Please try again.',
         ) from exc
