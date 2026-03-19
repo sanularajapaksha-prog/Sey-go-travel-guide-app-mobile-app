@@ -39,7 +39,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
 
   Future<void> _loadPlaylists() async {
     final token = Supabase.instance.client.auth.currentSession?.accessToken;
-    final data = await ApiService.fetchPlaylists(accessToken: token);
+    final data = await ApiService.fetchMyPlaylists(accessToken: token);
     if (mounted) {
       setState(() {
         _playlists = data;

@@ -15,6 +15,11 @@ class ApiService {
   static Map<String, dynamic>? _profileCache;
   static DateTime? _profileCacheTime;
 
+  /// Always returns the current live access token from Supabase's session.
+  /// The supabase_flutter SDK auto-refreshes tokens, so this is always fresh.
+  static String? get currentToken =>
+      Supabase.instance.client.auth.currentSession?.accessToken;
+
   static String get baseUrl {
     final envUrl = dotenv.env['API_BASE_URL'];
     if (envUrl != null && envUrl.isNotEmpty) {
@@ -896,6 +901,7 @@ class ApiService {
     String? name,
     String? description,
     String? icon,
+    String? visibility,
     String? accessToken,
   }) async {
     final headers = <String, String>{
@@ -908,6 +914,7 @@ class ApiService {
       'name': ?name,
       'description': ?description,
       'icon': ?icon,
+      'visibility': ?visibility,
     };
     if (payload.isEmpty) return false;
     try {

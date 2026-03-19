@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:sizer/sizer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/services/api_service.dart';
+import '../playlist_details/playlist_details_screen.dart';
 
 void showAvatarPicker(BuildContext context, ValueChanged<String> onPicked) {
   showModalBottomSheet(
@@ -88,6 +89,30 @@ class _SavedRoutesContentState extends State<_SavedRoutesContent> {
     if (mounted) setState(() { _playlists = data; _loading = false; });
   }
 
+  Future<void> _toggleVisibility(int index) async {
+    final p = _playlists[index];
+    final playlistId = (p['id'] ?? '').toString();
+    final wasPublic = (p['visibility'] ?? 'public') == 'public';
+    final newVisibility = wasPublic ? 'private' : 'public';
+
+    // Optimistic update
+    setState(() => _playlists[index] = {...p, 'visibility': newVisibility});
+
+    final token = Supabase.instance.client.auth.currentSession?.accessToken;
+    final ok = await ApiService.updatePlaylist(
+      playlistId: playlistId,
+      visibility: newVisibility,
+      accessToken: token,
+    );
+    if (!ok && mounted) {
+      // Revert on failure
+      setState(() => _playlists[index] = {...p, 'visibility': wasPublic ? 'public' : 'private'});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update visibility')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -103,57 +128,123 @@ class _SavedRoutesContentState extends State<_SavedRoutesContent> {
           Expanded(
             child: ListView.separated(
               itemCount: _playlists.length,
-              separatorBuilder: (context, i) => SizedBox(height: 1.7.h),
+              separatorBuilder: (_, _) => SizedBox(height: 1.7.h),
               itemBuilder: (context, i) {
                 final p = _playlists[i];
                 final isPublic = (p['visibility'] ?? 'public') == 'public';
-                final stops = p['places_count'] ?? p['destination_count'] ?? 0;
+                final stops = (p['places_count'] ?? p['destination_count'] ?? 0) as int;
                 final name = p['name'] as String? ?? 'Route';
                 final desc = p['description'] as String? ?? '';
+                final playlistId = (p['id'] ?? '').toString();
+                final createdAt = (p['created_at'] as String? ?? '').split('T').first;
                 return Container(
-                  padding: EdgeInsets.all(3.5.w),
+                  padding: EdgeInsets.all(2.3.w),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: const Color(0xFFE3E7ED)),
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Top row: icon/info + chevron tap target
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          Navigator.of(context, rootNavigator: true).push(
+                            MaterialPageRoute(
+                              builder: (_) => PlaylistDetailsScreen(
+                                playlistId: playlistId,
+                                initialPlaylist: p,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 12.w, height: 12.w,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFD8E6FB),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(Icons.route_outlined, color: const Color(0xFF2F7BF2), size: 6.w),
+                            ),
+                            SizedBox(width: 2.5.w),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(name, style: TextStyle(fontSize: 17.5.sp, color: const Color(0xFF1F2639))),
+                                  SizedBox(height: 0.8.h),
+                                  Row(
+                                    children: [
+                                      if (createdAt.isNotEmpty) ...[
+                                        _routeMetric(Icons.calendar_today_outlined, createdAt),
+                                        _dot(),
+                                      ],
+                                      _routeMetric(Icons.place_outlined, '$stops stops'),
+                                    ],
+                                  ),
+                                  if (desc.isNotEmpty) ...[
+                                    SizedBox(height: 0.8.h),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.7.h),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFD8E6FB),
+                                            borderRadius: BorderRadius.circular(16),
+                                          ),
+                                          child: Text(desc, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(fontSize: 12.5.sp, color: const Color(0xFF1855E5))),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right_rounded, color: Color(0xFF9BA4B6)),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 1.4.h),
+                      // Bottom row: public/private toggle
                       Row(
                         children: [
-                          Container(
-                            width: 12.w, height: 12.w,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFD8E6FB),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(Icons.route_outlined, color: const Color(0xFF2F7BF2), size: 6.w),
+                          Icon(
+                            isPublic ? Icons.public : Icons.lock_outline_rounded,
+                            color: isPublic ? const Color(0xFF337AF3) : const Color(0xFF737B8E),
+                            size: 3.1.w,
                           ),
-                          SizedBox(width: 3.w),
-                          Expanded(child: Column(
+                          SizedBox(width: 2.w),
+                          Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(name, style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600, color: const Color(0xFF1F2639))),
-                              if (desc.isNotEmpty) Text(desc, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.sp, color: const Color(0xFF6D7587))),
+                              Text(
+                                isPublic ? 'Public' : 'Private',
+                                style: TextStyle(fontSize: 15.5.sp, color: const Color(0xFF1B2235)),
+                              ),
+                              Text(
+                                isPublic ? 'Anyone can view this' : 'Only you can see this',
+                                style: TextStyle(fontSize: 11.8.sp, color: const Color(0xFF6E778A)),
+                              ),
                             ],
-                          )),
-                          const Icon(Icons.chevron_right_rounded, color: Color(0xFF9BA4B6)),
-                        ],
-                      ),
-                      SizedBox(height: 1.2.h),
-                      Row(
-                        children: [
-                          Icon(isPublic ? Icons.public : Icons.lock_outline_rounded,
-                            color: isPublic ? const Color(0xFF337AF3) : const Color(0xFF737B8E), size: 3.8.w),
-                          SizedBox(width: 1.5.w),
-                          Text(isPublic ? 'Public' : 'Private',
-                            style: TextStyle(fontSize: 13.sp, color: isPublic ? const Color(0xFF337AF3) : const Color(0xFF737B8E))),
+                          ),
                           const Spacer(),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.5.h),
-                            decoration: BoxDecoration(color: const Color(0xFFD8E6FB), borderRadius: BorderRadius.circular(12)),
-                            child: Text('$stops stops', style: TextStyle(fontSize: 12.sp, color: const Color(0xFF1855E5))),
+                          if (isPublic) ...[
+                            const Icon(Icons.share_outlined, color: Color(0xFF596275)),
+                            SizedBox(width: 1.5.w),
+                            Text('Share', style: TextStyle(fontSize: 15.sp, color: const Color(0xFF596275))),
+                            SizedBox(width: 4.w),
+                          ],
+                          Switch(
+                            value: isPublic,
+                            onChanged: (_) => _toggleVisibility(i),
+                            activeColor: Colors.white,
+                            activeTrackColor: const Color(0xFF0A0828),
+                            inactiveThumbColor: Colors.white,
+                            inactiveTrackColor: const Color(0xFFD1D4DB),
                           ),
                         ],
                       ),
@@ -747,146 +838,6 @@ Widget _pickerTile({
   );
 }
 
-Widget _savedRouteCard(_SavedRoute route, {required VoidCallback onToggle}) {
-  return Container(
-    padding: EdgeInsets.all(2.3.w),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: const Color(0xFFE3E7ED)),
-    ),
-    child: Column(
-      children: [
-        Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.network(
-                route.imageUrl,
-                width: 22.w,
-                height: 10.2.h,
-                fit: BoxFit.cover,
-              ),
-            ),
-            SizedBox(width: 2.5.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    route.title,
-                    style: TextStyle(
-                      fontSize: 17.5.sp,
-                      color: const Color(0xFF1F2639),
-                    ),
-                  ),
-                  SizedBox(height: 0.8.h),
-                  Row(
-                    children: [
-                      _routeMetric(Icons.calendar_today_outlined, route.date),
-                      _dot(),
-                      _routeMetric(null, route.distance),
-                      _dot(),
-                      _routeMetric(Icons.access_time_outlined, route.duration),
-                    ],
-                  ),
-                  SizedBox(height: 1.h),
-                  Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 3.w,
-                          vertical: 0.7.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD8E6FB),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          route.tag,
-                          style: TextStyle(
-                            fontSize: 12.5.sp,
-                            color: const Color(0xFF1855E5),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 3.w),
-                      Text(
-                        route.stops,
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          color: const Color(0xFF6D7587),
-                        ),
-                      ),
-                      const Spacer(),
-                      const Icon(
-                        Icons.chevron_right_rounded,
-                        color: Color(0xFF9BA4B6),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 1.4.h),
-        Row(
-          children: [
-            Icon(
-              route.isPublic ? Icons.public : Icons.lock_outline_rounded,
-              color: route.isPublic
-                  ? const Color(0xFF337AF3)
-                  : const Color(0xFF737B8E),
-              size: 3.1.w,
-            ),
-            SizedBox(width: 2.w),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  route.isPublic ? 'Public' : 'Private',
-                  style: TextStyle(
-                    fontSize: 15.5.sp,
-                    color: const Color(0xFF1B2235),
-                  ),
-                ),
-                Text(
-                  route.meta,
-                  style: TextStyle(
-                    fontSize: 11.8.sp,
-                    color: const Color(0xFF6E778A),
-                  ),
-                ),
-              ],
-            ),
-            const Spacer(),
-            if (route.isPublic) ...[
-              const Icon(Icons.share_outlined, color: Color(0xFF596275)),
-              SizedBox(width: 1.5.w),
-              Text(
-                'Share',
-                style: TextStyle(
-                  fontSize: 15.sp,
-                  color: const Color(0xFF596275),
-                ),
-              ),
-              SizedBox(width: 4.w),
-            ],
-            Switch(
-              value: route.isPublic,
-              onChanged: (_) => onToggle(),
-              activeColor: Colors.white,
-              activeTrackColor: const Color(0xFF0A0828),
-              inactiveThumbColor: Colors.white,
-              inactiveTrackColor: const Color(0xFFD1D4DB),
-            ),
-          ],
-        ),
-      ],
-    ),
-  );
-}
 
 Widget _achievementCard(_AchievementData item) {
   return Container(
@@ -1156,44 +1107,6 @@ class _WriteReviewDialogState extends State<_WriteReviewDialog> {
   }
 }
 
-class _SavedRoute {
-  final String imageUrl;
-  final String title;
-  final String date;
-  final String distance;
-  final String duration;
-  final String tag;
-  final String stops;
-  final bool isPublic;
-  final String meta;
-
-  const _SavedRoute({
-    required this.imageUrl,
-    required this.title,
-    required this.date,
-    required this.distance,
-    required this.duration,
-    required this.tag,
-    required this.stops,
-    required this.isPublic,
-    required this.meta,
-  });
-
-  _SavedRoute copyWith({bool? isPublic}) {
-    final nextPublic = isPublic ?? this.isPublic;
-    return _SavedRoute(
-      imageUrl: imageUrl,
-      title: title,
-      date: date,
-      distance: distance,
-      duration: duration,
-      tag: tag,
-      stops: stops,
-      isPublic: nextPublic,
-      meta: nextPublic ? '342 views | 28\nlikes' : 'Only you can see this',
-    );
-  }
-}
 
 class _AchievementData {
   final String title;
