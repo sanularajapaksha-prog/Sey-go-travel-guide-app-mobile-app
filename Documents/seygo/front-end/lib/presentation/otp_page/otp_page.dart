@@ -81,13 +81,16 @@ class _OtpPageState extends State<OtpPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FB),
-      resizeToAvoidBottomInset: false,
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 10, 24, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
               if (!keyboardVisible) ...[
                 Image.asset(
                   'assets/images/OTP.jpg',
@@ -164,8 +167,16 @@ class _OtpPageState extends State<OtpPage> {
                   ),
                 ),
               ),
-              const Spacer(),
-              SizedBox(
+                ],
+              ),
+            ),
+          ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                24, 8, 24,
+                MediaQuery.of(context).padding.bottom + 16,
+              ),
+              child: SizedBox(
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
@@ -198,9 +209,8 @@ class _OtpPageState extends State<OtpPage> {
                         ),
                 ),
               ),
-              const SizedBox(height: 6),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

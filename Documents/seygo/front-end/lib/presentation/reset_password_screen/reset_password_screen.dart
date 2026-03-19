@@ -41,71 +41,82 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         foregroundColor: const Color(0xFF1F1F1F),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Reset Password',
-                style: GoogleFonts.poppins(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF1F1F1F),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Set a new password for your account.',
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  color: const Color(0xFF7B8794),
-                ),
-              ),
-              const SizedBox(height: 22),
-              TextField(
-                controller: _passwordController,
-                obscureText: !_isPasswordVisible,
-                decoration: _decoration(
-                  label: 'New Password',
-                  errorText: _passwordError,
-                  trailing: IconButton(
-                    onPressed: () {
-                      setState(() {
-                        _isPasswordVisible = !_isPasswordVisible;
-                      });
-                    },
-                    icon: Icon(
-                      _isPasswordVisible
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Reset Password',
+                      style: GoogleFonts.poppins(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1F1F1F),
+                      ),
                     ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: _confirmController,
-                obscureText: !_isConfirmVisible,
-                decoration: _decoration(
-                  label: 'Confirm Password',
-                  errorText: _confirmError,
-                  trailing: IconButton(
-                    onPressed: () {
-                      setState(() {
-                        _isConfirmVisible = !_isConfirmVisible;
-                      });
-                    },
-                    icon: Icon(
-                      _isConfirmVisible
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
+                    const SizedBox(height: 8),
+                    Text(
+                      'Set a new password for your account.',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: const Color(0xFF7B8794),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 22),
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: !_isPasswordVisible,
+                      decoration: _decoration(
+                        label: 'New Password',
+                        errorText: _passwordError,
+                        trailing: IconButton(
+                          onPressed: () {
+                            setState(() {
+                              _isPasswordVisible = !_isPasswordVisible;
+                            });
+                          },
+                          icon: Icon(
+                            _isPasswordVisible
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: _confirmController,
+                      obscureText: !_isConfirmVisible,
+                      decoration: _decoration(
+                        label: 'Confirm Password',
+                        errorText: _confirmError,
+                        trailing: IconButton(
+                          onPressed: () {
+                            setState(() {
+                              _isConfirmVisible = !_isConfirmVisible;
+                            });
+                          },
+                          icon: Icon(
+                            _isConfirmVisible
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 20),
-              SizedBox(
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                24, 8, 24,
+                MediaQuery.of(context).padding.bottom + 16,
+              ),
+              child: SizedBox(
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
@@ -135,8 +146,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
