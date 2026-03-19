@@ -18,9 +18,10 @@ import os
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
+from ..dependencies import get_current_user
 from ..services.semantic_recommender import (
     semantic_recommender,
     parse_intent,
@@ -103,10 +104,10 @@ def semantic_search(req: SearchRequest):
     """
     try:
         sb = _make_supabase()
-    except Exception as exc:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'DB connection failed: {exc}',
+            detail='Database connection failed.',
         )
 
     # 1. Parse intent
@@ -200,16 +201,23 @@ def search_status():
 
 
 @router.post('/rebuild')
-def rebuild_index():
+def rebuild_index(user=Depends(get_current_user)):
     """
     Force a full semantic index rebuild from Supabase.
     Takes ~2 minutes for 4900+ places. Call after bulk imports.
+    Requires admin privileges (user_metadata.is_admin = true).
     """
+    meta = getattr(user, 'user_metadata', {}) or {}
+    if not meta.get('is_admin'):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Admin access required.',
+        )
     try:
         sb = _make_supabase()
-    except Exception as exc:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'DB connection failed: {exc}',
+            detail='Database connection failed.',
         )
     return semantic_recommender.rebuild(sb)

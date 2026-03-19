@@ -35,6 +35,7 @@ class UpdatePlaylistRequest(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=100)
     description: str | None = None
     icon: str | None = None
+    visibility: str | None = None
 
 
 class AddDestinationRequest(BaseModel):
@@ -70,15 +71,22 @@ def get_playlists():
 
 
 @router.get('/mine')
-async def get_my_playlists(user=Depends(get_current_user)):
-    """Return all playlists owned by the current user."""
+async def get_my_playlists(
+    page: int = 1,
+    limit: int = 50,
+    user=Depends(get_current_user),
+):
+    """Return playlists owned by the current user (paginated, default 50/page)."""
     supabase = _sb()
+    start = (page - 1) * limit
+    end = start + limit - 1
     try:
         response = (
             supabase.table(PLAYLISTS_TABLE)
             .select('*')
             .eq('user_id', str(user.id))
             .order('created_at', desc=True)
+            .range(start, end)
             .execute()
         )
         rows = response.data or []
@@ -90,7 +98,7 @@ async def get_my_playlists(user=Depends(get_current_user)):
         p['is_editable'] = True
         p['is_deletable'] = not bool(row.get('is_default'))
         playlists.append(p)
-    return {'playlists': playlists}
+    return {'playlists': playlists, 'page': page, 'limit': limit}
 
 
 @router.get('/{playlist_id}/details')
@@ -276,7 +284,7 @@ async def get_playlist_destinations(
     _assert_owner(supabase, playlist_id, user)
     response = (
         supabase.table(PLAYLIST_DESTINATIONS_TABLE)
-        .select('*, placses(*)')
+        .select(f'*, {PLACES_TABLE}(*)')
         .eq('playlist_id', playlist_id)
         .execute()
     )

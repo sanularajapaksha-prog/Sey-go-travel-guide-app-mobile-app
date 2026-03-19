@@ -20,8 +20,8 @@ SAVED_TABLE = 'saved_destinations'
 
 class SaveDestinationRequest(BaseModel):
     name: str
-    latitude: float
-    longitude: float
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
     address: str | None = None
     google_place_id: str | None = None
     category: str | None = None
@@ -32,8 +32,8 @@ class SaveDestinationRequest(BaseModel):
 
 class UpdateDestinationRequest(BaseModel):
     name: str | None = None
-    latitude: float | None = None
-    longitude: float | None = None
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
     address: str | None = None
     google_place_id: str | None = None
     category: str | None = None

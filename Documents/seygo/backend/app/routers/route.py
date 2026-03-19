@@ -58,6 +58,26 @@ class RouteOptimizeResponse(BaseModel):
 # Endpoint
 # ---------------------------------------------------------------------------
 
+def _validate_coords(lat: Any, lng: Any, label: str) -> None:
+    try:
+        lat, lng = float(lat), float(lng)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f'{label}: latitude and longitude must be numbers.',
+        )
+    if not (-90 <= lat <= 90):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f'{label}: latitude must be between -90 and 90.',
+        )
+    if not (-180 <= lng <= 180):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f'{label}: longitude must be between -180 and 180.',
+        )
+
+
 @router.post(
     '/optimize',
     response_model=RouteOptimizeResponse,
@@ -76,6 +96,7 @@ async def optimize_route_endpoint(request: RouteOptimizeRequest):
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail='origin must contain latitude and longitude.',
         )
+    _validate_coords(request.origin['latitude'], request.origin['longitude'], 'origin')
 
     for i, dest in enumerate(request.destinations):
         if 'latitude' not in dest or 'longitude' not in dest:
@@ -83,6 +104,7 @@ async def optimize_route_endpoint(request: RouteOptimizeRequest):
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f'destinations[{i}] must contain latitude and longitude.',
             )
+        _validate_coords(dest['latitude'], dest['longitude'], f'destinations[{i}]')
 
     try:
         result = optimize_route(
