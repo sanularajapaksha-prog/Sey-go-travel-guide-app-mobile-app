@@ -479,11 +479,16 @@ class _MapViewScreenState extends State<MapViewScreen> {
       'rating': _toDouble(row['avg_rating'] ?? row['rating']) ?? 0.0,
       'reviews':
           row['review_count'] is num ? (row['review_count'] as num).toInt() : 0,
-      'location': (row['location'] ?? row['address'] ?? '').toString(),
+      'location': (row['location'] ?? row['formatted_address'] ?? row['address'] ?? '').toString(),
       'seedArea': (row['seed_area'] ?? '').toString(),
       'seed_area': row['seed_area'],
       'google_url': row['google_url'],
       'image_url': row['image_url'],
+      'phone': row['phone_number']?.toString(),
+      'website': row['website']?.toString(),
+      'opening_hours': row['opening_hours'],
+      'tags': row['tags'],
+      'categories': row['categories'],
     };
   }
 

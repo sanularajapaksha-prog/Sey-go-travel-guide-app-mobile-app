@@ -182,26 +182,84 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
   }
 
   Map<String, dynamic> _buildDestinationData(Map<String, dynamic> destination) {
-    final googleUrl = (destination['googleUrl'] ?? destination['google_url'])
-        ?.toString();
+    final googleUrl = (destination['googleUrl'] ?? destination['google_url'])?.toString();
     return {
       'id': destination['id'],
       'name': destination['name'] ?? 'Unknown Place',
-      'location':
-          destination['location'] ?? destination['address'] ?? 'Sri Lanka',
-      'description':
-          destination['description'] ?? 'No description available.',
+      'location': destination['location'] ?? destination['formatted_address'] ?? destination['address'] ?? 'Sri Lanka',
+      'description': destination['description'] ?? 'No description available.',
       'latitude': _toDouble(destination['latitude']) ?? 7.8731,
       'longitude': _toDouble(destination['longitude']) ?? 80.7718,
       'images': [
         {
           'googleUrl': googleUrl,
-          'semanticLabel':
-              destination['semanticLabel'] ?? destination['name'] ?? 'Place photo',
+          'semanticLabel': destination['semanticLabel'] ?? destination['name'] ?? 'Place photo',
         },
       ],
-      'highlights': _destinationData['highlights'],
+      'highlights': _buildHighlights(destination),
+      'rating': _toDouble(destination['rating'] ?? destination['avg_rating']) ?? 0.0,
+      'reviews': destination['reviews'] is num ? (destination['reviews'] as num).toInt()
+          : destination['review_count'] is num ? (destination['review_count'] as num).toInt() : 0,
+      'phone': destination['phone']?.toString(),
+      'website': destination['website']?.toString(),
+      'opening_hours': destination['opening_hours'],
+      'category': destination['category']?.toString(),
+      'tags': destination['tags'],
     };
+  }
+
+  List<Map<String, dynamic>> _buildHighlights(Map<String, dynamic> destination) {
+    // Try to build highlights from real tags/categories
+    final rawTags = destination['tags'];
+    final rawCategories = destination['categories'];
+    final List<String> tags = [];
+    if (rawTags is List) {
+      tags.addAll(rawTags.map((t) => t.toString()));
+    } else if (rawTags is String && rawTags.isNotEmpty) {
+      tags.addAll(rawTags.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty));
+    }
+    if (rawCategories is List) {
+      for (final c in rawCategories) {
+        final s = c.toString();
+        if (!tags.contains(s)) tags.add(s);
+      }
+    }
+
+    if (tags.isNotEmpty) {
+      return tags.take(6).map((tag) {
+        return {
+          'icon': _iconForTag(tag),
+          'title': tag,
+          'description': '',
+        };
+      }).toList();
+    }
+
+    // Fallback: single category card
+    final cat = destination['category']?.toString() ?? '';
+    if (cat.isNotEmpty) {
+      return [{'icon': _iconForTag(cat), 'title': cat, 'description': ''}];
+    }
+    return [];
+  }
+
+  String _iconForTag(String tag) {
+    final t = tag.toLowerCase();
+    if (t.contains('beach') || t.contains('coast') || t.contains('sea')) return 'beach_access';
+    if (t.contains('mountain') || t.contains('hill') || t.contains('hik')) return 'landscape';
+    if (t.contains('temple') || t.contains('cultural') || t.contains('heritage')) return 'account_balance';
+    if (t.contains('water') || t.contains('fall') || t.contains('river') || t.contains('lake')) return 'water';
+    if (t.contains('camp')) return 'camping';
+    if (t.contains('hotel') || t.contains('resort') || t.contains('stay')) return 'hotel';
+    if (t.contains('food') || t.contains('restaurant') || t.contains('cafe')) return 'local_cafe';
+    if (t.contains('wildlife') || t.contains('safari') || t.contains('park') || t.contains('national')) return 'forest';
+    if (t.contains('train') || t.contains('rail')) return 'train';
+    if (t.contains('fort') || t.contains('ancient') || t.contains('ruins')) return 'castle';
+    if (t.contains('tea') || t.contains('plantation')) return 'eco';
+    if (t.contains('dive') || t.contains('snorkel') || t.contains('surf')) return 'pool';
+    if (t.contains('city') || t.contains('town') || t.contains('urban')) return 'location_city';
+    if (t.contains('view') || t.contains('scenic') || t.contains('panoram')) return 'wb_sunny';
+    return 'place';
   }
 
   Map<String, dynamic> _buildRelatedDestination(Map<String, dynamic> destination) {
@@ -505,11 +563,10 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
   }
 
   void _handleRelatedDestinationTap(Map<String, dynamic> destination) {
-    // Navigate to the same screen with new destination data
-    Navigator.of(
-      context,
-      rootNavigator: true,
-    ).pushNamed('/destination-detail-screen');
+    Navigator.of(context, rootNavigator: true).pushNamed(
+      '/destination-detail-screen',
+      arguments: {'destination': destination},
+    );
   }
 
   @override
@@ -554,8 +611,12 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
                   DestinationInfoWidget(
                     name: _destinationData["name"] as String,
                     location: _destinationData["location"] as String,
-                    description:
-                    _destinationData["description"] as String,
+                    description: _destinationData["description"] as String,
+                    rating: (_destinationData["rating"] as num?)?.toDouble() ?? 0.0,
+                    reviews: (_destinationData["reviews"] as num?)?.toInt() ?? 0,
+                    phone: _destinationData["phone"] as String?,
+                    website: _destinationData["website"] as String?,
+                    openingHours: _destinationData["opening_hours"],
                   ),
 
                   SizedBox(height: 3.h),
@@ -580,13 +641,14 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
                     ),
                   ),
 
-                  SizedBox(height: 4.h),
-
-                  // Key highlights
-                  HighlightsWidget(
-                    highlights: (_destinationData["highlights"] as List)
-                        .cast<Map<String, dynamic>>(),
-                  ),
+                  // Key highlights (only when data available)
+                  if ((_destinationData["highlights"] as List).isNotEmpty) ...[
+                    SizedBox(height: 4.h),
+                    HighlightsWidget(
+                      highlights: (_destinationData["highlights"] as List)
+                          .cast<Map<String, dynamic>>(),
+                    ),
+                  ],
 
                   SizedBox(height: 4.h),
 
