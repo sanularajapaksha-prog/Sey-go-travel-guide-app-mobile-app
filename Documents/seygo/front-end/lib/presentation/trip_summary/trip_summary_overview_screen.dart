@@ -128,7 +128,9 @@ class _TripSummaryOverviewScreenState extends State<TripSummaryOverviewScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
+      body: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -341,6 +343,7 @@ class _TripSummaryOverviewScreenState extends State<TripSummaryOverviewScreen> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

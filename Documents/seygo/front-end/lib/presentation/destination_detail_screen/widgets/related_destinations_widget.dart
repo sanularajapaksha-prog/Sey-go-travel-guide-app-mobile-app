@@ -34,7 +34,7 @@ class RelatedDestinationsWidget extends StatelessWidget {
 
           // Horizontal scrolling list
           SizedBox(
-            height: 28.h,
+            height: 30.h,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: destinations.length,
@@ -45,6 +45,7 @@ class RelatedDestinationsWidget extends StatelessWidget {
                   onTap: () => onDestinationTap(destination),
                   child: Container(
                     width: 45.w,
+                    clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surface,
                       borderRadius: BorderRadius.circular(3.w),
@@ -64,7 +65,7 @@ class RelatedDestinationsWidget extends StatelessWidget {
                             googleUrl: (destination['googleUrl'] ??
                                 destination['google_url']) as String?,
                             width: 45.w,
-                            height: 18.h,
+                            height: 16.h,
                             fit: BoxFit.cover,
                             semanticLabel: destination['semanticLabel'] as String?,
                           ),

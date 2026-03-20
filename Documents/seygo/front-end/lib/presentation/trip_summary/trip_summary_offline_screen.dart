@@ -87,7 +87,9 @@ class _TripSummaryOfflineScreenState extends State<TripSummaryOfflineScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
+      body: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -285,6 +287,7 @@ class _TripSummaryOfflineScreenState extends State<TripSummaryOfflineScreen> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

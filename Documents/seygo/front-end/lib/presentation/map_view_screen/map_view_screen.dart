@@ -1792,7 +1792,11 @@ class _MapViewScreenState extends State<MapViewScreen> {
     List<Map<String, dynamic>> cards,
     ThemeData theme,
   ) {
-    return Column(
+    return SafeArea(
+      top: false,
+      left: false,
+      right: false,
+      child: Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1839,6 +1843,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
           ),
         ),
       ],
+      ),
     );
   }
 
