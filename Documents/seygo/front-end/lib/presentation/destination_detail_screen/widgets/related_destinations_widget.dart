@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
+import '../../../data/models/place.dart';
 /// Related destinations horizontal carousel
 class RelatedDestinationsWidget extends StatelessWidget {
   final List<Map<String, dynamic>> destinations;
@@ -58,17 +59,14 @@ class RelatedDestinationsWidget extends StatelessWidget {
                             topLeft: Radius.circular(3.w),
                             topRight: Radius.circular(3.w),
                           ),
-                          child: CustomImageWidget(
-                            imageUrl:
-                                (destination['googleUrl'] ??
-                                        destination['image'] ??
-                                        destination['imageUrl'])
-                                    as String?,
+                          child: PlacePhotoWidget(
+                            place: Place.fromMap(destination),
+                            googleUrl: (destination['googleUrl'] ??
+                                destination['google_url']) as String?,
                             width: 45.w,
                             height: 18.h,
                             fit: BoxFit.cover,
-                            semanticLabel:
-                                destination["semanticLabel"] as String?,
+                            semanticLabel: destination['semanticLabel'] as String?,
                           ),
                         ),
 
@@ -108,6 +106,17 @@ class RelatedDestinationsWidget extends StatelessWidget {
                                   ),
                                 ],
                               ),
+                              if ((destination['rating'] as num? ?? 0) > 0) ...[
+                                SizedBox(height: 0.4.h),
+                                Row(children: [
+                                  Icon(Icons.star, size: 3.5.w, color: const Color(0xFFF59E0B)),
+                                  SizedBox(width: 1.w),
+                                  Text(
+                                    (destination['rating'] as num).toStringAsFixed(1),
+                                    style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
+                                  ),
+                                ]),
+                              ],
                             ],
                           ),
                         ),

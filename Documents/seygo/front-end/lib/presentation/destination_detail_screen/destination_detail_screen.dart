@@ -5,6 +5,8 @@ import 'package:sizer/sizer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_export.dart';
+import '../../data/models/place.dart';
+import '../../data/services/api_service.dart';
 import '../../widgets/custom_icon_widget.dart';
 import './widgets/destination_header_widget.dart';
 import './widgets/destination_info_widget.dart';
@@ -24,6 +26,7 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
   bool _isLoading = false;
   bool _isFavorite = false;
   bool _didLoadArguments = false;
+  bool _isLoadingRelated = false;
   final ScrollController _scrollController = ScrollController();
 
   Map<String, dynamic> _destinationData = {
@@ -172,13 +175,65 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
       if (allDestinations != null && allDestinations.isNotEmpty) {
         _relatedDestinations = allDestinations
             .where((item) => item['id'] != destination!['id'])
-            .take(4)
+            .take(6)
             .map(_buildRelatedDestination)
             .toList();
+      } else {
+        // Fetch real related places from backend after frame is built
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _fetchRelatedPlaces();
+        });
       }
     }
 
     _didLoadArguments = true;
+  }
+
+  Future<void> _fetchRelatedPlaces() async {
+    final category = (_destinationData['category'] ?? '').toString().trim();
+    final district = (_destinationData['district'] ?? '').toString().trim();
+    final currentId = _destinationData['id']?.toString() ?? '';
+
+    if (!mounted) return;
+    setState(() => _isLoadingRelated = true);
+
+    try {
+      List<dynamic> rows = [];
+
+      // 1st try: search by category
+      if (category.isNotEmpty && category != 'unknown') {
+        rows = await ApiService.searchPlacesFromDb(query: category, limit: 8);
+      }
+
+      // 2nd try: search by district if not enough results
+      if (rows.length < 3 && district.isNotEmpty) {
+        final more = await ApiService.searchPlacesFromDb(query: district, limit: 8);
+        rows = [...rows, ...more];
+      }
+
+      // 3rd fallback: just fetch next batch of places
+      if (rows.length < 3) {
+        rows = await ApiService.fetchPlaces(limit: 12, offset: 0);
+      }
+
+      if (!mounted) return;
+
+      final related = rows
+          .whereType<Map>()
+          .map((r) => Map<String, dynamic>.from(r))
+          .where((r) => r['id']?.toString() != currentId &&
+              r['place_id']?.toString() != currentId)
+          .take(6)
+          .map(_buildRelatedDestination)
+          .toList();
+
+      setState(() {
+        if (related.isNotEmpty) _relatedDestinations = related;
+        _isLoadingRelated = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingRelated = false);
+    }
   }
 
   Map<String, dynamic> _buildDestinationData(Map<String, dynamic> destination) {
@@ -290,14 +345,21 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
   }
 
   Map<String, dynamic> _buildRelatedDestination(Map<String, dynamic> destination) {
+    final photoUrl = (destination['imageUrl'] ?? destination['image_url'] ??
+        destination['photo_url'] ?? destination['googleUrl'] ??
+        destination['google_url'])?.toString();
     return {
-      'id': destination['id'],
+      'id': destination['id'] ?? destination['place_id'],
       'name': destination['name'] ?? 'Unknown Place',
-      'location':
-          destination['location'] ?? destination['address'] ?? 'Sri Lanka',
-      'googleUrl': destination['googleUrl'] ?? destination['google_url'],
-      'semanticLabel':
-          destination['semanticLabel'] ?? destination['name'] ?? 'Place photo',
+      'location': destination['location'] ?? destination['city'] ??
+          destination['district'] ?? destination['address'] ?? 'Sri Lanka',
+      'googleUrl': photoUrl,
+      'imageUrl': photoUrl,
+      'image_url': destination['image_url'] ?? destination['photo_url'],
+      'photo_url': destination['photo_url'],
+      'category': destination['category'] ?? destination['primary_category'],
+      'rating': destination['avg_rating'] ?? destination['rating'],
+      'semanticLabel': destination['semanticLabel'] ?? destination['name'] ?? 'Place photo',
     };
   }
 
@@ -720,10 +782,23 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
                   SizedBox(height: 4.h),
 
                   // Related destinations
-                  RelatedDestinationsWidget(
-                    destinations: _relatedDestinations,
-                    onDestinationTap: _handleRelatedDestinationTap,
-                  ),
+                  if (_isLoadingRelated)
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4.w),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Related Destinations', style: theme.textTheme.titleLarge),
+                          SizedBox(height: 2.h),
+                          const Center(child: CircularProgressIndicator()),
+                        ],
+                      ),
+                    )
+                  else if (_relatedDestinations.isNotEmpty)
+                    RelatedDestinationsWidget(
+                      destinations: _relatedDestinations,
+                      onDestinationTap: _handleRelatedDestinationTap,
+                    ),
 
                   SizedBox(height: 4.h),
                 ],
