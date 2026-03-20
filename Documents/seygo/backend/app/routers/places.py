@@ -310,13 +310,8 @@ def get_places_count():
     return {'count': resp.count}
 
 
-_PLACE_COLUMNS = (
-    'id,place_id,name,primary_category,categories,category_confidence,'
-    'lat,lng,latitude,longitude,location,address,formatted_address,'
-    'description,website,google_url,phone_number,opening_hours,'
-    'avg_rating,review_count,types,photo_storage_paths,tags,'
-    'seed_area,status,created_at'
-)
+# Use wildcard — _normalize_place_row handles missing columns gracefully
+_PLACE_COLUMNS = '*'
 
 
 @router.get('/')
