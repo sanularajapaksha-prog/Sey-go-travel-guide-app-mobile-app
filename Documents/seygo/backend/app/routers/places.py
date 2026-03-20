@@ -27,8 +27,7 @@ router = APIRouter(prefix='/places', tags=['places'])
 recommender = PlaceRecommender()
 ml_recommender = MLRecommender()
 google_places_service = GooglePlacesService()
-# Table name in Supabase (typo in original migration, kept as-is).
-PLACES_TABLE = os.getenv('SUPABASE_PLACES_TABLE', 'placses')
+PLACES_TABLE = os.getenv('SUPABASE_PLACES_TABLE', 'tourist_places')
 PHOTOS_BUCKET = os.getenv('SUPABASE_PLACE_PHOTOS_BUCKET', 'place-photos')
 SUPABASE_URL = os.getenv('SUPABASE_URL', '').rstrip('/')
 PHOTOS_PRIVATE = os.getenv('SUPABASE_PLACE_PHOTOS_PRIVATE', 'false').lower() == 'true'
@@ -225,6 +224,9 @@ def _normalize_place_row(supabase, row: dict) -> dict:
     normalized['longitude'] = lng
     normalized['avg_rating'] = _coerce_float(_first_non_empty(row, ['avg_rating', 'rating']), 0.0) or 0.0
     normalized['review_count'] = int(_first_non_empty(row, ['review_count', 'reviews', 'user_rating_count']) or 0)
+    normalized['phone_number'] = _first_non_empty(row, ['phone_number', 'phone', 'contact_number']) or None
+    normalized['opening_hours'] = _first_non_empty(row, ['opening_hours', 'hours', 'business_hours']) or None
+    normalized['website'] = _first_non_empty(row, ['website', 'website_url', 'url']) or None
     return normalized
 
 
@@ -309,9 +311,10 @@ def get_places_count():
 
 
 _PLACE_COLUMNS = (
-    'place_id,name,primary_category,categories,category_confidence,'
-    'lat,lng,latitude,longitude,address,website,google_url,'
-    'avg_rating,review_count,types,photo_storage_paths,'
+    'id,place_id,name,primary_category,categories,category_confidence,'
+    'lat,lng,latitude,longitude,location,address,formatted_address,'
+    'description,website,google_url,phone_number,opening_hours,'
+    'avg_rating,review_count,types,photo_storage_paths,tags,'
     'seed_area,status,created_at'
 )
 

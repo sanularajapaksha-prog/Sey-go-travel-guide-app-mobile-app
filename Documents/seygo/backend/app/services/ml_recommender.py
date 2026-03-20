@@ -413,7 +413,7 @@ def train(supabase) -> _ModelArtifacts:
     # 1. Fetch data
     place_rows: list[dict] = []
     start, step = 0, 1000
-    places_table = os.getenv('SUPABASE_PLACES_TABLE', 'places')
+    places_table = os.getenv('SUPABASE_PLACES_TABLE', 'tourist_places')
     while True:
         resp = supabase.table(places_table).select('*').range(start, start + step - 1).execute()
         batch = resp.data or []
