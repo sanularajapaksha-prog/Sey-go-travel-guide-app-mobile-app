@@ -27,7 +27,7 @@ router = APIRouter(prefix='/places', tags=['places'])
 recommender = PlaceRecommender()
 ml_recommender = MLRecommender()
 google_places_service = GooglePlacesService()
-PLACES_TABLE = os.getenv('SUPABASE_PLACES_TABLE', 'tourist_places')
+PLACES_TABLE = 'tourist_places'
 PHOTOS_BUCKET = os.getenv('SUPABASE_PLACE_PHOTOS_BUCKET', 'place-photos')
 SUPABASE_URL = os.getenv('SUPABASE_URL', '').rstrip('/')
 PHOTOS_PRIVATE = os.getenv('SUPABASE_PLACE_PHOTOS_PRIVATE', 'false').lower() == 'true'

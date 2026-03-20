@@ -503,7 +503,7 @@ class SemanticRecommender:
         return None if self._model == 'unavailable' else self._model
 
     def _fetch_all_places(self, supabase) -> list[dict]:
-        table = os.getenv('SUPABASE_PLACES_TABLE', 'tourist_places')
+        table = 'tourist_places'
         rows: list[dict] = []
         offset, step = 0, 1000
         while True:
