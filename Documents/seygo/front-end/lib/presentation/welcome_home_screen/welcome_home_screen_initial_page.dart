@@ -33,7 +33,7 @@ class _WelcomeHomeScreenInitialPageState
   bool _playlistsLoading = true;
   Map<String, dynamic>? _offlineTrip;
 
-  final List<Map<String, dynamic>> _featuredDestinations = [
+  List<Map<String, dynamic>> _featuredDestinations = [
     {
       "id": 1,
       "name": "Mirissa Beach",
@@ -68,7 +68,7 @@ class _WelcomeHomeScreenInitialPageState
     {"id": "temples", "name": "Temples", "icon": "account_balance"},
   ];
 
-  final List<Map<String, dynamic>> _destinations = [
+  List<Map<String, dynamic>> _destinations = [
     {
       "id": 1,
       "name": "Ella",
@@ -118,14 +118,38 @@ class _WelcomeHomeScreenInitialPageState
       "category": "Mountains",
     },
   ];
+  List<String> _dynamicCategories = [];
 
   List<Map<String, dynamic>> get _filteredDestinations {
-    if (_selectedCategory == 'All') {
-      return _destinations;
-    }
-    return _destinations
-        .where((dest) => dest['category'] == _selectedCategory)
-        .toList();
+    if (_selectedCategory == 'All') return _destinations;
+    return _destinations.where((dest) {
+      final cat = (dest['category'] ?? dest['primary_category'] ?? '').toString();
+      return cat == _selectedCategory;
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> get _displayCategories {
+    final base = <Map<String, dynamic>>[
+      {"name": "All", "icon": "apps"},
+    ];
+    final cats = _dynamicCategories.isNotEmpty
+        ? _dynamicCategories
+        : ["Camping", "Beach Side", "Mountains", "Temples"];
+    base.addAll(cats.map((c) => {"name": c, "icon": _iconForCategory(c)}));
+    return base;
+  }
+
+  String _iconForCategory(String cat) {
+    final c = cat.toLowerCase();
+    if (c.contains('beach') || c.contains('coast')) return 'beach_access';
+    if (c.contains('mountain') || c.contains('hill')) return 'landscape';
+    if (c.contains('temple') || c.contains('religious') || c.contains('sacred')) return 'account_balance';
+    if (c.contains('camp') || c.contains('wildlife') || c.contains('national')) return 'terrain';
+    if (c.contains('ancient') || c.contains('heritage') || c.contains('historic')) return 'castle';
+    if (c.contains('bird') || c.contains('nature')) return 'forest';
+    if (c.contains('water') || c.contains('fall') || c.contains('river')) return 'water';
+    if (c.contains('city') || c.contains('town') || c.contains('urban')) return 'location_city';
+    return 'place';
   }
 
   @override
@@ -133,6 +157,44 @@ class _WelcomeHomeScreenInitialPageState
     super.initState();
     _loadPlaylists();
     _checkOfflineTrip();
+    _loadBackendPlaces();
+  }
+
+  Future<void> _loadBackendPlaces() async {
+    try {
+      final rows = await ApiService.fetchPlaces(limit: 60, offset: 0);
+      if (!mounted) return;
+      final places = rows
+          .whereType<Map>()
+          .map((r) => Map<String, dynamic>.from(r))
+          .toList();
+      if (places.isEmpty) return;
+
+      // Collect unique categories from DB data
+      final catSet = <String>{};
+      for (final p in places) {
+        final cat = (p['category'] ?? p['primary_category'] ?? '').toString().trim();
+        if (cat.isNotEmpty && cat != 'unknown') catSet.add(cat);
+      }
+      final topCats = catSet.take(8).toList();
+
+      // Featured: places that have a photo_url
+      final withPhoto = places
+          .where((p) {
+            final url = (p['photo_url'] ?? p['image_url'] ?? '').toString();
+            return url.startsWith('http');
+          })
+          .take(6)
+          .toList();
+
+      setState(() {
+        if (withPhoto.isNotEmpty) _featuredDestinations = withPhoto;
+        _destinations = places;
+        _dynamicCategories = topCats;
+      });
+    } catch (_) {
+      // Keep static fallback on error
+    }
   }
 
   Future<void> _checkOfflineTrip() async {
@@ -478,11 +540,11 @@ class _WelcomeHomeScreenInitialPageState
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       padding: EdgeInsets.symmetric(horizontal: 4.w),
-                      itemCount: _categories.length,
+                      itemCount: _displayCategories.length,
                       separatorBuilder: (context, index) =>
                           SizedBox(width: 2.w),
                       itemBuilder: (context, index) {
-                        final category = _categories[index];
+                        final category = _displayCategories[index];
                         return CategoryPillWidget(
                           name: category['name'] as String,
                           icon: category['icon'] as String,
