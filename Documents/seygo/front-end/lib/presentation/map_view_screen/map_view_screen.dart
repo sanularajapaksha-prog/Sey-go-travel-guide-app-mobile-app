@@ -8,6 +8,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
+import '../../data/models/place.dart';
 import '../../data/services/api_service.dart';
 import './widgets/destination_bottom_sheet_widget.dart';
 import './widgets/destination_marker_widget.dart';
@@ -484,11 +485,37 @@ class _MapViewScreenState extends State<MapViewScreen> {
       'seed_area': row['seed_area'],
       'google_url': row['google_url'],
       'image_url': row['image_url'],
-      'phone': row['phone_number']?.toString(),
+      'phone': row['phone_number']?.toString() ?? row['phone']?.toString(),
       'website': row['website']?.toString(),
       'opening_hours': row['opening_hours'],
       'tags': row['tags'],
       'categories': row['categories'],
+      // Rich detail fields
+      'district': row['district']?.toString(),
+      'city': row['city']?.toString(),
+      'subcategory': row['subcategory']?.toString(),
+      'price_level': row['price_level']?.toString(),
+      'ai_description': row['ai_description']?.toString(),
+      'safety_tips': row['safety_tips']?.toString(),
+      'crowd_level': row['crowd_level']?.toString(),
+      'best_for': row['best_for']?.toString(),
+      'avoid_if': row['avoid_if']?.toString(),
+      'hidden_gem': row['hidden_gem'],
+      'instagram_worthy': row['instagram_worthy'],
+      'photo_tip': row['photo_tip']?.toString(),
+      'best_time_of_day': row['best_time_of_day']?.toString(),
+      'best_months': row['best_months']?.toString(),
+      'avoid_months': row['avoid_months']?.toString(),
+      'visit_duration_minutes': row['visit_duration_minutes'],
+      'budget_level': row['budget_level']?.toString(),
+      'estimated_cost_usd': row['estimated_cost_usd']?.toString(),
+      'transport_options': row['transport_options']?.toString(),
+      'parking_available': row['parking_available'],
+      'fun_fact': row['fun_fact']?.toString(),
+      'bucket_list_score': row['bucket_list_score'],
+      'wheelchair_accessible': row['wheelchair_accessible'],
+      'child_friendly': row['child_friendly'],
+      'senior_friendly': row['senior_friendly'],
     };
   }
 
@@ -1822,7 +1849,6 @@ class _MapViewScreenState extends State<MapViewScreen> {
     final name = (place['name'] as String?) ?? '';
     final category = (place['category'] as String?) ?? '';
     final rating = (place['rating'] as num?)?.toDouble() ?? 0.0;
-    final googleUrl = place['googleUrl'] as String?;
 
     String distanceLabel = '';
     final centerLat = _activeCenterLat;
@@ -1864,7 +1890,8 @@ class _MapViewScreenState extends State<MapViewScreen> {
                   left: Radius.circular(16),
                 ),
                 child: PlacePhotoWidget(
-                  googleUrl: googleUrl,
+                  place: Place.fromMap(place),
+                  googleUrl: (place['googleUrl'] ?? place['google_url']) as String?,
                   width: 22.w,
                   height: double.infinity,
                   fit: BoxFit.cover,

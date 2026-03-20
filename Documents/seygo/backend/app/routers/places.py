@@ -230,6 +230,32 @@ def _normalize_place_row(supabase, row: dict) -> dict:
     normalized['phone_number'] = _first_non_empty(row, ['phone_number', 'phone', 'contact_number']) or None
     normalized['opening_hours'] = _first_non_empty(row, ['opening_hours', 'hours', 'business_hours']) or None
     normalized['website'] = _first_non_empty(row, ['website', 'website_url', 'url']) or None
+    # Rich detail fields from tourist_places schema
+    normalized['district'] = _first_non_empty(row, ['district']) or None
+    normalized['city'] = _first_non_empty(row, ['city']) or None
+    normalized['subcategory'] = _first_non_empty(row, ['subcategory']) or None
+    normalized['price_level'] = _first_non_empty(row, ['price_level']) or None
+    normalized['ai_description'] = _first_non_empty(row, ['ai_description']) or None
+    normalized['safety_tips'] = _first_non_empty(row, ['safety_tips']) or None
+    normalized['crowd_level'] = _first_non_empty(row, ['crowd_level']) or None
+    normalized['best_for'] = _first_non_empty(row, ['best_for']) or None
+    normalized['avoid_if'] = _first_non_empty(row, ['avoid_if']) or None
+    normalized['hidden_gem'] = row.get('hidden_gem')
+    normalized['instagram_worthy'] = row.get('instagram_worthy')
+    normalized['photo_tip'] = _first_non_empty(row, ['photo_tip']) or None
+    normalized['best_time_of_day'] = _first_non_empty(row, ['best_time_of_day']) or None
+    normalized['best_months'] = _first_non_empty(row, ['best_months']) or None
+    normalized['avoid_months'] = _first_non_empty(row, ['avoid_months']) or None
+    normalized['visit_duration_minutes'] = row.get('visit_duration_minutes')
+    normalized['budget_level'] = _first_non_empty(row, ['budget_level']) or None
+    normalized['estimated_cost_usd'] = _first_non_empty(row, ['estimated_cost_usd']) or None
+    normalized['transport_options'] = _first_non_empty(row, ['transport_options']) or None
+    normalized['parking_available'] = row.get('parking_available')
+    normalized['fun_fact'] = _first_non_empty(row, ['fun_fact']) or None
+    normalized['bucket_list_score'] = row.get('bucket_list_score')
+    normalized['wheelchair_accessible'] = row.get('wheelchair_accessible')
+    normalized['child_friendly'] = row.get('child_friendly')
+    normalized['senior_friendly'] = row.get('senior_friendly')
     return normalized
 
 

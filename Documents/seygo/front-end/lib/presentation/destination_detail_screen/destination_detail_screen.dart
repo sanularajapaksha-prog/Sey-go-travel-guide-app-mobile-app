@@ -206,6 +206,32 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
       'opening_hours': destination['opening_hours'],
       'category': destination['category']?.toString(),
       'tags': destination['tags'],
+      // Rich fields
+      'district': destination['district']?.toString(),
+      'city': destination['city']?.toString(),
+      'subcategory': destination['subcategory']?.toString(),
+      'price_level': destination['price_level']?.toString(),
+      'ai_description': destination['ai_description']?.toString(),
+      'safety_tips': destination['safety_tips']?.toString(),
+      'crowd_level': destination['crowd_level']?.toString(),
+      'best_for': destination['best_for']?.toString(),
+      'avoid_if': destination['avoid_if']?.toString(),
+      'hidden_gem': destination['hidden_gem'],
+      'instagram_worthy': destination['instagram_worthy'],
+      'photo_tip': destination['photo_tip']?.toString(),
+      'best_time_of_day': destination['best_time_of_day']?.toString(),
+      'best_months': destination['best_months']?.toString(),
+      'avoid_months': destination['avoid_months']?.toString(),
+      'visit_duration_minutes': destination['visit_duration_minutes'],
+      'budget_level': destination['budget_level']?.toString(),
+      'estimated_cost_usd': destination['estimated_cost_usd']?.toString(),
+      'transport_options': destination['transport_options']?.toString(),
+      'parking_available': destination['parking_available'],
+      'fun_fact': destination['fun_fact']?.toString(),
+      'bucket_list_score': destination['bucket_list_score'],
+      'wheelchair_accessible': destination['wheelchair_accessible'],
+      'child_friendly': destination['child_friendly'],
+      'senior_friendly': destination['senior_friendly'],
     };
   }
 
@@ -651,6 +677,36 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
                     ),
                   ],
 
+                  // Badges row (hidden gem / instagram worthy / bucket list)
+                  if (_hasBadges()) ...[
+                    SizedBox(height: 3.h),
+                    _buildBadgesSection(theme),
+                  ],
+
+                  // Visit planning section
+                  if (_hasVisitPlanningData()) ...[
+                    SizedBox(height: 3.h),
+                    _buildSectionHeader('Visit Planning', 'calendar_today', theme),
+                    SizedBox(height: 1.5.h),
+                    _buildVisitPlanningSection(theme),
+                  ],
+
+                  // Tips & Insights section
+                  if (_hasTipsData()) ...[
+                    SizedBox(height: 3.h),
+                    _buildSectionHeader('Tips & Insights', 'lightbulb', theme),
+                    SizedBox(height: 1.5.h),
+                    _buildTipsSection(theme),
+                  ],
+
+                  // Accessibility & Family section
+                  if (_hasAccessibilityData()) ...[
+                    SizedBox(height: 3.h),
+                    _buildSectionHeader('Accessibility & Family', 'accessibility', theme),
+                    SizedBox(height: 1.5.h),
+                    _buildAccessibilitySection(theme),
+                  ],
+
                   SizedBox(height: 4.h),
 
                   // Map preview
@@ -676,6 +732,219 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  // ── helpers for conditional sections ──────────────────────────────────────
+
+  bool _isTrue(dynamic v) => v == true;
+  bool _notEmpty(String? s) => s != null && s.trim().isNotEmpty;
+
+  bool _hasBadges() =>
+      _isTrue(_destinationData['hidden_gem']) ||
+      _isTrue(_destinationData['instagram_worthy']) ||
+      (_destinationData['bucket_list_score'] != null);
+
+  bool _hasVisitPlanningData() =>
+      _notEmpty(_destinationData['crowd_level']) ||
+      _notEmpty(_destinationData['best_time_of_day']) ||
+      _notEmpty(_destinationData['best_months']) ||
+      _notEmpty(_destinationData['avoid_months']) ||
+      _destinationData['visit_duration_minutes'] != null ||
+      _notEmpty(_destinationData['budget_level']) ||
+      _notEmpty(_destinationData['estimated_cost_usd']) ||
+      _notEmpty(_destinationData['transport_options']) ||
+      _destinationData['parking_available'] != null ||
+      _notEmpty(_destinationData['price_level']);
+
+  bool _hasTipsData() =>
+      _notEmpty(_destinationData['safety_tips']) ||
+      _notEmpty(_destinationData['best_for']) ||
+      _notEmpty(_destinationData['avoid_if']) ||
+      _notEmpty(_destinationData['photo_tip']) ||
+      _notEmpty(_destinationData['fun_fact']) ||
+      _notEmpty(_destinationData['ai_description']);
+
+  bool _hasAccessibilityData() =>
+      _destinationData['wheelchair_accessible'] != null ||
+      _destinationData['child_friendly'] != null ||
+      _destinationData['senior_friendly'] != null;
+
+  // ── section builders ───────────────────────────────────────────────────────
+
+  Widget _buildSectionHeader(String title, String icon, ThemeData theme) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 4.w),
+      child: Row(
+        children: [
+          CustomIconWidget(iconName: icon, color: theme.colorScheme.primary, size: 5.w),
+          SizedBox(width: 2.w),
+          Text(title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBadgesSection(ThemeData theme) {
+    final badges = <Widget>[];
+    if (_isTrue(_destinationData['hidden_gem']))
+      badges.add(_badge('Hidden Gem', Icons.diamond, const Color(0xFF9C27B0), theme));
+    if (_isTrue(_destinationData['instagram_worthy']))
+      badges.add(_badge('Instagram Worthy', Icons.camera_alt, const Color(0xFFE91E63), theme));
+    final score = _destinationData['bucket_list_score'];
+    if (score != null)
+      badges.add(_badge('Bucket List $score/100', Icons.star, const Color(0xFFFF9800), theme));
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 4.w),
+      child: Wrap(spacing: 2.w, runSpacing: 1.h, children: badges),
+    );
+  }
+
+  Widget _badge(String label, IconData icon, Color color, ThemeData theme) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.8.h),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 4.w, color: color),
+        SizedBox(width: 1.5.w),
+        Text(label, style: theme.textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w600)),
+      ]),
+    );
+  }
+
+  Widget _buildVisitPlanningSection(ThemeData theme) {
+    final items = <Widget>[];
+    final d = _destinationData;
+    if (_notEmpty(d['visit_duration_minutes']?.toString()) || d['visit_duration_minutes'] != null) {
+      final mins = d['visit_duration_minutes'];
+      if (mins != null) {
+        final h = (mins as num).toInt();
+        final label = h >= 60 ? '${h ~/ 60}h ${h % 60}min' : '${h}min';
+        items.add(_infoTile(Icons.schedule, 'Visit Duration', label, theme));
+      }
+    }
+    if (_notEmpty(d['crowd_level']))
+      items.add(_infoTile(Icons.people, 'Crowd Level', d['crowd_level']!, theme));
+    if (_notEmpty(d['best_time_of_day']))
+      items.add(_infoTile(Icons.wb_sunny, 'Best Time of Day', d['best_time_of_day']!, theme));
+    if (_notEmpty(d['best_months']))
+      items.add(_infoTile(Icons.calendar_month, 'Best Months', d['best_months']!, theme));
+    if (_notEmpty(d['avoid_months']))
+      items.add(_infoTile(Icons.event_busy, 'Avoid Months', d['avoid_months']!, theme));
+    if (_notEmpty(d['price_level']))
+      items.add(_infoTile(Icons.attach_money, 'Price Level', d['price_level']!, theme));
+    if (_notEmpty(d['budget_level']))
+      items.add(_infoTile(Icons.account_balance_wallet, 'Budget', d['budget_level']!, theme));
+    if (_notEmpty(d['estimated_cost_usd']))
+      items.add(_infoTile(Icons.payments, 'Est. Cost', '\$${d['estimated_cost_usd']}', theme));
+    if (_notEmpty(d['transport_options']))
+      items.add(_infoTile(Icons.directions_bus, 'Transport', d['transport_options']!, theme));
+    if (d['parking_available'] != null)
+      items.add(_infoTile(Icons.local_parking, 'Parking',
+          d['parking_available'] == true ? 'Available' : 'Not Available', theme));
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 4.w),
+      child: Column(children: items),
+    );
+  }
+
+  Widget _buildTipsSection(ThemeData theme) {
+    final items = <Widget>[];
+    final d = _destinationData;
+    if (_notEmpty(d['ai_description']))
+      items.add(_tipCard(Icons.auto_awesome, 'AI Summary', d['ai_description']!, const Color(0xFF2196F3), theme));
+    if (_notEmpty(d['best_for']))
+      items.add(_tipCard(Icons.thumb_up, 'Best For', d['best_for']!, const Color(0xFF4CAF50), theme));
+    if (_notEmpty(d['avoid_if']))
+      items.add(_tipCard(Icons.info_outline, 'Avoid If', d['avoid_if']!, const Color(0xFFFF9800), theme));
+    if (_notEmpty(d['safety_tips']))
+      items.add(_tipCard(Icons.health_and_safety, 'Safety Tips', d['safety_tips']!, const Color(0xFFE53935), theme));
+    if (_notEmpty(d['photo_tip']))
+      items.add(_tipCard(Icons.photo_camera, 'Photo Tip', d['photo_tip']!, const Color(0xFF9C27B0), theme));
+    if (_notEmpty(d['fun_fact']))
+      items.add(_tipCard(Icons.lightbulb, 'Fun Fact', d['fun_fact']!, const Color(0xFFFF9800), theme));
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 4.w),
+      child: Column(children: items),
+    );
+  }
+
+  Widget _buildAccessibilitySection(ThemeData theme) {
+    final d = _destinationData;
+    final chips = <Widget>[];
+    void addChip(String label, IconData icon, dynamic val) {
+      if (val == null) return;
+      final yes = val == true;
+      chips.add(_accessChip(label, icon, yes, theme));
+    }
+    addChip('Wheelchair Access', Icons.accessible, d['wheelchair_accessible']);
+    addChip('Child Friendly', Icons.child_care, d['child_friendly']);
+    addChip('Senior Friendly', Icons.elderly, d['senior_friendly']);
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 4.w),
+      child: Wrap(spacing: 2.w, runSpacing: 1.h, children: chips),
+    );
+  }
+
+  Widget _infoTile(IconData icon, String label, String value, ThemeData theme) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 1.2.h),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(icon, size: 4.5.w, color: theme.colorScheme.secondary),
+        SizedBox(width: 3.w),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label, style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w600)),
+          SizedBox(height: 0.3.h),
+          Text(value, style: theme.textTheme.bodyMedium),
+        ])),
+      ]),
+    );
+  }
+
+  Widget _tipCard(IconData icon, String label, String value, Color color, ThemeData theme) {
+    return Container(
+      width: double.infinity,
+      margin: EdgeInsets.only(bottom: 1.5.h),
+      padding: EdgeInsets.all(3.w),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.25)),
+      ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(icon, size: 5.w, color: color),
+        SizedBox(width: 3.w),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label, style: theme.textTheme.labelMedium?.copyWith(
+              color: color, fontWeight: FontWeight.w700)),
+          SizedBox(height: 0.4.h),
+          Text(value, style: theme.textTheme.bodyMedium),
+        ])),
+      ]),
+    );
+  }
+
+  Widget _accessChip(String label, IconData icon, bool yes, ThemeData theme) {
+    final color = yes ? const Color(0xFF4CAF50) : theme.colorScheme.onSurfaceVariant.withOpacity(0.4);
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.8.h),
+      decoration: BoxDecoration(
+        color: yes ? const Color(0xFF4CAF50).withOpacity(0.1) : theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 4.w, color: color),
+        SizedBox(width: 1.5.w),
+        Text(label, style: theme.textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w600)),
+        SizedBox(width: 1.w),
+        Icon(yes ? Icons.check_circle : Icons.cancel, size: 3.5.w, color: color),
+      ]),
     );
   }
 
