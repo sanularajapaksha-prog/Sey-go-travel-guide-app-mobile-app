@@ -195,10 +195,13 @@ def _normalize_place_row(supabase, row: dict) -> dict:
     photo_public_urls: list[str] = []
 
     normalized['photo_public_urls'] = photo_public_urls
-    normalized['image_url'] = None
+    # Use photo_url from DB if it's a valid HTTP URL
+    raw_photo = _first_non_empty(row, ['photo_url', 'image_url', 'place_url'])
+    db_photo_url = raw_photo if (isinstance(raw_photo, str) and raw_photo.strip().startswith('http')) else None
+    normalized['image_url'] = db_photo_url
+    normalized['photo_url'] = db_photo_url
     normalized['image_source'] = _first_non_empty(row, ['image_source'])
     normalized['photo_last_checked'] = _first_non_empty(row, ['photo_last_checked'])
-    normalized['photo_url'] = None
     normalized['name'] = str(_first_non_empty(row, ['name', 'place_name', 'title']) or '')
     normalized['primary_category'] = _resolve_primary_category(row)
     normalized['category'] = normalized['primary_category']

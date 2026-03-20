@@ -183,6 +183,7 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
 
   Map<String, dynamic> _buildDestinationData(Map<String, dynamic> destination) {
     final googleUrl = (destination['googleUrl'] ?? destination['google_url'])?.toString();
+    final photoUrl = (destination['imageUrl'] ?? destination['image_url'] ?? destination['photo_url'] ?? googleUrl)?.toString();
     return {
       'id': destination['id'],
       'name': destination['name'] ?? 'Unknown Place',
@@ -192,7 +193,7 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
       'longitude': _toDouble(destination['longitude']) ?? 80.7718,
       'images': [
         {
-          'googleUrl': googleUrl,
+          'googleUrl': photoUrl,
           'semanticLabel': destination['semanticLabel'] ?? destination['name'] ?? 'Place photo',
         },
       ],

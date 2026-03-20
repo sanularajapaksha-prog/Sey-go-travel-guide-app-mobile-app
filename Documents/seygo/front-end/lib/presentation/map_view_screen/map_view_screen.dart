@@ -708,7 +708,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
   }
 
   String? _extractImageUrl(Map<String, dynamic> row) {
-    final rawValue = (row['imageUrl'] ?? row['image_url']).toString().trim();
+    final rawValue = (row['imageUrl'] ?? row['image_url'] ?? row['photo_url'] ?? '').toString().trim();
     if (rawValue.isEmpty) {
       return null;
     }
