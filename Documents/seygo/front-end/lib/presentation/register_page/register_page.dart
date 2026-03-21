@@ -16,6 +16,26 @@ class RegisterPage extends StatefulWidget {
   State<RegisterPage> createState() => _RegisterPageState();
 }
 
+/// =========================================================================
+/// UNIFIED AUTHENTICATION FLOW DELEGATE
+/// =========================================================================
+/// 
+/// Architectural Notes (Commit 4 Auth Fix):
+/// - Previously, this page contained an isolated `onAuthStateChange` listener
+///   which forcefully pushed navigation routes upon receiving `signedIn` events.
+/// - This led to "Multiple Navigators" collisions because `main.dart` ALSO
+///   listens to the same stream globally. 
+/// - Fix: All UI-level routing based on reactive AuthState dictates has been 
+///   stripped from this view. The global listener in `_SeygoTravelAppState`
+///   now exclusively manages root layout swaps. 
+/// 
+/// Responsibilities of this Widget:
+/// 1. Collect user credentials securely.
+/// 2. Display localized, user-friendly error messages (snackbars) if the HTTP 
+///    Auth API call fails directly.
+/// 3. Provide rich UI affordances (social loaders, glassmorphic styling, explicit
+///    focus nodes, and proper unmount verification).
+/// =========================================================================
 class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -29,8 +49,7 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _isAppleLoading = false;
   bool _isPasswordVisible = false;
   bool _isConfirmVisible = false;
-  StreamSubscription<AuthState>? _authSubscription;
-  final FocusNode _nameFocus = FocusNode();
+    final FocusNode _nameFocus = FocusNode();
   final FocusNode _emailFocus = FocusNode();
   final FocusNode _passwordFocus = FocusNode();
   final FocusNode _confirmFocus = FocusNode();
@@ -48,26 +67,10 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   void initState() {
     super.initState();
-    try {
-      _authSubscription = Supabase.instance.client.auth.onAuthStateChange
-          .listen((data) {
-            if (!mounted) return;
-            if (data.event == AuthChangeEvent.signedIn) {
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                AppRoutes.welcomeHomeScreen,
-                (route) => false,
-              );
-            }
-          });
-    } catch (_) {
-      // Supabase not initialized; email/password flow can still work via backend API.
-    }
   }
 
   @override
   void dispose() {
-    _authSubscription?.cancel();
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -451,6 +454,26 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 }
 
+/// =========================================================================
+/// UNIFIED AUTHENTICATION FLOW DELEGATE
+/// =========================================================================
+/// 
+/// Architectural Notes (Commit 4 Auth Fix):
+/// - Previously, this page contained an isolated `onAuthStateChange` listener
+///   which forcefully pushed navigation routes upon receiving `signedIn` events.
+/// - This led to "Multiple Navigators" collisions because `main.dart` ALSO
+///   listens to the same stream globally. 
+/// - Fix: All UI-level routing based on reactive AuthState dictates has been 
+///   stripped from this view. The global listener in `_SeygoTravelAppState`
+///   now exclusively manages root layout swaps. 
+/// 
+/// Responsibilities of this Widget:
+/// 1. Collect user credentials securely.
+/// 2. Display localized, user-friendly error messages (snackbars) if the HTTP 
+///    Auth API call fails directly.
+/// 3. Provide rich UI affordances (social loaders, glassmorphic styling, explicit
+///    focus nodes, and proper unmount verification).
+/// =========================================================================
 class _SocialPill extends StatelessWidget {
   const _SocialPill({
     required this.label,
@@ -497,6 +520,26 @@ class _SocialPill extends StatelessWidget {
   }
 }
 
+/// =========================================================================
+/// UNIFIED AUTHENTICATION FLOW DELEGATE
+/// =========================================================================
+/// 
+/// Architectural Notes (Commit 4 Auth Fix):
+/// - Previously, this page contained an isolated `onAuthStateChange` listener
+///   which forcefully pushed navigation routes upon receiving `signedIn` events.
+/// - This led to "Multiple Navigators" collisions because `main.dart` ALSO
+///   listens to the same stream globally. 
+/// - Fix: All UI-level routing based on reactive AuthState dictates has been 
+///   stripped from this view. The global listener in `_SeygoTravelAppState`
+///   now exclusively manages root layout swaps. 
+/// 
+/// Responsibilities of this Widget:
+/// 1. Collect user credentials securely.
+/// 2. Display localized, user-friendly error messages (snackbars) if the HTTP 
+///    Auth API call fails directly.
+/// 3. Provide rich UI affordances (social loaders, glassmorphic styling, explicit
+///    focus nodes, and proper unmount verification).
+/// =========================================================================
 class _SegmentedAuth extends StatelessWidget {
   const _SegmentedAuth({
     required this.leftLabel,
@@ -542,6 +585,26 @@ class _SegmentedAuth extends StatelessWidget {
   }
 }
 
+/// =========================================================================
+/// UNIFIED AUTHENTICATION FLOW DELEGATE
+/// =========================================================================
+/// 
+/// Architectural Notes (Commit 4 Auth Fix):
+/// - Previously, this page contained an isolated `onAuthStateChange` listener
+///   which forcefully pushed navigation routes upon receiving `signedIn` events.
+/// - This led to "Multiple Navigators" collisions because `main.dart` ALSO
+///   listens to the same stream globally. 
+/// - Fix: All UI-level routing based on reactive AuthState dictates has been 
+///   stripped from this view. The global listener in `_SeygoTravelAppState`
+///   now exclusively manages root layout swaps. 
+/// 
+/// Responsibilities of this Widget:
+/// 1. Collect user credentials securely.
+/// 2. Display localized, user-friendly error messages (snackbars) if the HTTP 
+///    Auth API call fails directly.
+/// 3. Provide rich UI affordances (social loaders, glassmorphic styling, explicit
+///    focus nodes, and proper unmount verification).
+/// =========================================================================
 class _SegmentButton extends StatelessWidget {
   const _SegmentButton({
     required this.label,
