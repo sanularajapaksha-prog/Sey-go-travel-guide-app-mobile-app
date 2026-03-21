@@ -96,7 +96,7 @@ class _ProfilePreferencesWidgetState extends State<ProfilePreferencesWidget> {
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         itemCount: _availableStyles.length,
-        separatorBuilder: (_, __) => SizedBox(width: 2.w),
+        separatorBuilder: (context, index) => SizedBox(width: 2.w),
         itemBuilder: (context, index) {
           final style = _availableStyles[index];
           final isSelected = _selectedStyle == style;

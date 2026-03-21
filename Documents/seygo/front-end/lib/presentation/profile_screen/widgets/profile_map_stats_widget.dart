@@ -205,11 +205,12 @@ class _ProfileMapStatsWidgetState extends State<ProfileMapStatsWidget>
       ),
       itemCount: widget.activeProvinces.length,
       itemBuilder: (context, index) {
+        final theme = Theme.of(context);
         final province = widget.activeProvinces[index];
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: theme.scaffoldBackgroundColor, // Assuming theme is inherited contextually 
+            color: theme.scaffoldBackgroundColor,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppTheme.dividerLight.withOpacity(0.5)),
           ),

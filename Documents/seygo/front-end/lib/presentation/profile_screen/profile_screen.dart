@@ -1,10 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:sizer/sizer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/services/api_service.dart';
+import '../../providers/user_data_provider.dart';
 import '../../theme/app_theme.dart';
 import 'profile_modals.dart';
 import 'widgets/profile_badges_widget.dart';
@@ -48,6 +50,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _playlistsLoading = true;
   bool _statsLoading = true;
   bool _avatarUploading = false;
+  bool _initialized = false;
 
   // ── data ─────────────────────────────────────────────────────────────────────
   List<Map<String, dynamic>> _userPlaylists = [];
@@ -78,13 +81,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
     'Relaxation & Spa': ['Wellness', 'Beach Side', 'Spa'],
   };
 
-  List<String> get _interestLabels =>
-      _styleChips[_travelStyle] ?? ['Camping', 'Mountains', 'Beach Side'];
-
   @override
   void initState() {
     super.initState();
-    _loadAll();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _initialized = true;
+      _seedFromCache();
+      _loadAll();
+    }
+  }
+
+  /// Instantly populates fields from pre-fetched cache so the screen renders
+  /// without a spinner on first open. [_loadAll] still runs in background to
+  /// get the freshest data from the server.
+  void _seedFromCache() {
+    final udp = Provider.of<UserDataProvider>(context, listen: false);
+    final profile = udp.profile;
+    if (profile != null) {
+      _displayName = (profile['full_name'] as String?)?.isNotEmpty == true
+          ? profile['full_name'] as String
+          : (profile['email'] as String? ?? '');
+      _email = profile['email'] as String? ?? '';
+      _homeCity = profile['home_city'] as String? ?? '';
+      _bio = profile['bio'] as String? ?? '';
+      _travelStyle = profile['travel_style'] as String? ?? '';
+      final av = profile['avatar_url'] as String?;
+      if (av != null && av.isNotEmpty) _avatarPath = av;
+      _profileLoading = false;
+    }
+    if (udp.myPlaylistsLoaded) {
+      _userPlaylists = udp.myPlaylists;
+      _playlistsLoading = false;
+    }
+    if (udp.statsLoaded) {
+      _stats = udp.stats;
+      _statsLoading = false;
+    }
   }
 
   // ── load everything in parallel ──────────────────────────────────────────────
@@ -491,179 +528,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ── badge card ───────────────────────────────────────────────────────────────
-  Widget _buildBadgeCard(bool isCompact) {
-    // Badge title/description derived from travel style
-    final badgeTitle = _travelStyle.isNotEmpty ? _travelStyle : 'Explorer';
-    final badgeDesc = _travelStyle.isNotEmpty
-        ? 'Your travel style is set to $_travelStyle.'
-        : 'Complete your profile to unlock your travel badge.';
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(
-        horizontal: isCompact ? 5.w : 6.w,
-        vertical: isCompact ? 2.2.h : 2.8.h,
-      ),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF4FA3D1), AppTheme.secondaryLight],
-        ),
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.secondaryLight.withOpacity(0.18),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  badgeTitle,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: isCompact ? 18.sp : 21.sp,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                SizedBox(height: isCompact ? 0.8.h : 1.2.h),
-                Text(
-                  badgeDesc,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.94),
-                    fontSize: isCompact ? 12.6.sp : 15.sp,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(width: isCompact ? 3.w : 4.w),
-          Container(
-            width: isCompact ? 12.w : 11.w,
-            height: isCompact ? 12.w : 11.w,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.16),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.terrain_rounded,
-              color: Colors.white,
-              size: isCompact ? 6.w : 5.2.w,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── interest chips (from travel_style) ───────────────────────────────────────
-  Widget _buildInterestChips(bool isCompact) {
-    final labels = _interestLabels;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: List.generate(labels.length, (i) {
-        final selected = i == 0; // first chip is the primary style
-        return Container(
-          width: isCompact ? 22.5.w : 24.5.w,
-          padding:
-              EdgeInsets.symmetric(vertical: isCompact ? 1.05.h : 1.35.h),
-          decoration: BoxDecoration(
-            color: selected ? _chipFill : Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: _border),
-          ),
-          child: Center(
-            child: Text(
-              labels[i],
-              style: TextStyle(
-                fontSize: isCompact ? 11.5.sp : 14.5.sp,
-                color: _text,
-              ),
-            ),
-          ),
-        );
-      }),
-    );
-  }
-
-  // ── activity summary (real stats) ────────────────────────────────────────────
-  Widget _buildSummaryCard(bool isCompact) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.fromLTRB(
-        isCompact ? 4.w : 5.w,
-        isCompact ? 1.8.h : 2.2.h,
-        isCompact ? 4.w : 5.w,
-        isCompact ? 1.8.h : 2.2.h,
-      ),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceLight,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(
-            'Activity Summary',
-            style: TextStyle(
-              fontSize: isCompact ? 15.5.sp : 17.sp,
-              fontWeight: FontWeight.w700,
-              color: _text,
-            ),
-          ),
-          SizedBox(height: isCompact ? 1.6.h : 2.2.h),
-          _statsLoading
-              ? const SizedBox(
-                  height: 48,
-                  child: Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                )
-              : Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _StatTile(
-                      value: '${_stats['places'] ?? 0}',
-                      label: 'Places',
-                      compact: isCompact,
-                    ),
-                    _StatTile(
-                      value: '${_stats['playlists'] ?? 0}',
-                      label: 'Journeys',
-                      compact: isCompact,
-                    ),
-                    _StatTile(
-                      value: '${_stats['reviews'] ?? 0}',
-                      label: 'Reviews',
-                      compact: isCompact,
-                    ),
-                    _StatTile(
-                      value: '${_stats['photos'] ?? 0}',
-                      label: 'Photos',
-                      compact: isCompact,
-                    ),
-                  ],
-                ),
-        ],
-      ),
-    );
-  }
-
   // ── your playlists (real data) ───────────────────────────────────────────────
   Widget _buildPlaylistsCard(bool isCompact) {
     return Container(
@@ -922,49 +786,3 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-// ── supporting widgets ────────────────────────────────────────────────────────
-
-class _StatTile extends StatelessWidget {
-  final String value;
-  final String label;
-  final bool compact;
-
-  const _StatTile({
-    required this.value,
-    required this.label,
-    this.compact = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: compact ? 14.5.w : 15.8.w,
-      padding: EdgeInsets.symmetric(vertical: compact ? 1.5.h : 2.1.h),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceLight,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.dividerLight),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: compact ? 15.5.sp : 18.sp,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.tertiaryLight,
-            ),
-          ),
-          SizedBox(height: compact ? 0.8.h : 1.2.h),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: compact ? 9.2.sp : 11.5.sp,
-              color: AppTheme.neutralLight,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

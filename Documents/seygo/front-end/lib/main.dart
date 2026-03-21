@@ -9,11 +9,16 @@ import 'package:provider/provider.dart';
 import 'package:sizer/sizer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:http/http.dart' as http;
+
 import 'core/app_export.dart'; // AppRoutes
+import 'data/services/api_service.dart';
 import 'providers/theme_provider.dart';
 import 'providers/font_scale_provider.dart';
 import 'providers/favorites_provider.dart';
 import 'providers/locale_provider.dart';
+import 'providers/places_provider.dart';
+import 'providers/user_data_provider.dart';
 import 'widgets/custom_error_widget.dart';
 
 /// Global navigator key allows us to navigate context-free from anywhere,
@@ -45,9 +50,12 @@ Future<void> main() async {
   // 2. Safely initialize backend services.
   await _initializeSupabaseSafely();
 
+  // 3. Fire-and-forget backend warm-up so Railway wakes before first user action.
+  _warmUpBackend();
+
   bool hasShownError = false;
 
-  // 3. Custom global error boundary to catch Flutter rendering errors.
+  // 4. Custom global error boundary to catch Flutter rendering errors.
   ErrorWidget.builder = (FlutterErrorDetails details) {
     AppLogger.error('Flutter global error caught', details.exception, details.stack);
     if (!hasShownError) {
@@ -78,10 +86,29 @@ Future<void> main() async {
           },
         ),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
+        ChangeNotifierProvider(create: (_) => PlacesProvider()),
+        ChangeNotifierProvider(create: (_) => UserDataProvider()),
       ],
       child: const SeygoTravelApp(),
     ),
   );
+}
+
+/// Pings the backend health endpoint so Railway wakes up before the user
+/// tries to load data. Fire-and-forget — errors are silently ignored.
+void _warmUpBackend() {
+  final apiUrl = (dotenv.env['API_BASE_URL'] ?? '').trim();
+  if (apiUrl.isEmpty) return;
+  // ignore: avoid_dynamic_calls
+  Future(() async {
+    try {
+      final uri = Uri.parse('$apiUrl/health');
+      await http.get(uri).timeout(const Duration(seconds: 30));
+      AppLogger.info('Backend warm-up ping sent.');
+    } catch (_) {
+      // Intentionally silent — this is best-effort only.
+    }
+  });
 }
 
 /// Robust environment initialization. Validates key configuration.
@@ -182,7 +209,15 @@ class _SeygoTravelAppState extends State<SeygoTravelApp> {
           (route) => false,
         );
       }
+      // Preload all auth-dependent data and rebuild search index in background.
+      final token = Supabase.instance.client.auth.currentSession?.accessToken;
+      if (token != null) {
+        ApiService.rebuildSearchIndex(accessToken: token);
+        Provider.of<UserDataProvider>(context, listen: false).preload(token);
+      }
     } else if (event == AuthChangeEvent.signedOut || event == AuthChangeEvent.userDeleted) {
+      // Clear stale user data so it isn't shown on the next login.
+      Provider.of<UserDataProvider>(context, listen: false).invalidate();
       if (currentRoute != AppRoutes.loginPage) {
         appNavigatorKey.currentState?.pushNamedAndRemoveUntil(
           AppRoutes.loginPage,

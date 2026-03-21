@@ -129,7 +129,7 @@ class ProfileActivityWidget extends StatelessWidget {
               height: 12.h,
               width: double.infinity,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              errorBuilder: (context, error, stack) => const SizedBox.shrink(),
             ),
           Padding(
             padding: const EdgeInsets.all(16.0),

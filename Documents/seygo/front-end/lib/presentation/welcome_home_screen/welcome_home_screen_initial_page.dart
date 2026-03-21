@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
 import 'package:sizer/sizer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -7,6 +8,8 @@ import '../../core/app_export.dart';
 import '../../data/models/place.dart';
 import '../../data/services/api_service.dart';
 import '../../data/services/offline_trip_service.dart';
+import '../../providers/places_provider.dart';
+import '../../providers/user_data_provider.dart';
 import '../../widgets/custom_icon_widget.dart';
 import '../trip_summary/trip_summary_overview_screen.dart';
 import './widgets/category_pill_widget.dart';
@@ -119,6 +122,7 @@ class _WelcomeHomeScreenInitialPageState
     },
   ];
   List<String> _dynamicCategories = [];
+  bool _initialized = false;
 
   List<Map<String, dynamic>> get _filteredDestinations {
     if (_selectedCategory == 'All') return _destinations;
@@ -155,46 +159,61 @@ class _WelcomeHomeScreenInitialPageState
   @override
   void initState() {
     super.initState();
-    _loadPlaylists();
     _checkOfflineTrip();
-    _loadBackendPlaces();
   }
 
-  Future<void> _loadBackendPlaces() async {
-    try {
-      final rows = await ApiService.fetchPlaces(limit: 60, offset: 0);
-      if (!mounted) return;
-      final places = rows
-          .whereType<Map>()
-          .map((r) => Map<String, dynamic>.from(r))
-          .toList();
-      if (places.isEmpty) return;
-
-      // Collect unique categories from DB data
-      final catSet = <String>{};
-      for (final p in places) {
-        final cat = (p['category'] ?? p['primary_category'] ?? '').toString().trim();
-        if (cat.isNotEmpty && cat != 'unknown') catSet.add(cat);
-      }
-      final topCats = catSet.take(8).toList();
-
-      // Featured: places that have a photo_url
-      final withPhoto = places
-          .where((p) {
-            final url = (p['photo_url'] ?? p['image_url'] ?? '').toString();
-            return url.startsWith('http');
-          })
-          .take(6)
-          .toList();
-
-      setState(() {
-        if (withPhoto.isNotEmpty) _featuredDestinations = withPhoto;
-        _destinations = places;
-        _dynamicCategories = topCats;
-      });
-    } catch (_) {
-      // Keep static fallback on error
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _initialized = true;
+      _loadPlacesFromProvider();
+      _loadPlaylistsFromProvider();
     }
+  }
+
+  /// Reads places from [PlacesProvider] cache (pre-fetched at app start).
+  /// Falls back to a direct API call only if the cache isn't ready yet.
+  Future<void> _loadPlacesFromProvider() async {
+    final provider = Provider.of<PlacesProvider>(context, listen: false);
+
+    List<dynamic> rows;
+    if (provider.isLoaded && provider.rawRows.isNotEmpty) {
+      rows = provider.rawRows;
+    } else {
+      // Cache not ready — fetch directly (rare: user opened home very fast)
+      try {
+        rows = await ApiService.fetchPlaces(limit: 60, offset: 0);
+      } catch (_) {
+        return;
+      }
+    }
+
+    if (!mounted) return;
+    final places = rows
+        .whereType<Map>()
+        .map((r) => Map<String, dynamic>.from(r))
+        .toList();
+    if (places.isEmpty) return;
+
+    final catSet = <String>{};
+    for (final p in places) {
+      final cat = (p['category'] ?? p['primary_category'] ?? '').toString().trim();
+      if (cat.isNotEmpty && cat != 'unknown') catSet.add(cat);
+    }
+    final withPhoto = places
+        .where((p) {
+          final url = (p['photo_url'] ?? p['image_url'] ?? '').toString();
+          return url.startsWith('http');
+        })
+        .take(6)
+        .toList();
+
+    setState(() {
+      if (withPhoto.isNotEmpty) _featuredDestinations = withPhoto;
+      _destinations = places;
+      _dynamicCategories = catSet.take(8).toList();
+    });
   }
 
   Future<void> _checkOfflineTrip() async {
@@ -251,9 +270,21 @@ class _WelcomeHomeScreenInitialPageState
     super.dispose();
   }
 
-  Future<void> _loadPlaylists() async {
-    final token =
-        Supabase.instance.client.auth.currentSession?.accessToken;
+  /// On first call reads from [UserDataProvider] cache (pre-fetched at login).
+  /// When called from pull-to-refresh, always re-fetches from the network.
+  Future<void> _loadPlaylistsFromProvider({bool forceRefresh = false}) async {
+    final udp = Provider.of<UserDataProvider>(context, listen: false);
+    if (!forceRefresh && udp.featuredPlaylistsLoaded) {
+      if (mounted) {
+        setState(() {
+          _playlists = udp.featuredPlaylists;
+          _playlistsLoading = false;
+        });
+      }
+      return;
+    }
+    // Cache not ready or explicit refresh — fetch from network.
+    final token = Supabase.instance.client.auth.currentSession?.accessToken;
     final result = await ApiService.fetchPlaylists(accessToken: token);
     if (mounted) {
       setState(() {
@@ -262,6 +293,9 @@ class _WelcomeHomeScreenInitialPageState
       });
     }
   }
+
+  // Called by pull-to-refresh — always hits the network.
+  Future<void> _loadPlaylists() => _loadPlaylistsFromProvider(forceRefresh: true);
 
   @override
   Widget build(BuildContext context) {

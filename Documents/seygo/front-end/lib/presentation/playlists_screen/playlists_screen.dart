@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:sizer/sizer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_export.dart';
 import '../../data/services/api_service.dart';
+import '../../providers/user_data_provider.dart';
 import '../../widgets/custom_icon_widget.dart';
 import '../playlist_details/playlist_details_screen.dart';
 import './widgets/create_playlist_dialog.dart';
@@ -24,11 +26,20 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
   List<Map<String, dynamic>> _playlists = [];
   List<Map<String, dynamic>> _filteredPlaylists = [];
   bool _isSearching = false;
+  bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
-    _loadPlaylists();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _initialized = true;
+      _loadPlaylists();
+    }
   }
 
   @override
@@ -37,7 +48,17 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
     super.dispose();
   }
 
-  Future<void> _loadPlaylists() async {
+  Future<void> _loadPlaylists({bool forceRefresh = false}) async {
+    final udp = Provider.of<UserDataProvider>(context, listen: false);
+    if (!forceRefresh && udp.myPlaylistsLoaded) {
+      if (mounted) {
+        setState(() {
+          _playlists = udp.myPlaylists;
+          _filteredPlaylists = udp.myPlaylists;
+        });
+      }
+      return;
+    }
     final token = Supabase.instance.client.auth.currentSession?.accessToken;
     final data = await ApiService.fetchMyPlaylists(accessToken: token);
     if (mounted) {
@@ -74,7 +95,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
   }
 
   Future<void> _refreshPlaylists() async {
-    await _loadPlaylists();
+    await _loadPlaylists(forceRefresh: true);
   }
 
   void _createPlaylist() async {
@@ -95,7 +116,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
       if (!mounted) return;
 
       if (created != null) {
-        await _loadPlaylists();
+        await _loadPlaylists(forceRefresh: true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Playlist "${result['name']}" created'),
@@ -139,7 +160,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
       if (!mounted) return;
 
       if (ok) {
-        await _loadPlaylists();
+        await _loadPlaylists(forceRefresh: true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Playlist "${result['name']}" updated'),
@@ -198,7 +219,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
                 );
                 if (!mounted) return;
                 if (ok) {
-                  await _loadPlaylists();
+                  await _loadPlaylists(forceRefresh: true);
                   if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
