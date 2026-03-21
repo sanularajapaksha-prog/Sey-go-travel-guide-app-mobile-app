@@ -970,8 +970,10 @@ class ApiService {
       final response = await http
           .post(uri, headers: headers, body: jsonEncode({'place_id': placeId}))
           .timeout(const Duration(seconds: 15));
+      debugPrint('[addDest] playlist=$playlistId place=$placeId → ${response.statusCode} ${response.body}');
       return response.statusCode == 201;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[addDest] playlist=$playlistId place=$placeId → ERROR $e');
       return false;
     }
   }

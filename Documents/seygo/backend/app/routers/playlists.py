@@ -232,22 +232,27 @@ async def add_destination(
     user=Depends(get_current_user),
 ):
     supabase = _sb()
+    logger.info('add_destination: playlist_id=%r user=%s', playlist_id, getattr(user, 'id', '?'))
     owner_row = _assert_owner(supabase, playlist_id, user)
     # Use the actual id value from the DB row so the type (UUID vs int) is correct.
     actual_playlist_id = owner_row.get('id', playlist_id)
+    logger.info('add_destination: owner found, actual_playlist_id=%r', actual_playlist_id)
 
     pid = body.resolved_place_id
+    logger.info('add_destination: resolved place_id=%r', pid)
     if not pid:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Provide place_id or destination_id.',
         )
 
-    try:
+    # Try insertion with the typed id first; if that fails with a type error,
+    # fall back to the string form so PostgREST can coerce it.
+    def _try_insert(pid_value):
         existing = (
             supabase.table(PLAYLIST_DESTINATIONS_TABLE)
             .select('id')
-            .eq('playlist_id', actual_playlist_id)
+            .eq('playlist_id', pid_value)
             .eq('place_id', pid)
             .execute()
         )
@@ -256,20 +261,28 @@ async def add_destination(
                 status_code=status.HTTP_409_CONFLICT,
                 detail='Destination already in playlist.',
             )
-
-        response = (
+        return (
             supabase.table(PLAYLIST_DESTINATIONS_TABLE)
-            .insert({'playlist_id': actual_playlist_id, 'place_id': pid})
+            .insert({'playlist_id': pid_value, 'place_id': pid})
             .execute()
         )
+
+    try:
+        response = _try_insert(actual_playlist_id)
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error('add_destination failed playlist=%s place=%s: %s', actual_playlist_id, pid, exc)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail='Failed to add destination to playlist.',
-        )
+        logger.warning('add_destination typed insert failed (%s), retrying with string', exc)
+        try:
+            response = _try_insert(str(playlist_id))
+        except HTTPException:
+            raise
+        except Exception as exc2:
+            logger.error('add_destination failed playlist=%s place=%s: %s', playlist_id, pid, exc2)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='Failed to add destination to playlist.',
+            )
 
     if not response.data:
         raise HTTPException(
