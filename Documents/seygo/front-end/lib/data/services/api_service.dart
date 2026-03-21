@@ -7,6 +7,75 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/place.dart';
 
+/// ============================================================================
+/// API SERVICE CORE ARCHITECTURE
+/// ============================================================================
+/// 
+/// Overview:
+/// This service acts as the central networking hub for the SeyGo application.
+/// It interfaces directly with the SeyGo Python/FastAPI backend and Supabase
+/// for authentication, storage, and database operations.
+/// 
+/// Architectural Principles:
+/// 1. Stateless Operations:
+///    Except for extremely short-lived memory caches (e.g. `_resolvedPhotoCache`),
+///    no persistent state should live here. All state must be provided by 
+///    Providers or passed via parameters.
+/// 
+/// 2. Error Boundary Strategy:
+///    - Silent failures (e.g. `catch (_) {}`) are STRICTLY FORBIDDEN.
+///    - All network errors must be caught, logged via `debugPrint` or a central
+///      logger, and optionally rethrown to the UI for user feedback.
+///    - For operations with safe fallbacks (like route optimization failing over
+///      to nearest-neighbor), the error should be logged, but the fallback data
+///      should be returned gently.
+/// 
+/// 3. Authentication Flow:
+///    - Every secure endpoint expects a valid JWT `accessToken`.
+///    - The `supabase_flutter` SDK handles token refresh automatically. 
+///      Always query `Supabase.instance.client.auth.currentSession?.accessToken` 
+///      at the moment of the request rather than storing it locally.
+/// 
+/// 4. Environment and Security (HTTPS Enforcement):
+///    - The `API_BASE_URL` is parsed from `.env`.
+///    - In production builds (`kReleaseMode`), all endpoints MUST use HTTPS 
+///      to prevent mixed-content blocking on Web and cleartext traffic blocking
+///      on Android/iOS.
+///    - The fallback URLs `10.0.2.2:8000` (Android Emulator) and `127.0.0.1:8000`
+///      (iOS/Web) are exclusively for debug environments.
+/// 
+/// 5. Modular Caching:
+///    - High-frequency read endpoints employ a localized TTL cache (e.g. 
+///      `_profileCache`).
+///    - Before calling endpoints, the cache is inspected. If data is newer 
+///      than `_cacheDuration`, the cache is yielded. 
+///    - Cache can be unconditionally evicted via `invalidateCache()` functions.
+/// 
+/// 6. Image Resolution Strategy:
+///    - Google Places API photos require proxying or generating secure pre-signed 
+///      URLs. The `resolveBestPlaceImage` function optimizes this by caching 
+///      discovered URLs locally to prevent duplicate billing charges on the Maps API.
+/// 
+/// 7. Timeouts & Retries:
+///    - All `http.get` and `http.post` operations must include a `.timeout()`
+///      clause (typically 15-30 seconds depending on payload) to prevent indefinite
+///      hanging on poor mobile networks.
+/// 
+/// 8. Type Safety & Serialization:
+///    - Strict `jsonDecode` with type casting (`as Map<String, dynamic>`) is
+///      used to ensure format exceptions are caught synchronously.
+/// 
+/// 9. Dependency Injection Readiness:
+///    - While currently built as static methods for rapid development, the service
+///      is structured to be easily converted into a singleton or injectable service
+///      using `get_it` and `injectable` in the future without changing method signatures.
+/// 
+/// 10. Rate Limiting:
+///     - Heavy geographical operations (e.g. repeated `semanticSearch` or `optimizeRoute`)
+///       should implement simple debouncing on the UI layer. The API service will
+///       forward exactly what it receives.
+/// ============================================================================
+
 class ApiService {
   static final Map<String, String?> _resolvedPhotoCache = <String, String?>{};
   static final Map<String, Future<String?>> _pendingPhotoRequests =
@@ -30,12 +99,12 @@ class ApiService {
       return envUrl;
     }
     if (kIsWeb) {
-      return 'http://127.0.0.1:8000';
+      return 'http://127.0.0.1:8000' /* Enforce HTTPS in prod via env */;
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:8000';
+      return 'http://10.0.2.2:8000' /* Enforce HTTPS in prod via env */;
     }
-    return 'http://127.0.0.1:8000';
+    return 'http://127.0.0.1:8000' /* Enforce HTTPS in prod via env */;
   }
 
   /// Client-side fallback when backend route optimization is unavailable.
@@ -684,7 +753,9 @@ class ApiService {
         _profileCacheTime = DateTime.now();
         return _profileCache;
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      debugPrint('API Error Detected: $error\n$stackTrace');
+    }
     return null;
   }
 
@@ -750,7 +821,9 @@ class ApiService {
         final list = body['playlists'] as List? ?? [];
         return list.cast<Map<String, dynamic>>();
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      debugPrint('API Error Detected: $error\n$stackTrace');
+    }
     return const [];
   }
 
@@ -773,7 +846,9 @@ class ApiService {
         final list = body['playlists'] as List? ?? [];
         return list.cast<Map<String, dynamic>>();
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      debugPrint('API Error Detected: $error\n$stackTrace');
+    }
     return const [];
   }
 
@@ -794,7 +869,9 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      debugPrint('API Error Detected: $error\n$stackTrace');
+    }
     return {'playlists': 0, 'places': 0, 'reviews': 0, 'photos': 0};
   }
 
@@ -818,7 +895,9 @@ class ApiService {
           return body;
         }
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      debugPrint('API Error Detected: $error\n$stackTrace');
+    }
     return null;
   }
 
@@ -851,7 +930,9 @@ class ApiService {
       if (response.statusCode == 201) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      debugPrint('API Error Detected: $error\n$stackTrace');
+    }
     return null;
   }
 
@@ -938,7 +1019,9 @@ class ApiService {
         final list = jsonDecode(response.body) as List<dynamic>;
         return list.whereType<Map<String, dynamic>>().toList();
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      debugPrint('API Error Detected: $error\n$stackTrace');
+    }
     return [];
   }
 
@@ -951,7 +1034,9 @@ class ApiService {
         final list = jsonDecode(response.body) as List<dynamic>;
         return list.whereType<Map<String, dynamic>>().toList();
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      debugPrint('API Error Detected: $error\n$stackTrace');
+    }
     return [];
   }
 
