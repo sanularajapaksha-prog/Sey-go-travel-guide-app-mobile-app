@@ -49,6 +49,7 @@ class DestinationMarkerWidget extends StatelessWidget {
                 child: PlacePhotoWidget(
                   place: place,
                   googleUrl: destination['google_url'] ?? destination['googleUrl'],
+                  fallbackImageUrl: destination['image_url'] ?? destination['imageUrl'],
                   width: 22.w,
                   height: 22.w,
                   fit: BoxFit.cover,

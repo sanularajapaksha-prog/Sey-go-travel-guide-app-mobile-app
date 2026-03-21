@@ -59,6 +59,7 @@ class DestinationBottomSheetWidget extends StatelessWidget {
             child: PlacePhotoWidget(
               place: place,
               googleUrl: destination['google_url'] ?? destination['googleUrl'],
+              fallbackImageUrl: destination['image_url'] ?? destination['imageUrl'],
               width: 90.w,
               height: 25.h,
               fit: BoxFit.cover,

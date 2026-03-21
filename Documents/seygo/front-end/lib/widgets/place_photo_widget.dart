@@ -4,12 +4,14 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../data/models/place.dart';
 import '../data/services/api_service.dart';
+import 'custom_image_widget.dart';
 
 class PlacePhotoWidget extends StatefulWidget {
   const PlacePhotoWidget({
     super.key,
     this.place,
     this.googleUrl,
+    this.fallbackImageUrl,
     this.width,
     this.height,
     this.fit,
@@ -19,6 +21,8 @@ class PlacePhotoWidget extends StatefulWidget {
 
   final Place? place;
   final String? googleUrl;
+  /// Shown when Google photo resolution fails, before the sad-face/grey fallback.
+  final String? fallbackImageUrl;
   final double? width;
   final double? height;
   final BoxFit? fit;
@@ -137,6 +141,17 @@ class _PlacePhotoWidgetState extends State<PlacePhotoWidget> {
   }
 
   Widget _fallback() {
+    final fallbackUrl = widget.fallbackImageUrl;
+    if (fallbackUrl != null && fallbackUrl.isNotEmpty) {
+      return CustomImageWidget(
+        imageUrl: fallbackUrl,
+        width: widget.width,
+        height: widget.height,
+        fit: widget.fit,
+        semanticLabel: widget.semanticLabel,
+      );
+    }
+
     if (widget.useSadFaceFallback) {
       final fallbackSize = _safePlaceholderSize();
       return SizedBox(

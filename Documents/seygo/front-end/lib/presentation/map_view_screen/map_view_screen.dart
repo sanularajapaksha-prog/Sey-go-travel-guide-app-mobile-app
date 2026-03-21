@@ -5,11 +5,13 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
 import '../../data/models/place.dart';
 import '../../data/services/api_service.dart';
+import '../../providers/places_provider.dart';
 import './widgets/destination_bottom_sheet_widget.dart';
 import './widgets/destination_marker_widget.dart';
 import './widgets/map_filter_widget.dart';
@@ -58,6 +60,9 @@ class _MapViewScreenState extends State<MapViewScreen> {
 
   // Place cards strip at bottom of map
   late final PageController _placeCardPageController;
+
+  // Guards didChangeDependencies so _initializeMap runs only once
+  bool _initialized = false;
 
   // Mock destination data with geographic coordinates
   final List<Map<String, dynamic>> _destinations = [
@@ -211,7 +216,15 @@ class _MapViewScreenState extends State<MapViewScreen> {
   void initState() {
     super.initState();
     _placeCardPageController = PageController(viewportFraction: 0.88);
-    _initializeMap();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _initialized = true;
+      _initializeMap();
+    }
   }
 
   @override
@@ -224,13 +237,77 @@ class _MapViewScreenState extends State<MapViewScreen> {
   }
 
   Future<void> _initializeMap() async {
+    final provider = Provider.of<PlacesProvider>(context, listen: false);
     try {
-      await _loadPlacesFromBackend();
-      await _getCurrentLocation();
+      // Run places fetch and location lookup in parallel to halve wait time.
+      await Future.wait([
+        _loadPlacesFromProvider(provider),
+        _getCurrentLocation(),
+      ]);
       await _createMarkers();
-      setState(() => _isLoading = false);
-    } catch (e) {
-      setState(() => _isLoading = false);
+    } catch (_) {
+      // Silently continue — partial data is better than nothing.
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Uses the pre-fetched cache from [PlacesProvider] when available,
+  /// waits for it if still loading, or falls back to a direct API call.
+  Future<void> _loadPlacesFromProvider(PlacesProvider provider) async {
+    if (provider.isLoaded) {
+      _applyRawRows(provider.rawRows);
+      return;
+    }
+
+    if (provider.isLoading) {
+      // Wait for the background fetch that started at app launch to finish.
+      final completer = Completer<void>();
+      late VoidCallback listener;
+      listener = () {
+        if (!provider.isLoading) {
+          provider.removeListener(listener);
+          if (!completer.isCompleted) completer.complete();
+        }
+      };
+      provider.addListener(listener);
+      if (!provider.isLoading) {
+        // Finished between our check and addListener — clean up immediately.
+        provider.removeListener(listener);
+      } else {
+        await completer.future;
+      }
+      _applyRawRows(provider.rawRows);
+      return;
+    }
+
+    // Not loaded and not loading (e.g. failed silently) — fetch directly.
+    await _loadPlacesFromBackend();
+  }
+
+  /// Applies raw API rows to [_destinations] via the existing mapping logic.
+  void _applyRawRows(List<dynamic> rawRows) {
+    if (!mounted || rawRows.isEmpty) return;
+    final mapped = rawRows
+        .whereType<Map>()
+        .toList()
+        .asMap()
+        .entries
+        .map((e) => _mapPlaceRow(Map<String, dynamic>.from(e.value), e.key))
+        .whereType<Map<String, dynamic>>()
+        .toList();
+    if (mapped.isNotEmpty && mounted) {
+      setState(() {
+        _destinations
+          ..clear()
+          ..addAll(mapped);
+        _usingBackendPlaces = true;
+        _placesLoadError = null;
+        if (_selectedCategory != 'All' &&
+            !_availableCategories.contains(_selectedCategory)) {
+          _selectedCategory = 'All';
+        }
+      });
     }
   }
 
@@ -283,6 +360,20 @@ class _MapViewScreenState extends State<MapViewScreen> {
 
   Future<void> _getCurrentLocation() async {
     try {
+      // Use the position pre-fetched at app start when available.
+      final cached =
+          Provider.of<PlacesProvider>(context, listen: false).cachedPosition;
+      if (cached != null) {
+        if (mounted) {
+          setState(() {
+            _hasLocationPermission = true;
+            _currentPosition = cached;
+          });
+          _panToCurrentLocationOnce();
+        }
+        return;
+      }
+
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         setState(() => _hasLocationPermission = false);
@@ -503,7 +594,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
       'seedArea': (row['seed_area'] ?? '').toString(),
       'seed_area': row['seed_area'],
       'google_url': row['google_url'],
-      'image_url': row['image_url'],
+      'image_url': _extractImageUrl({'image_url': row['image_url']}),
       'phone': row['phone_number']?.toString() ?? row['phone']?.toString(),
       'website': row['website']?.toString(),
       'opening_hours': row['opening_hours'],
@@ -755,13 +846,12 @@ class _MapViewScreenState extends State<MapViewScreen> {
 
   String? _extractImageUrl(Map<String, dynamic> row) {
     final rawValue = (row['imageUrl'] ?? row['image_url'] ?? row['photo_url'] ?? '').toString().trim();
-    if (rawValue.isEmpty) {
-      return null;
-    }
-    if (rawValue.startsWith('http://') || rawValue.startsWith('https://')) {
-      return rawValue;
-    }
-    return null;
+    if (rawValue.isEmpty) return null;
+    if (!rawValue.startsWith('http://') && !rawValue.startsWith('https://')) return null;
+    // Filter known-broken image sources (same list as Place._normalizeHttpUrl)
+    final lower = rawValue.toLowerCase();
+    if (lower.contains('source.unsplash.com') || lower.contains('example.com')) return null;
+    return rawValue;
   }
 
   List<String> _asStringList(dynamic value) {
@@ -976,7 +1066,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
       );
       final rawResults = (searchResp['results'] as List?)?.cast<Map>() ?? [];
 
-      final mapped = rawResults
+      var mapped = rawResults
           .map((item) => _mapPlaceRow(Map<String, dynamic>.from(item), 0))
           .whereType<Map<String, dynamic>>()
           .where(
@@ -985,6 +1075,28 @@ class _MapViewScreenState extends State<MapViewScreen> {
                 (item['longitude'] as double) != 0.0,
           )
           .toList();
+
+      // Fallback: semantic index not ready — query DB keyword search too
+      if (mapped.isEmpty) {
+        try {
+          final dbResults = await ApiService.searchPlacesFromDb(
+            query: query,
+            latitude: _currentPosition?.latitude,
+            longitude: _currentPosition?.longitude,
+            radiusKm: 500,
+            limit: 12,
+          );
+          mapped = dbResults
+              .whereType<Map>()
+              .map((item) => _mapPlaceRow(Map<String, dynamic>.from(item), 0))
+              .whereType<Map<String, dynamic>>()
+              .where((item) =>
+                  (item['latitude'] as double) != 0.0 ||
+                  (item['longitude'] as double) != 0.0)
+              .toList();
+        } catch (_) {}
+      }
+
       final merged = <Map<String, dynamic>>[...local, ...mapped];
       final dedup = <String, Map<String, dynamic>>{};
       for (final item in merged) {
@@ -1046,10 +1158,29 @@ class _MapViewScreenState extends State<MapViewScreen> {
         topN: 100,
       );
       final rawPlaces = (searchResp['results'] as List?)?.cast<Map>() ?? [];
-      final mapped = rawPlaces
+      var mapped = rawPlaces
           .map((item) => _mapPlaceRow(Map<String, dynamic>.from(item), 0))
           .whereType<Map<String, dynamic>>()
           .toList();
+
+      // Fallback: semantic index not ready — query DB keyword search too
+      if (mapped.isEmpty) {
+        try {
+          final dbResults = await ApiService.searchPlacesFromDb(
+            query: query,
+            latitude: _currentPosition?.latitude,
+            longitude: _currentPosition?.longitude,
+            radiusKm: _selectedRadiusKm,
+            limit: 50,
+          );
+          mapped = dbResults
+              .whereType<Map>()
+              .map((item) => _mapPlaceRow(Map<String, dynamic>.from(item), 0))
+              .whereType<Map<String, dynamic>>()
+              .toList();
+        } catch (_) {}
+      }
+
       final merged = <Map<String, dynamic>>[...local, ...mapped];
       final dedup = <String, Map<String, dynamic>>{};
       for (final item in merged) {
@@ -1614,18 +1745,14 @@ class _MapViewScreenState extends State<MapViewScreen> {
     final cards = _filteredDestinations;
     final hasCards = cards.isNotEmpty;
 
-    if (_isLoading) {
-      return Center(
-        child: CircularProgressIndicator(color: theme.colorScheme.primary),
-      );
-    }
-
     return Stack(
       children: [
         GoogleMap(
           initialCameraPosition: CameraPosition(
-            target: _defaultSriLankaCenter,
-            zoom: 8.0,
+            target: _currentPosition != null
+                ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+                : _defaultSriLankaCenter,
+            zoom: _currentPosition != null ? 12.0 : 8.0,
           ),
           markers: _markers,
           circles: Set<Circle>.from(_circles),
@@ -1647,6 +1774,42 @@ class _MapViewScreenState extends State<MapViewScreen> {
           tiltGesturesEnabled: true,
           zoomGesturesEnabled: true,
         ),
+
+        // Small loading indicator while places/markers are being prepared
+        if (_isLoading)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              child: Center(
+                child: Container(
+                  margin: EdgeInsets.only(top: 1.h),
+                  padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.8.h),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8)],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                      SizedBox(width: 2.w),
+                      Text('Loading places…', style: theme.textTheme.labelSmall),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
 
         // Place cards strip at bottom
         if (hasCards)
