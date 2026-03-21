@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -8,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/services/api_service.dart';
 import '../../data/services/offline_trip_service.dart';
+import '../../providers/user_data_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/place_photo_widget.dart';
 
@@ -877,6 +879,11 @@ class _TripSummaryOverviewScreenState extends State<TripSummaryOverviewScreen> {
         setState(() => _isSavingPlaylist = false);
       }
       return;
+    }
+
+    // Invalidate cache so Playlists tab fetches fresh data on next visit.
+    if (mounted) {
+      Provider.of<UserDataProvider>(context, listen: false).invalidate();
     }
 
     final playlistId = playlist['id']?.toString() ?? '';
