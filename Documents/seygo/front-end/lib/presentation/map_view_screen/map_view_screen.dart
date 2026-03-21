@@ -1040,6 +1040,8 @@ class _MapViewScreenState extends State<MapViewScreen> {
           _searchSuggestions = [];
           _apiSearchPlaces = [];
           _searchCenter = null;
+          _showRadiusCircle = false;
+          _circles = {};
         });
         await _createMarkers();
         return;
@@ -1224,12 +1226,15 @@ class _MapViewScreenState extends State<MapViewScreen> {
         _detectedCategory = (searchResp['detected_category'] as String?)?.isNotEmpty == true
             ? searchResp['detected_category'] as String
             : null;
-        if (semanticCenter != null) _searchCenter = semanticCenter;
+        if (semanticCenter != null) {
+          _searchCenter = semanticCenter;
+          _showRadiusCircle = true; // auto-activate circle on search
+        }
       });
       await _createMarkers();
 
       if (semanticCenter != null && _mapController != null) {
-        if (_showRadiusCircle) _updateRadiusCircle();
+        _updateRadiusCircle();
         _mapController?.animateCamera(
           CameraUpdate.newLatLngZoom(
             semanticCenter,
@@ -1240,8 +1245,11 @@ class _MapViewScreenState extends State<MapViewScreen> {
         final first = ranked.first;
         final lat = first['latitude'] as double;
         final lon = first['longitude'] as double;
-        setState(() => _searchCenter = LatLng(lat, lon));
-        if (_showRadiusCircle) _updateRadiusCircle();
+        setState(() {
+          _searchCenter = LatLng(lat, lon);
+          _showRadiusCircle = true; // auto-activate circle on search
+        });
+        _updateRadiusCircle();
         // Fit camera to show ALL result markers, not just the first one
         final visiblePoints = _filteredDestinations
             .map((p) => LatLng(
@@ -1275,9 +1283,10 @@ class _MapViewScreenState extends State<MapViewScreen> {
           setState(() {
             _geocodedPin = geo;
             _searchCenter = pinCenter;
+            _showRadiusCircle = true; // auto-activate circle on geocoded location
             _markers.add(pinMarker);
           });
-          if (_showRadiusCircle) _updateRadiusCircle();
+          _updateRadiusCircle();
           _mapController?.animateCamera(
             CameraUpdate.newLatLngZoom(
               pinCenter,
@@ -1298,8 +1307,11 @@ class _MapViewScreenState extends State<MapViewScreen> {
           final first = local.first;
           final lat = first['latitude'] as double;
           final lon = first['longitude'] as double;
-          setState(() => _searchCenter = LatLng(lat, lon));
-          if (_showRadiusCircle) _updateRadiusCircle();
+          setState(() {
+            _searchCenter = LatLng(lat, lon);
+            _showRadiusCircle = true;
+          });
+          _updateRadiusCircle();
           final pts = local
               .map((p) => LatLng(
                     (p['latitude'] as num).toDouble(),
@@ -1333,6 +1345,13 @@ class _MapViewScreenState extends State<MapViewScreen> {
     setState(() {
       _selectedRadiusKm = radiusKm;
       _showRadiusCircle = true;
+      // If no search center yet, anchor the circle to the user's GPS position.
+      if (_searchCenter == null && _currentPosition != null) {
+        _searchCenter = LatLng(
+          _currentPosition!.latitude,
+          _currentPosition!.longitude,
+        );
+      }
     });
     _updateRadiusCircle();
     _createMarkers().then((_) {
@@ -1424,19 +1443,19 @@ class _MapViewScreenState extends State<MapViewScreen> {
   List<Map<String, dynamic>> _applyRadiusFilter(
     List<Map<String, dynamic>> places,
   ) {
-    if (_searchCenter == null) {
-      return places;
-    }
+    // Only filter when the user has actively turned on the radius circle.
+    if (!_showRadiusCircle) return places;
+
+    // Use searched location first, then GPS position as fallback center.
     final centerLat = _activeCenterLat;
     final centerLon = _activeCenterLon;
-    if (centerLat == null || centerLon == null) {
-      return places;
-    }
+    if (centerLat == null || centerLon == null) return places;
+
     return places.where((place) {
-      final lat = place['latitude'] as double;
-      final lon = place['longitude'] as double;
-      final distance = _haversineKm(centerLat, centerLon, lat, lon);
-      return distance <= _selectedRadiusKm;
+      final lat = (place['latitude'] as num?)?.toDouble();
+      final lon = (place['longitude'] as num?)?.toDouble();
+      if (lat == null || lon == null) return false;
+      return _haversineKm(centerLat, centerLon, lat, lon) <= _selectedRadiusKm;
     }).toList();
   }
 
@@ -1568,6 +1587,8 @@ class _MapViewScreenState extends State<MapViewScreen> {
                                         _searchSuggestions = [];
                                         _apiSearchPlaces = [];
                                         _searchCenter = null;
+                                        _showRadiusCircle = false;
+                                        _circles = {};
                                       });
                                       _createMarkers();
                                     },
