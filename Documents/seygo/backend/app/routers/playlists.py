@@ -246,20 +246,15 @@ async def add_destination(
             detail='Provide place_id or destination_id.',
         )
 
-    # Build candidate (playlist_id_value, place_id_value) pairs to try in order:
-    # 1. typed DB id + string place_id
-    # 2. string playlist_id + string place_id
-    # 3/4. same but with int-coerced place_id (if pid looks numeric)
+    # playlist_places.playlist_id is TEXT (works with both UUID and bigint playlists).
+    # Always use the string form.  Try place_id as string first; if numeric, also try int.
+    _pl_str = str(actual_playlist_id)   # e.g. "28" or "uuid-string"
     _pid_int = int(pid) if str(pid).strip().isdigit() else None
     _candidates = [
-        (actual_playlist_id, pid),
-        (str(playlist_id), pid),
+        (_pl_str, pid),             # primary attempt: string playlist_id, string place_id
     ]
     if _pid_int is not None:
-        _candidates += [
-            (actual_playlist_id, _pid_int),
-            (str(playlist_id), _pid_int),
-        ]
+        _candidates.append((_pl_str, _pid_int))   # string playlist_id, int place_id
 
     last_exc: Exception | None = None
     for pl_id_val, place_id_val in _candidates:
@@ -417,18 +412,20 @@ def _playlist_cover_image(name: str, description: str | None) -> str:
     return f'https://source.unsplash.com/featured/1200x800/?{query}'
 
 
-def _fetch_playlist_places(supabase, playlist_id: str) -> list[dict]:
+def _fetch_playlist_places(supabase, playlist_id) -> list[dict]:
+    # playlist_places.playlist_id is TEXT — always query with string form.
+    pl_id_str = str(playlist_id)
     try:
         relation_rows = (
             supabase.table('playlist_places')
             .select('*')
-            .eq('playlist_id', playlist_id)
+            .eq('playlist_id', pl_id_str)
             .execute()
             .data
             or []
         )
     except Exception as exc:
-        logger.warning('playlist_places query failed for %s: %s', playlist_id, exc)
+        logger.warning('playlist_places query failed for %s: %s', pl_id_str, exc)
         return []
 
     if not relation_rows:

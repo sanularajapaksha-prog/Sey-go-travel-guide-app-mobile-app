@@ -81,10 +81,14 @@ create policy "Owners can delete playlists" on public.playlists for delete
 
 -- ============================================================
 -- 3. playlist_places
+-- Uses text for playlist_id so it works whether playlists.id
+-- is UUID or bigint (production tables often differ from migrations).
 -- ============================================================
-create table if not exists public.playlist_places (
+drop table if exists public.playlist_places cascade;
+
+create table public.playlist_places (
   id           uuid primary key default gen_random_uuid(),
-  playlist_id  uuid not null references public.playlists(id) on delete cascade,
+  playlist_id  text not null,
   place_id     text not null,
   notes        text,
   distance_km  float,
@@ -104,13 +108,13 @@ drop policy if exists "Playlist owners can manage places"            on public.p
 create policy "Playlist places inherit playlist read access" on public.playlist_places for select
   using (exists (
     select 1 from public.playlists pl
-    where pl.id = playlist_id
+    where pl.id::text = playlist_id
       and ((pl.status = 'active' and pl.visibility = 'public') or pl.user_id = auth.uid())
   ));
 create policy "Playlist owners can manage places" on public.playlist_places for all
   using (exists (
     select 1 from public.playlists pl
-    where pl.id = playlist_id and pl.user_id = auth.uid()
+    where pl.id::text = playlist_id and pl.user_id = auth.uid()
   ));
 
 -- Auto-sync places_count
@@ -118,9 +122,9 @@ create or replace function public.sync_playlist_places_count()
 returns trigger language plpgsql security definer as $$
 begin
   if TG_OP = 'INSERT' then
-    update public.playlists set places_count = places_count + 1 where id = new.playlist_id;
+    update public.playlists set places_count = places_count + 1 where id::text = new.playlist_id;
   elsif TG_OP = 'DELETE' then
-    update public.playlists set places_count = greatest(places_count - 1, 0) where id = old.playlist_id;
+    update public.playlists set places_count = greatest(places_count - 1, 0) where id::text = old.playlist_id;
   end if;
   return null;
 end;
