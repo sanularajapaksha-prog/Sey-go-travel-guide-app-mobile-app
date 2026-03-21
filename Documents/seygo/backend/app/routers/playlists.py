@@ -324,11 +324,14 @@ async def get_playlist_destinations(
     user=Depends(get_current_user),
 ):
     supabase = _sb()
-    _assert_owner(supabase, playlist_id, user)
+    owner_row = _assert_owner(supabase, playlist_id, user)
+    # Use the actual DB id value (same as add_destination does) so the
+    # TEXT playlist_id column is matched correctly for both UUID and bigint PKs.
+    actual_playlist_id = str(owner_row.get('id', playlist_id))
     response = (
         supabase.table(PLAYLIST_DESTINATIONS_TABLE)
         .select(f'*, {PLACES_TABLE}(*)')
-        .eq('playlist_id', playlist_id)
+        .eq('playlist_id', actual_playlist_id)
         .execute()
     )
     return {'destinations': response.data or []}
