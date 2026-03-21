@@ -67,11 +67,11 @@ class FavoritesProvider extends ChangeNotifier {
       } else {
         // Data format unexpected, clear immediately
         await prefs.remove(_prefsKey);
-        debugPrint('Favs format corrupted. Wiped.');
+        if (kDebugMode) debugPrint('Favs format corrupted. Wiped.');
       }
     } catch (e, stack) {
       // Severe string parsing corruption, clean slate
-      debugPrint('Favorites decoding failed: $e, $stack');
+      if (kDebugMode) debugPrint('Favorites decoding failed: $e, $stack');
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove(_prefsKey);
@@ -87,7 +87,7 @@ class FavoritesProvider extends ChangeNotifier {
         jsonEncode(_favorites.map((f) => f.toJson()).toList()),
       );
     } catch (e) {
-      debugPrint('Serialization failed for favorites: $e');
+      if (kDebugMode) debugPrint('Serialization failed for favorites: $e');
     }
   }
 

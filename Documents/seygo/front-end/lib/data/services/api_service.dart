@@ -773,7 +773,7 @@ class ApiService {
         return _profileCache;
       }
     } catch (error, stackTrace) {
-      debugPrint('API Error Detected: $error\n$stackTrace');
+      if (kDebugMode) debugPrint('API Error Detected: $error\n$stackTrace');
     }
     return null;
   }
@@ -841,7 +841,7 @@ class ApiService {
         return list.cast<Map<String, dynamic>>();
       }
     } catch (error, stackTrace) {
-      debugPrint('API Error Detected: $error\n$stackTrace');
+      if (kDebugMode) debugPrint('API Error Detected: $error\n$stackTrace');
     }
     return const [];
   }
@@ -866,7 +866,7 @@ class ApiService {
         return list.cast<Map<String, dynamic>>();
       }
     } catch (error, stackTrace) {
-      debugPrint('API Error Detected: $error\n$stackTrace');
+      if (kDebugMode) debugPrint('API Error Detected: $error\n$stackTrace');
     }
     return const [];
   }
@@ -889,7 +889,7 @@ class ApiService {
         return jsonDecode(response.body) as Map<String, dynamic>;
       }
     } catch (error, stackTrace) {
-      debugPrint('API Error Detected: $error\n$stackTrace');
+      if (kDebugMode) debugPrint('API Error Detected: $error\n$stackTrace');
     }
     return {'playlists': 0, 'places': 0, 'reviews': 0, 'photos': 0};
   }
@@ -915,7 +915,7 @@ class ApiService {
         }
       }
     } catch (error, stackTrace) {
-      debugPrint('API Error Detected: $error\n$stackTrace');
+      if (kDebugMode) debugPrint('API Error Detected: $error\n$stackTrace');
     }
     return null;
   }
@@ -950,7 +950,7 @@ class ApiService {
         return jsonDecode(response.body) as Map<String, dynamic>;
       }
     } catch (error, stackTrace) {
-      debugPrint('API Error Detected: $error\n$stackTrace');
+      if (kDebugMode) debugPrint('API Error Detected: $error\n$stackTrace');
     }
     return null;
   }
@@ -970,10 +970,10 @@ class ApiService {
       final response = await http
           .post(uri, headers: headers, body: jsonEncode({'place_id': placeId}))
           .timeout(const Duration(seconds: 15));
-      debugPrint('[addDest] playlist=$playlistId place=$placeId → ${response.statusCode} ${response.body}');
+      if (kDebugMode) debugPrint('[addDest] playlist=$playlistId place=$placeId → ${response.statusCode} ${response.body}');
       return response.statusCode == 201;
     } catch (e) {
-      debugPrint('[addDest] playlist=$playlistId place=$placeId → ERROR $e');
+      if (kDebugMode) debugPrint('[addDest] playlist=$playlistId place=$placeId → ERROR $e');
       return false;
     }
   }
@@ -1041,7 +1041,7 @@ class ApiService {
         return list.whereType<Map<String, dynamic>>().toList();
       }
     } catch (error, stackTrace) {
-      debugPrint('API Error Detected: $error\n$stackTrace');
+      if (kDebugMode) debugPrint('API Error Detected: $error\n$stackTrace');
     }
     return [];
   }
@@ -1056,7 +1056,7 @@ class ApiService {
         return list.whereType<Map<String, dynamic>>().toList();
       }
     } catch (error, stackTrace) {
-      debugPrint('API Error Detected: $error\n$stackTrace');
+      if (kDebugMode) debugPrint('API Error Detected: $error\n$stackTrace');
     }
     return [];
   }
