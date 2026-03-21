@@ -292,11 +292,14 @@ class _MapViewScreenState extends State<MapViewScreen> {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
+        if (!mounted) return; // BUG FIX
         if (permission == LocationPermission.denied) {
           setState(() => _hasLocationPermission = false);
           return;
         }
       }
+
+      if (!mounted) return; // BUG FIX
 
       if (permission == LocationPermission.deniedForever) {
         setState(() => _hasLocationPermission = false);
@@ -310,6 +313,8 @@ class _MapViewScreenState extends State<MapViewScreen> {
           accuracy: LocationAccuracy.high,
         ),
       );
+      
+      if (!mounted) return; // BUG FIX
 
       setState(() => _currentPosition = position);
       _panToCurrentLocationOnce();
@@ -341,6 +346,20 @@ class _MapViewScreenState extends State<MapViewScreen> {
     return 0.0; // no clustering at zoom 14+
   }
 
+  /// =========================================================================
+  /// CORE MAP RENDERING ENGINE
+  /// =========================================================================
+  /// Handles the generation, clustering, and optimization of Google Map Markers.
+  /// 
+  /// Architectural Notes:
+  /// - Uses a primitive grid-based clustering algorithm to group markers that
+  ///   fall within the same geographical lat/lng bounding box.
+  /// - To prevent UI thread starvation, `await _buildClusterIcon` generates
+  ///   bitmaps asynchronously. (In a v2 update, this should be parallelized for
+  ///   massive sets).
+  /// - Custom markers are utilized depending on place categories for high-fidelity
+  ///   visuals rather than default red pins.
+  /// =========================================================================
   Future<void> _createMarkers() async {
     final places = _filteredDestinations;
     final precision = _gridPrecision(_currentZoom);

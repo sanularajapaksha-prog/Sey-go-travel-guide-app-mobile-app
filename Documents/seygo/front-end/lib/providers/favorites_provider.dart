@@ -1,6 +1,5 @@
 import 'dart:collection';
 import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -45,24 +44,38 @@ class FavoritesProvider extends ChangeNotifier {
 
   final List<FavoritePlace> _favorites = [];
 
-  UnmodifiableListView<FavoritePlace> get favorites =>
-      UnmodifiableListView(_favorites);
+  UnmodifiableListView<FavoritePlace> get favorites => UnmodifiableListView(_favorites);
 
   int get count => _favorites.length;
 
   /// Call once at startup to restore persisted favorites.
+  /// BUG FIX: Handle data corruption actively by erasing the faulty key 
+  /// instead of ignoring it, which prevents recurrent loss of state.
   Future<void> loadFromPrefs() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_prefsKey);
-      if (raw == null) return;
-      final list = (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
-      _favorites
-        ..clear()
-        ..addAll(list.map(FavoritePlace.fromJson));
-      notifyListeners();
-    } catch (_) {
-      // Ignore corrupt data
+      if (raw == null || raw.trim().isEmpty) return;
+
+      final dynamic decoded = jsonDecode(raw);
+      if (decoded is List) {
+        final list = decoded.cast<Map<String, dynamic>>();
+        _favorites
+          ..clear()
+          ..addAll(list.map(FavoritePlace.fromJson));
+        notifyListeners();
+      } else {
+        // Data format unexpected, clear immediately
+        await prefs.remove(_prefsKey);
+        debugPrint('Favs format corrupted. Wiped.');
+      }
+    } catch (e, stack) {
+      // Severe string parsing corruption, clean slate
+      debugPrint('Favorites decoding failed: $e, $stack');
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(_prefsKey);
+      } catch (_) {}
     }
   }
 
@@ -73,7 +86,9 @@ class FavoritesProvider extends ChangeNotifier {
         _prefsKey,
         jsonEncode(_favorites.map((f) => f.toJson()).toList()),
       );
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Serialization failed for favorites: $e');
+    }
   }
 
   bool isFavorite(String id) {
@@ -81,8 +96,7 @@ class FavoritesProvider extends ChangeNotifier {
   }
 
   void toggleFavorite(FavoritePlace place) {
-    final existingIndex =
-        _favorites.indexWhere((favorite) => favorite.id == place.id);
+    final existingIndex = _favorites.indexWhere((favorite) => favorite.id == place.id);
     if (existingIndex >= 0) {
       _favorites.removeAt(existingIndex);
     } else {

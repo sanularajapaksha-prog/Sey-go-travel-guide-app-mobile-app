@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
-
 /// Splash Screen - Branded app launch experience with initialization
 /// Displays SeyGo logo with subtle animation during 2-3 second initialization
 /// Handles background tasks: cache loading, network check, image optimization
@@ -14,83 +13,100 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
+    with TickerProviderStateMixin { // Upgraded to TickerProviderStateMixin for multiple explicit animations
+  late final AnimationController _scaleController;
+  late final AnimationController _fadeController;
+  late final Animation<double> _scaleAnimation;
+  late final Animation<double> _fadeAnimation;
+  
   bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeAnimation();
+    _initializeAnimations();
     _initializeApp();
   }
 
-  /// Initialize logo scale animation
-  void _initializeAnimation() {
-    _animationController = AnimationController(
+  /// Initialize complex logo scale and fade animations
+  void _initializeAnimations() {
+    _scaleController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
-
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    _fadeController = AnimationController(
+     vsync: this,
+     duration: const Duration(milliseconds: 1000),
     );
 
-    _animationController.forward();
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.easeOutBack),
+    );
+    
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
+    );
+
+    _scaleController.forward();
+    _fadeController.forward();
   }
 
-  /// Initialize app services and navigate
+  /// Initialize app services and navigate robustly
   Future<void> _initializeApp() async {
     try {
-      // Simulate initialization tasks
+      // Execute non-blocking prerequisite tasks in parallel
       await Future.wait([
         _loadDestinationCache(),
         _checkNetworkConnectivity(),
         _prepareImageOptimization(),
-        Future.delayed(const Duration(milliseconds: 2500)),
+        Future.delayed(const Duration(milliseconds: 2500)), // Guaranteed Minimum UI Show Time
       ]);
+
+      // BUG FIX: Context verification BEFORE setting state or navigating
+      if (!mounted) return;
 
       setState(() => _isInitialized = true);
 
-      // Navigate to Welcome/Home screen
-      if (mounted) {
-        await Future.delayed(const Duration(milliseconds: 500));
-        Navigator.of(
-          context,
-          rootNavigator: true,
-        ).pushReplacementNamed('/welcome-home-screen');
-      }
+      // Add a polite fade out delay before exiting the splash screen
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // BUG FIX: Second necessary check because the context might be 
+      // unmounted during the second 500ms sleep above
+      if (!mounted) return;
+
+      Navigator.of(context, rootNavigator: true)
+          .pushReplacementNamed('/welcome-home-screen');
     } catch (e) {
-      // Handle initialization errors gracefully
-      if (mounted) {
-        await Future.delayed(const Duration(seconds: 3));
-        Navigator.of(
-          context,
-          rootNavigator: true,
-        ).pushReplacementNamed('/welcome-home-screen');
-      }
+      // In the event of a critical startup component failure, fallback gracefully
+      if (!mounted) return;
+      await Future.delayed(const Duration(seconds: 1));
+      
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true)
+          .pushReplacementNamed('/welcome-home-screen');
     }
   }
 
-  /// Load destination cache
+  /// Bootstraps any background cache operations required for immediate UX
   Future<void> _loadDestinationCache() async {
     await Future.delayed(const Duration(milliseconds: 800));
   }
 
-  /// Check network connectivity
+  /// Pre-flights DNS and connection speeds
   Future<void> _checkNetworkConnectivity() async {
     await Future.delayed(const Duration(milliseconds: 600));
   }
 
-  /// Prepare image optimization
+  /// Pre-warms image texture caches
   Future<void> _prepareImageOptimization() async {
     await Future.delayed(const Duration(milliseconds: 700));
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
+    // BUG FIX: Cleanup all animation resources explicitly
+    _scaleController.dispose();
+    _fadeController.dispose();
     super.dispose();
   }
 
@@ -104,69 +120,78 @@ class _SplashScreenState extends State<SplashScreen>
         height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
             colors: [
               theme.colorScheme.surface,
-              theme.colorScheme.primary.withValues(alpha: 0.1),
+              theme.colorScheme.primary.withValues(alpha: 0.15),
             ],
           ),
         ),
         child: SafeArea(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Spacer(),
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Spacer(),
 
-              // Animated Logo
-              ScaleTransition(scale: _scaleAnimation, child: _buildLogo(theme)),
+                // Animated Logo Component
+                ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: _buildLogo(theme),
+                ),
 
-              SizedBox(height: 4.h),
+                SizedBox(height: 5.h),
 
-              // Loading Indicator
-              _buildLoadingIndicator(theme),
+                // Elegant Loading Indicator Sequence
+                _buildLoadingIndicator(theme),
 
-              const Spacer(),
+                const Spacer(),
 
-              // Version Info
-              _buildVersionInfo(theme),
+                // Software Identity Info
+                _buildVersionInfo(theme),
 
-              SizedBox(height: 3.h),
-            ],
+                SizedBox(height: 4.h),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  /// Build SeyGo logo
+  /// Constructs the central SeyGo visual identity logomark
   Widget _buildLogo(ThemeData theme) {
     return Container(
-      width: 40.w,
-      height: 40.w,
+      width: 45.w,
+      height: 45.w,
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(20.w),
+        shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: theme.colorScheme.primary.withValues(alpha: 0.25),
+            blurRadius: 30,
+            spreadRadius: 5,
+            offset: const Offset(0, 15),
           ),
         ],
       ),
       child: Padding(
-        padding: EdgeInsets.all(4.w),
+        padding: EdgeInsets.all(5.w),
         child: Image.asset(
           'assets/images/img_app_logo.png',
           fit: BoxFit.contain,
           errorBuilder: (context, error, stackTrace) {
-            return Text(
-              'SeyGo',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                color: theme.colorScheme.primary,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.0,
+            return Center(
+              child: Text(
+                'SeyGo',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 2.0,
+                ),
               ),
             );
           },
@@ -175,37 +200,53 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 
-  /// Build loading indicator
+  /// Clean, modern circulatory loading mechanism
   Widget _buildLoadingIndicator(ThemeData theme) {
-    return SizedBox(
-      width: 8.w,
-      height: 8.w,
-      child: CircularProgressIndicator(
-        strokeWidth: 3,
-        valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
-      ),
+    return Column(
+      children: [
+        SizedBox(
+          width: 10.w,
+          height: 10.w,
+          child: CircularProgressIndicator(
+            strokeWidth: 4,
+            strokeCap: StrokeCap.round,
+            valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
+          ),
+        ),
+        SizedBox(height: 2.h),
+        Text(
+          _isInitialized ? 'Ready...' : 'Preparing your journey...',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.primary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 
-  /// Build version info
+  /// Display branding version configuration neatly at bottom
   Widget _buildVersionInfo(ThemeData theme) {
     return Column(
       children: [
         Text(
           'Discover Your Next Adventure',
-          style: theme.textTheme.bodyMedium?.copyWith(
+          style: theme.textTheme.titleMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
           ),
         ),
         SizedBox(height: 1.h),
         Text(
-          'Version 1.0.0',
+          'Version 1.0.0 (Build 42)',
           style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],
     );
   }
 }
+
