@@ -185,6 +185,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // ── build ────────────────────────────────────────────────────────────────────
+  /// =========================================================================
+  /// REDESIGN: GAMIFIED CUSTOM SCROLL VIEW
+  /// =========================================================================
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -193,79 +196,141 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(
-                isCompact ? 8.w : 7.w,
-                2.h,
-                isCompact ? 6.w : 7.w,
-                6.h,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(height: isCompact ? 1.2.h : 1.8.h),
-                  _buildProfileHero(isCompact),
-                  SizedBox(height: isCompact ? 2.2.h : 3.h),
-                  _buildBadgeCard(isCompact),
-                  SizedBox(height: isCompact ? 2.2.h : 3.h),
-                  _buildInterestChips(isCompact),
-                  SizedBox(height: isCompact ? 2.4.h : 3.h),
-                  _buildSummaryCard(isCompact),
-                  SizedBox(height: isCompact ? 2.4.h : 3.h),
-                  _buildPlaylistsCard(isCompact),
-                  SizedBox(height: isCompact ? 2.4.h : 3.h),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: _buildPrivacyToggle(isCompact),
+      body: Stack(
+        children: [
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverAppBar(
+                expandedHeight: isCompact ? 28.h : 32.h,
+                pinned: true,
+                stretch: true,
+                backgroundColor: theme.colorScheme.surface,
+                flexibleSpace: FlexibleSpaceBar(
+                  stretchModes: const [
+                    StretchMode.zoomBackground,
+                    StretchMode.blurBackground,
+                  ],
+                  titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
+                  title: Text(
+                    _displayName.isNotEmpty ? _displayName : 'Traveller',
+                    style: TextStyle(
+                      color: _text,
+                      fontWeight: FontWeight.w800,
+                      shadows: [
+                        Shadow(
+                          color: Colors.white.withOpacity(0.8),
+                          blurRadius: 10,
+                        )
+                      ]
+                    ),
                   ),
-                ],
+                  background: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Premium Gradient Background
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topRight,
+                            end: Alignment.bottomLeft,
+                            colors: [
+                              AppTheme.primaryLight.withOpacity(0.15),
+                              AppTheme.secondaryLight.withOpacity(0.05),
+                              theme.scaffoldBackgroundColor,
+                            ],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        right: -30,
+                        top: -20,
+                        child: Icon(
+                          Icons.travel_explore,
+                          size: 200,
+                          color: AppTheme.primaryLight.withOpacity(0.05),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                actions: [
+                   IconButton(
+                     icon: const Icon(Icons.settings_outlined),
+                     onPressed: () {}, // Handled in later commits
+                     color: _text,
+                   )
+                ]
+              ),
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(
+                  isCompact ? 8.w : 7.w,
+                  2.h,
+                  isCompact ? 6.w : 7.w,
+                  12.h, // padding for floating assist
+                ),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    _buildProfileHero(isCompact),
+                    SizedBox(height: isCompact ? 2.2.h : 3.h),
+                    _buildBadgeCard(isCompact),
+                    SizedBox(height: isCompact ? 2.2.h : 3.h),
+                    _buildInterestChips(isCompact),
+                    SizedBox(height: isCompact ? 2.4.h : 3.h),
+                    _buildSummaryCard(isCompact),
+                    SizedBox(height: isCompact ? 2.4.h : 3.h),
+                    _buildPlaylistsCard(isCompact),
+                    SizedBox(height: isCompact ? 2.4.h : 3.h),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: _buildPrivacyToggle(isCompact),
+                    ),
+                  ]),
+                ),
+              ),
+            ],
+          ),
+          
+          // Original floating logic remains overlaying the ScrollView
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: isCompact ? 15.h : 13.h,
+            child: AnimatedSlide(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              offset: _isSideRailVisible
+                  ? Offset.zero
+                  : const Offset(0, 1.15),
+              child: Align(
+                alignment: Alignment.bottomLeft,
+                child: Padding(
+                  padding: EdgeInsets.only(left: isCompact ? 4.w : 5.w),
+                  child: _buildSideRail(isCompact),
+                ),
               ),
             ),
-            // Side rail
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: isCompact ? 15.h : 13.h,
-              child: AnimatedSlide(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOutCubic,
-                offset: _isSideRailVisible
-                    ? Offset.zero
-                    : const Offset(0, 1.15),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: isCompact ? 7.h : 6.h,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 180),
+              opacity: _isSideRailVisible ? 0 : 1,
+              child: IgnorePointer(
+                ignoring: _isSideRailVisible,
                 child: Align(
                   alignment: Alignment.bottomLeft,
                   child: Padding(
                     padding: EdgeInsets.only(left: isCompact ? 4.w : 5.w),
-                    child: _buildSideRail(isCompact),
+                    child: _buildAssistiveTouch(isCompact),
                   ),
                 ),
               ),
             ),
-            // Assistive touch button
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: isCompact ? 7.h : 6.h,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 180),
-                opacity: _isSideRailVisible ? 0 : 1,
-                child: IgnorePointer(
-                  ignoring: _isSideRailVisible,
-                  child: Align(
-                    alignment: Alignment.bottomLeft,
-                    child: Padding(
-                      padding: EdgeInsets.only(left: isCompact ? 4.w : 5.w),
-                      child: _buildAssistiveTouch(isCompact),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
