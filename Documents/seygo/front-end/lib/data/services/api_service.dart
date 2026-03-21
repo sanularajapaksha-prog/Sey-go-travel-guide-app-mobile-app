@@ -213,6 +213,25 @@ class ApiService {
     );
   }
 
+  /// Triggers a background rebuild of the semantic search index on the backend.
+  /// Should be called once after login — fire-and-forget.
+  static Future<void> rebuildSearchIndex({required String accessToken}) async {
+    final uri = Uri.parse('$baseUrl/search/rebuild');
+    try {
+      await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $accessToken',
+            },
+          )
+          .timeout(const Duration(seconds: 60));
+    } catch (_) {
+      // Best-effort only — silent on failure.
+    }
+  }
+
   static Future<List<dynamic>> searchPlacesFromDb({
     required String query,
     double? latitude,
