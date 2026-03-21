@@ -229,7 +229,9 @@ async def add_destination(
     user=Depends(get_current_user),
 ):
     supabase = _sb()
-    _assert_owner(supabase, playlist_id, user)
+    owner_row = _assert_owner(supabase, playlist_id, user)
+    # Use the actual id value from the DB row so the type (UUID vs int) is correct.
+    actual_playlist_id = owner_row.get('id', playlist_id)
 
     pid = body.resolved_place_id
     if not pid:
@@ -238,24 +240,34 @@ async def add_destination(
             detail='Provide place_id or destination_id.',
         )
 
-    existing = (
-        supabase.table(PLAYLIST_DESTINATIONS_TABLE)
-        .select('id')
-        .eq('playlist_id', playlist_id)
-        .eq('place_id', pid)
-        .execute()
-    )
-    if existing.data:
+    try:
+        existing = (
+            supabase.table(PLAYLIST_DESTINATIONS_TABLE)
+            .select('id')
+            .eq('playlist_id', actual_playlist_id)
+            .eq('place_id', pid)
+            .execute()
+        )
+        if existing.data:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail='Destination already in playlist.',
+            )
+
+        response = (
+            supabase.table(PLAYLIST_DESTINATIONS_TABLE)
+            .insert({'playlist_id': actual_playlist_id, 'place_id': pid})
+            .execute()
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error('add_destination failed playlist=%s place=%s: %s', actual_playlist_id, pid, exc)
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail='Destination already in playlist.',
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail='Failed to add destination to playlist.',
         )
 
-    response = (
-        supabase.table(PLAYLIST_DESTINATIONS_TABLE)
-        .insert({'playlist_id': playlist_id, 'place_id': pid})
-        .execute()
-    )
     if not response.data:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -296,19 +308,30 @@ async def get_playlist_destinations(
 # ---------------------------------------------------------------------------
 
 def _assert_owner(supabase, playlist_id: str, user) -> dict:
-    result = (
-        supabase.table(PLAYLISTS_TABLE)
-        .select('id, is_default')
-        .eq('id', playlist_id)
-        .eq('user_id', str(user.id))
-        .execute()
-    )
-    if not result.data:
+    """Return the playlist row if the user owns it, else raise 404.
+
+    Handles both UUID and integer primary keys, and tolerates missing
+    columns (e.g. is_default not yet added via migration) by selecting *.
+    """
+    def _run(pid_value):
+        try:
+            return supabase.table(PLAYLISTS_TABLE).select('*').eq('id', pid_value).eq('user_id', str(user.id)).execute()
+        except Exception:
+            return None
+
+    result = _run(playlist_id)
+    rows = (result.data if result else None) or []
+
+    if not rows and playlist_id.isdigit():
+        result = _run(int(playlist_id))
+        rows = (result.data if result else None) or []
+
+    if not rows:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail='Playlist not found or does not belong to you.',
         )
-    return result.data[0]
+    return rows[0]
 
 
 def _normalize_playlist_row(row: dict) -> dict:
