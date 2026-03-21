@@ -129,7 +129,10 @@ async def get_playlist_details(playlist_id: str):
         )
 
     playlist = _normalize_playlist_row(playlist_rows[0])
-    raw_stops = _fetch_playlist_places(supabase, playlist_id)
+    # Use the actual id value from the DB row (not the URL string) so the
+    # type matches whatever was stored in playlist_places.playlist_id.
+    actual_playlist_id = playlist_rows[0].get('id', playlist_id)
+    raw_stops = _fetch_playlist_places(supabase, actual_playlist_id)
     stops = [_normalize_playlist_stop(stop, index) for index, stop in enumerate(raw_stops)]
     _fill_leg_distances(stops)
 
@@ -413,8 +416,27 @@ def _fetch_playlist_places(supabase, playlist_id: str) -> list[dict]:
                 .data
                 or []
             )
-        except Exception:
-            continue
+        except Exception as exc:
+            logger.warning('place lookup failed key=%s values=%s: %s', key_name, values, exc)
+            rows = []
+
+        # If string lookup returned nothing and the values look like integers,
+        # retry with int-coerced values (tourist_places.id is bigint in production).
+        if not rows and key_name == 'id':
+            int_values = [int(v) for v in values if str(v).strip().isdigit()]
+            if int_values:
+                try:
+                    rows = (
+                        supabase.table(PLACES_TABLE)
+                        .select('*')
+                        .in_(key_name, int_values)
+                        .execute()
+                        .data
+                        or []
+                    )
+                except Exception as exc:
+                    logger.warning('int place lookup failed key=%s values=%s: %s', key_name, int_values, exc)
+                    rows = []
 
         for row in rows:
             normalized = _normalize_place_row(supabase, row)
