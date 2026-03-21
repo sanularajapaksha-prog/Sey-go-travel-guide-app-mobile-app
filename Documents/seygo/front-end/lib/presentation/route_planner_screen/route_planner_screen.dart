@@ -106,7 +106,23 @@ class _RoutePlannerScreenState extends State<RoutePlannerScreen> {
 
       final optimized = (response['optimized_stops'] as List?)
               ?.whereType<Map>()
-              .map((e) => Map<String, dynamic>.from(e))
+              .map((e) {
+                final stop = Map<String, dynamic>.from(e);
+                // Re-inject the original destination data (esp. 'id' / 'place_id')
+                // because the backend may return only geometry fields.
+                final stopName = stop['name']?.toString() ?? '';
+                final original = _cartDestinations.firstWhere(
+                  (d) => d['name']?.toString() == stopName,
+                  orElse: () => const {},
+                );
+                return {
+                  ...original,  // original fields first (preserves 'id')
+                  ...stop,      // backend fields override (coords, distance, etc.)
+                  // Always prefer the original id so playlist saving works
+                  'id': original['id'] ?? stop['id'],
+                  'place_id': original['place_id'] ?? stop['place_id'],
+                };
+              })
               .toList() ??
           <Map<String, dynamic>>[];
 

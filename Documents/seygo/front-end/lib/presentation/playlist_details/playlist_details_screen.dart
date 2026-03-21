@@ -51,6 +51,7 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
         _stops = ((result['stops'] as List?) ?? const [])
             .whereType<Map>()
             .map((item) => item.cast<String, dynamic>())
+            .where(_isRealStop)
             .toList();
         _totalDistanceKm =
             (result['total_distance_km'] as num?)?.toDouble() ?? 0;
@@ -201,12 +202,35 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
     );
   }
 
+  /// Returns false for auto-generated placeholder rows like "Stop 1", "Stop 2"
+  /// that have no coordinates, description, or image — pure sample data.
+  static bool _isRealStop(Map<String, dynamic> stop) {
+    final name = (stop['name'] as String?) ?? '';
+    final hasCoords = stop['latitude'] != null && stop['longitude'] != null;
+    final hasDescription = ((stop['description'] as String?) ?? '').isNotEmpty;
+    final hasImage = (stop['imageUrl'] ?? stop['image_url'] ?? stop['googleUrl'] ?? stop['google_url']) != null;
+    // A stop is a placeholder if name matches "Stop <digits>" and has no useful data
+    final isGenericName = RegExp(r'^Stop\s+\d+$', caseSensitive: false).hasMatch(name.trim());
+    if (isGenericName && !hasCoords && !hasDescription && !hasImage) return false;
+    return true;
+  }
+
+  static bool _isValidImageUrl(String? url) {
+    if (url == null || url.isEmpty) return false;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) return false;
+    final lower = url.toLowerCase();
+    // source.unsplash.com returns 503 — treat as invalid
+    if (lower.contains('source.unsplash.com')) return false;
+    return true;
+  }
+
   Widget _buildStopCard(ThemeData theme, Map<String, dynamic> stop, int index) {
     final stopName = (stop['name'] as String?) ?? 'Place';
     final category = (stop['category'] as String?) ?? 'Place';
     final location = (stop['location'] as String?) ?? '';
     final description = (stop['description'] as String?) ?? '';
-    final imageUrl = (stop['imageUrl'] ?? stop['image_url'])?.toString();
+    final rawImageUrl = (stop['imageUrl'] ?? stop['image_url'])?.toString();
+    final imageUrl = _isValidImageUrl(rawImageUrl) ? rawImageUrl : null;
     final googleUrl = (stop['googleUrl'] ?? stop['google_url'])?.toString();
     final distanceKm = (stop['distance_km'] as num?)?.toDouble() ?? 0;
     final rating = (stop['avg_rating'] as num?)?.toDouble() ?? 0;
@@ -304,19 +328,22 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
             child: googleUrl != null && googleUrl.isNotEmpty
                 ? PlacePhotoWidget(
                     googleUrl: googleUrl,
+                    fallbackImageUrl: imageUrl,
                     width: double.infinity,
                     height: 20.h,
                     fit: BoxFit.cover,
                     semanticLabel: stopName,
                     useSadFaceFallback: true,
                   )
-                : CustomImageWidget(
-                    imageUrl: imageUrl,
-                    width: double.infinity,
-                    height: 20.h,
-                    fit: BoxFit.cover,
-                    semanticLabel: stopName,
-                  ),
+                : imageUrl != null
+                    ? CustomImageWidget(
+                        imageUrl: imageUrl,
+                        width: double.infinity,
+                        height: 20.h,
+                        fit: BoxFit.cover,
+                        semanticLabel: stopName,
+                      )
+                    : _buildStopGradient(stopName, index),
           ),
           if (description.isNotEmpty) ...[
             SizedBox(height: 1.4.h),
@@ -340,6 +367,35 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  static const List<List<Color>> _kStopGradients = [
+    [Color(0xFF1A73E8), Color(0xFF0D47A1)],
+    [Color(0xFF00897B), Color(0xFF004D40)],
+    [Color(0xFF6D4C41), Color(0xFF3E2723)],
+    [Color(0xFF7B1FA2), Color(0xFF4A148C)],
+    [Color(0xFFE64A19), Color(0xFFBF360C)],
+    [Color(0xFF388E3C), Color(0xFF1B5E20)],
+    [Color(0xFF0288D1), Color(0xFF01579B)],
+    [Color(0xFFF57F17), Color(0xFFE65100)],
+  ];
+
+  Widget _buildStopGradient(String name, int index) {
+    final colors = _kStopGradients[index % _kStopGradients.length];
+    return Container(
+      width: double.infinity,
+      height: 20.h,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: colors,
+        ),
+      ),
+      child: Center(
+        child: Icon(Icons.place_rounded, color: Colors.white.withValues(alpha: 0.4), size: 40),
       ),
     );
   }
