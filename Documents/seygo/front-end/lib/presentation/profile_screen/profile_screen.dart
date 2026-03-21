@@ -7,6 +7,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/services/api_service.dart';
 import '../../theme/app_theme.dart';
 import 'profile_modals.dart';
+import 'widgets/profile_badges_widget.dart';
+import 'widgets/profile_activity_widget.dart';
+import 'widgets/profile_preferences_widget.dart';
+import 'widgets/profile_map_stats_widget.dart';
+
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -16,6 +21,20 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  // ── gamification data ────────────────────────────────────────────────────────
+  final List<TravelBadge> _badges = [
+    const TravelBadge(id: '1', title: 'Island Explorer', description: 'Visited 5 unique districts in Sri Lanka', iconData: Icons.explore, isUnlocked: true, progress: 1.0),
+    const TravelBadge(id: '2', title: 'Beach Bum', description: 'Saved 10 coastal pristine locations', iconData: Icons.beach_access, isUnlocked: true, progress: 1.0),
+    TravelBadge(id: '3', title: 'Mountain Goat', description: 'Hike 3 famous trails in the central province', iconData: Icons.landscape, isUnlocked: false, progress: 0.33),
+    TravelBadge(id: '4', title: 'Culture Vulture', description: 'Review 5 historical temples and monuments', iconData: Icons.account_balance, isUnlocked: false, progress: 0.8),
+  ];
+  
+  final List<UserActivity> _activities = [
+    UserActivity(id: '1', type: ActivityType.trip, title: 'Completed Sigiriya Trek', description: 'An amazing morning hike observing the ancient rock fortress.', timestamp: DateTime.now().subtract(const Duration(hours: 4)), location: 'Sigiriya, Dambulla'),
+    UserActivity(id: '2', type: ActivityType.review, title: 'Reviewed Ella Gap', description: 'Gave a 5-star rating to the spectacular views at Ella.', timestamp: DateTime.now().subtract(const Duration(days: 1)), location: 'Ella, Badulla'),
+    UserActivity(id: '3', type: ActivityType.photo, title: 'Uploaded Photos', description: 'Added 12 new photos to the Galle Fort gallery.', timestamp: DateTime.now().subtract(const Duration(days: 3)), location: 'Galle, Southern Province'),
+  ];
+
   // ── profile fields ──────────────────────────────────────────────────────────
   String _avatarPath = '';
   String _displayName = '';
@@ -272,13 +291,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     _buildProfileHero(isCompact),
-                    SizedBox(height: isCompact ? 2.2.h : 3.h),
-                    _buildBadgeCard(isCompact),
-                    SizedBox(height: isCompact ? 2.2.h : 3.h),
-                    _buildInterestChips(isCompact),
-                    SizedBox(height: isCompact ? 2.4.h : 3.h),
-                    _buildSummaryCard(isCompact),
-                    SizedBox(height: isCompact ? 2.4.h : 3.h),
+                    SizedBox(height: isCompact ? 3.h : 3.5.h),
+                    
+                    // Gamification: Achievements
+                    ProfileBadgesWidget(badges: _badges, isCompact: isCompact),
+                    SizedBox(height: isCompact ? 3.h : 4.h),
+                    
+                    // Historical Map Timeline
+                    ProfileActivityWidget(activities: _activities, isCompact: isCompact),
+                    SizedBox(height: isCompact ? 3.h : 4.h),
+                    
+                    // Core Map Statistics
+                    ProfileMapStatsWidget(isCompact: isCompact),
+                    SizedBox(height: isCompact ? 3.h : 4.h),
+                    
+                    // Editable Preferences
+                    ProfilePreferencesWidget(initialStyle: _travelStyle.isNotEmpty ? _travelStyle : 'Adventure & Hiking', isCompact: isCompact),
+                    SizedBox(height: isCompact ? 3.h : 4.h),
+                    
+                    // Legacy Playlists Fallback
                     _buildPlaylistsCard(isCompact),
                     SizedBox(height: isCompact ? 2.4.h : 3.h),
                     Align(
