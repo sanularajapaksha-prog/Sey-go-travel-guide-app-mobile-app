@@ -50,7 +50,9 @@ class Place {
       rating: _toDouble(map['rating'] ?? map['avg_rating']) ?? 0.0,
       reviews: _toInt(map['reviews'] ?? map['review_count']) ?? 0,
       googleUrl: _normalizeGoogleUrl(map['googleUrl'] ?? map['google_url']),
-      imageUrl: _normalizeHttpUrl(map['imageUrl'] ?? map['image_url'] ?? map['photo_url']),
+      imageUrl: _normalizeHttpUrl(map['imageUrl']) ??
+          _normalizeHttpUrl(map['image_url']) ??
+          _normalizeHttpUrl(map['photo_url']),
       imageSource: map['imageSource']?.toString() ?? map['image_source']?.toString(),
       photoPublicUrls: _toStringList(map['photoPublicUrls'] ?? map['photo_public_urls']),
     );
@@ -123,7 +125,9 @@ class Place {
     }
     if (text.startsWith('http://') || text.startsWith('https://')) {
       final lowered = text.toLowerCase();
-      if (lowered.contains('example.com')) {
+      // Block known-broken or placeholder domains
+      if (lowered.contains('example.com') ||
+          lowered.contains('source.unsplash.com')) {
         return null;
       }
       return text;
