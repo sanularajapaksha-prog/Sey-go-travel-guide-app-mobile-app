@@ -134,7 +134,13 @@ class _MyAppState extends State<MyApp> {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => FontScaleProvider()),
-        ChangeNotifierProvider(create: (_) => FavoritesProvider()),
+        ChangeNotifierProvider(
+          create: (_) {
+            final provider = FavoritesProvider();
+            provider.loadFromPrefs();
+            return provider;
+          },
+        ),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
       ],
       child: Sizer(

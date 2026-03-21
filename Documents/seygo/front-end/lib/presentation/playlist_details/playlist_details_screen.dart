@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -77,7 +78,20 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.share_outlined),
-            onPressed: () {},
+            onPressed: () {
+              final name = (_playlist?['name'] as String?) ?? 'Playlist';
+              final stopNames = _stops
+                  .map((s) => s['name'] as String? ?? '')
+                  .where((n) => n.isNotEmpty)
+                  .toList();
+              final text = stopNames.isEmpty
+                  ? 'Check out my SeyGo playlist: $name'
+                  : 'Check out my SeyGo playlist: $name\n${stopNames.map((n) => '• $n').join('\n')}';
+              Clipboard.setData(ClipboardData(text: text));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Playlist copied to clipboard')),
+              );
+            },
           ),
         ],
       ),

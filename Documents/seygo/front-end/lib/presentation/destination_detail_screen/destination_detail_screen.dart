@@ -5,7 +5,6 @@ import 'package:sizer/sizer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_export.dart';
-import '../../data/models/place.dart';
 import '../../data/services/api_service.dart';
 import '../../widgets/custom_icon_widget.dart';
 import './widgets/destination_header_widget.dart';

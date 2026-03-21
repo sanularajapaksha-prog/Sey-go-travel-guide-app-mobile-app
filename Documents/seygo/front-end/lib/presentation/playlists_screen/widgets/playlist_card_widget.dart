@@ -3,6 +3,25 @@ import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
 
+/// Deterministic gradient palettes for playlist banners.
+/// Index is picked by hashing the playlist name so each playlist
+/// always gets the same colours.
+const List<List<Color>> _kBannerPalettes = [
+  [Color(0xFF1A73E8), Color(0xFF0D47A1)], // blue
+  [Color(0xFF00897B), Color(0xFF004D40)], // teal
+  [Color(0xFFE53935), Color(0xFF880E4F)], // red→pink
+  [Color(0xFF7B1FA2), Color(0xFF311B92)], // purple
+  [Color(0xFFF57C00), Color(0xFFBF360C)], // orange→deep-orange
+  [Color(0xFF388E3C), Color(0xFF1B5E20)], // green
+  [Color(0xFF0288D1), Color(0xFF01579B)], // light-blue→blue
+  [Color(0xFFC2185B), Color(0xFF880E4F)], // pink
+];
+
+List<Color> _paletteFor(String name) {
+  final hash = name.codeUnits.fold(0, (h, c) => (h * 31 + c) & 0x7FFFFFFF);
+  return _kBannerPalettes[hash % _kBannerPalettes.length];
+}
+
 /// Individual playlist card widget displaying playlist information
 /// with swipe actions and tap navigation
 class PlaylistCardWidget extends StatelessWidget {
@@ -64,56 +83,125 @@ class PlaylistCardWidget extends StatelessWidget {
   }
 
   Widget _buildPreviewSection(BuildContext context, List<String> images) {
-    final theme = Theme.of(context);
     final semanticLabels = (playlist['semanticLabels'] as List? ?? const [])
         .map((item) => item.toString())
         .toList();
     final fallbackLabel = (playlist['name'] as String?) ?? 'Playlist';
 
-    return Container(
-      height: 20.h,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(12.0)),
-      ),
-      child: images.isEmpty
-          ? Center(
-        child: CustomIconWidget(
-          iconName: 'photo_library',
-          size: 48,
-          color: theme.colorScheme.onSurfaceVariant.withValues(
-            alpha: 0.3,
-          ),
-        ),
-      )
-          : ClipRRect(
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(12.0),
-        ),
-        child: images.length == 1
-            ? CustomImageWidget(
-          imageUrl: images[0],
-          width: double.infinity,
-          height: 20.h,
-          fit: BoxFit.cover,
-          semanticLabel:
-              semanticLabels.isNotEmpty ? semanticLabels.first : fallbackLabel,
-        )
-            : Row(
-          children: List.generate(
-            images.length > 3 ? 3 : images.length,
+    if (images.isEmpty) {
+      return _buildGradientBanner(context, fallbackLabel);
+    }
+
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(12.0)),
+      child: images.length == 1
+          ? CustomImageWidget(
+              imageUrl: images[0],
+              width: double.infinity,
+              height: 20.h,
+              fit: BoxFit.cover,
+              semanticLabel:
+                  semanticLabels.isNotEmpty ? semanticLabels.first : fallbackLabel,
+            )
+          : Row(
+              children: List.generate(
+                images.length > 3 ? 3 : images.length,
                 (index) => Expanded(
-              child: CustomImageWidget(
-                imageUrl: images[index],
-                width: double.infinity,
-                height: 20.h,
-                fit: BoxFit.cover,
-                semanticLabel: semanticLabels.length > index
-                    ? semanticLabels[index]
-                    : fallbackLabel,
+                  child: CustomImageWidget(
+                    imageUrl: images[index],
+                    width: double.infinity,
+                    height: 20.h,
+                    fit: BoxFit.cover,
+                    semanticLabel: semanticLabels.length > index
+                        ? semanticLabels[index]
+                        : fallbackLabel,
+                  ),
+                ),
               ),
             ),
+    );
+  }
+
+  Widget _buildGradientBanner(BuildContext context, String name) {
+    final colors = _paletteFor(name);
+    final iconName = (playlist['icon'] as String?) ?? 'playlist_play';
+    final stopCount = playlist['stop_count'] ?? playlist['stops_count'] ?? '';
+
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(12.0)),
+      child: Container(
+        height: 20.h,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: colors,
           ),
+        ),
+        child: Stack(
+          children: [
+            // Decorative circles for depth
+            Positioned(
+              top: -20,
+              right: -20,
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.08),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -30,
+              left: -10,
+              child: Container(
+                width: 130,
+                height: 130,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.06),
+                ),
+              ),
+            ),
+            // Centre content
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CustomIconWidget(
+                    iconName: iconName,
+                    size: 40,
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
+                  SizedBox(height: 1.h),
+                  Text(
+                    name,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                  if (stopCount != '' && stopCount != 0) ...[
+                    SizedBox(height: 0.4.h),
+                    Text(
+                      '$stopCount stops',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.75),
+                        fontSize: 10.sp,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
