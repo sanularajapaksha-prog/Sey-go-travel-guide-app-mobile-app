@@ -246,50 +246,70 @@ async def add_destination(
             detail='Provide place_id or destination_id.',
         )
 
-    # Try insertion with the typed id first; if that fails with a type error,
-    # fall back to the string form so PostgREST can coerce it.
-    def _try_insert(pid_value):
-        existing = (
-            supabase.table(PLAYLIST_DESTINATIONS_TABLE)
-            .select('id')
-            .eq('playlist_id', pid_value)
-            .eq('place_id', pid)
-            .execute()
-        )
-        if existing.data:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail='Destination already in playlist.',
-            )
-        return (
-            supabase.table(PLAYLIST_DESTINATIONS_TABLE)
-            .insert({'playlist_id': pid_value, 'place_id': pid})
-            .execute()
-        )
+    # Build candidate (playlist_id_value, place_id_value) pairs to try in order:
+    # 1. typed DB id + string place_id
+    # 2. string playlist_id + string place_id
+    # 3/4. same but with int-coerced place_id (if pid looks numeric)
+    _pid_int = int(pid) if str(pid).strip().isdigit() else None
+    _candidates = [
+        (actual_playlist_id, pid),
+        (str(playlist_id), pid),
+    ]
+    if _pid_int is not None:
+        _candidates += [
+            (actual_playlist_id, _pid_int),
+            (str(playlist_id), _pid_int),
+        ]
 
-    try:
-        response = _try_insert(actual_playlist_id)
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.warning('add_destination typed insert failed (%s), retrying with string', exc)
+    last_exc: Exception | None = None
+    for pl_id_val, place_id_val in _candidates:
         try:
-            response = _try_insert(str(playlist_id))
+            # Duplicate check (use select * + limit 1 in case there is no 'id' column)
+            existing = (
+                supabase.table(PLAYLIST_DESTINATIONS_TABLE)
+                .select('*')
+                .eq('playlist_id', pl_id_val)
+                .eq('place_id', place_id_val)
+                .limit(1)
+                .execute()
+            )
+            if existing.data:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail='Destination already in playlist.',
+                )
+            response = (
+                supabase.table(PLAYLIST_DESTINATIONS_TABLE)
+                .insert({'playlist_id': pl_id_val, 'place_id': place_id_val})
+                .execute()
+            )
+            logger.info(
+                'add_destination: inserted playlist=%r place=%r → rows=%d',
+                pl_id_val, place_id_val, len(response.data or []),
+            )
+            if response.data:
+                return response.data[0]
+            # Insert succeeded but returned no data — still treat as success
+            return {'playlist_id': pl_id_val, 'place_id': place_id_val}
         except HTTPException:
             raise
-        except Exception as exc2:
-            logger.error('add_destination failed playlist=%s place=%s: %s', playlist_id, pid, exc2)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail='Failed to add destination to playlist.',
+        except Exception as exc:
+            last_exc = exc
+            logger.warning(
+                'add_destination attempt (pl=%r place=%r) failed: %s',
+                pl_id_val, place_id_val, exc,
             )
+            continue
 
-    if not response.data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='Failed to add destination.',
-        )
-    return response.data[0]
+    # All attempts failed — surface the real error so we can diagnose it
+    logger.error(
+        'add_destination all attempts failed playlist=%s place=%s last_error=%s',
+        playlist_id, pid, last_exc,
+    )
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail=f'Failed to add destination to playlist. DB error: {last_exc}',
+    )
 
 
 @router.delete('/{playlist_id}/destinations/{destination_id}', status_code=status.HTTP_204_NO_CONTENT)
