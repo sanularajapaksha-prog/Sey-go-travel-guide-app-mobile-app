@@ -19,6 +19,7 @@ import '../presentation/destination_detail_screen/destination_detail_screen.dart
 import '../presentation/route_planner_screen/route_planner_screen.dart';
 import '../presentation/map_view_screen/map_view_screen.dart';
 import '../presentation/user_preferences_screen/user_preferences_screen.dart';
+import '../presentation/offline_trips/offline_trips_screen.dart';
 
 class AppRoutes {
   static const String initial = introLogo;
@@ -45,6 +46,7 @@ class AppRoutes {
   static const String destinationDetail = '/destination-detail-screen';
   static const String routePlanner = '/route-planner-screen';
   static const String userPreferences = '/user-preferences-screen';
+  static const String offlineTrips = '/offline-trips-screen';
 
   static final Map<String, WidgetBuilder> routes = {
     introLogo: (context) => const LogoIntroPage(),
@@ -66,5 +68,6 @@ class AppRoutes {
     destinationDetail: (context) => const DestinationDetailScreen(),
     routePlanner: (context) => const RoutePlannerScreen(),
     userPreferences: (context) => const UserPreferencesScreen(),
+    offlineTrips: (context) => const OfflineTripsScreen(),
   };
 }

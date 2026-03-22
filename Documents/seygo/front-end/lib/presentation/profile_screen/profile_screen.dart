@@ -1,19 +1,20 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sizer/sizer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/services/api_service.dart';
+import '../../providers/favorites_provider.dart';
 import '../../providers/user_data_provider.dart';
 import '../../theme/app_theme.dart';
 import 'profile_modals.dart';
-import 'widgets/profile_badges_widget.dart';
 import 'widgets/profile_activity_widget.dart';
-import 'widgets/profile_preferences_widget.dart';
+import 'widgets/profile_badges_widget.dart';
 import 'widgets/profile_map_stats_widget.dart';
-
+import 'widgets/profile_preferences_widget.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -23,36 +24,59 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // ── gamification data ────────────────────────────────────────────────────────
+  // ── gamification (static for now) ────────────────────────────────────────────
   final List<TravelBadge> _badges = [
-    const TravelBadge(id: '1', title: 'Island Explorer', description: 'Visited 5 unique districts in Sri Lanka', iconData: Icons.explore, isUnlocked: true, progress: 1.0),
-    const TravelBadge(id: '2', title: 'Beach Bum', description: 'Saved 10 coastal pristine locations', iconData: Icons.beach_access, isUnlocked: true, progress: 1.0),
-    TravelBadge(id: '3', title: 'Mountain Goat', description: 'Hike 3 famous trails in the central province', iconData: Icons.landscape, isUnlocked: false, progress: 0.33),
-    TravelBadge(id: '4', title: 'Culture Vulture', description: 'Review 5 historical temples and monuments', iconData: Icons.account_balance, isUnlocked: false, progress: 0.8),
-  ];
-  
-  final List<UserActivity> _activities = [
-    UserActivity(id: '1', type: ActivityType.trip, title: 'Completed Sigiriya Trek', description: 'An amazing morning hike observing the ancient rock fortress.', timestamp: DateTime.now().subtract(const Duration(hours: 4)), location: 'Sigiriya, Dambulla'),
-    UserActivity(id: '2', type: ActivityType.review, title: 'Reviewed Ella Gap', description: 'Gave a 5-star rating to the spectacular views at Ella.', timestamp: DateTime.now().subtract(const Duration(days: 1)), location: 'Ella, Badulla'),
-    UserActivity(id: '3', type: ActivityType.photo, title: 'Uploaded Photos', description: 'Added 12 new photos to the Galle Fort gallery.', timestamp: DateTime.now().subtract(const Duration(days: 3)), location: 'Galle, Southern Province'),
+    const TravelBadge(
+        id: '1',
+        title: 'Island Explorer',
+        description: 'Visited 5 unique districts in Sri Lanka',
+        iconData: Icons.explore,
+        isUnlocked: true,
+        progress: 1.0),
+    const TravelBadge(
+        id: '2',
+        title: 'Beach Bum',
+        description: 'Saved 10 coastal pristine locations',
+        iconData: Icons.beach_access,
+        isUnlocked: true,
+        progress: 1.0),
+    TravelBadge(
+        id: '3',
+        title: 'Mountain Goat',
+        description: 'Hike 3 famous trails in the central province',
+        iconData: Icons.landscape,
+        isUnlocked: false,
+        progress: 0.33),
+    TravelBadge(
+        id: '4',
+        title: 'Culture Vulture',
+        description: 'Review 5 historical temples and monuments',
+        iconData: Icons.account_balance,
+        isUnlocked: false,
+        progress: 0.8),
   ];
 
-  // ── profile fields ──────────────────────────────────────────────────────────
+  // ── profile fields ────────────────────────────────────────────────────────────
   String _avatarPath = '';
+  String _bannerUrl = '';
   String _displayName = '';
   String _email = '';
   String _homeCity = '';
   String _bio = '';
+  String _aiDescription = '';
   String _travelStyle = '';
+  String _workingType = '';
+  String _travelPersonalityType = '';
 
-  // ── loading flags ────────────────────────────────────────────────────────────
+  // ── loading flags ─────────────────────────────────────────────────────────────
   bool _profileLoading = true;
   bool _playlistsLoading = true;
   bool _statsLoading = true;
   bool _avatarUploading = false;
+  bool _bannerUploading = false;
   bool _initialized = false;
 
-  // ── data ─────────────────────────────────────────────────────────────────────
+  // ── data ──────────────────────────────────────────────────────────────────────
   List<Map<String, dynamic>> _userPlaylists = [];
   Map<String, dynamic> _stats = {
     'playlists': 0,
@@ -60,11 +84,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     'reviews': 0,
     'photos': 0,
   };
+  List<UserActivity> _activities = [];
 
   bool _isPrivatePlaylist = true;
   bool _isSideRailVisible = false;
 
-  // ── theme constants ──────────────────────────────────────────────────────────
+  // ── theme ─────────────────────────────────────────────────────────────────────
   static const Color _ink = AppTheme.secondaryLight;
   static const Color _accent = AppTheme.secondaryLight;
   static const Color _border = AppTheme.dividerLight;
@@ -72,19 +97,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   static const Color _mutedText = AppTheme.neutralLight;
   static const Color _chipFill = Color(0xFFEAF4FA);
 
-  // ── travel style → interest chip labels ─────────────────────────────────────
-  static const _styleChips = <String, List<String>>{
-    'Beach & Culture': ['Beach Side', 'Culture', 'History'],
-    'Adventure & Hiking': ['Hiking', 'Mountains', 'Adventure'],
-    'Urban Exploration': ['Cities', 'Urban', 'Nightlife'],
-    'Nature & Wildlife': ['Nature', 'Wildlife', 'Camping'],
-    'Relaxation & Spa': ['Wellness', 'Beach Side', 'Spa'],
+  // ── banner gradient per travel style (AI-ready personalisation) ───────────────
+  static const Map<String, List<Color>> _styleGradients = {
+    'Beach & Culture': [Color(0xFF0077B6), Color(0xFF00B4D8)],
+    'Adventure & Hiking': [Color(0xFF2D6A4F), Color(0xFF74C69D)],
+    'Urban Exploration': [Color(0xFF4361EE), Color(0xFF7209B7)],
+    'Nature & Wildlife': [Color(0xFF1B4332), Color(0xFF52B788)],
+    'Relaxation & Spa': [Color(0xFF9B5DE5), Color(0xFFF15BB5)],
+    'Historical Trails': [Color(0xFF6D4C41), Color(0xFFBCAAA4)],
+    'Culinary Tours': [Color(0xFFE63946), Color(0xFFF4A261)],
   };
-
-  @override
-  void initState() {
-    super.initState();
-  }
 
   @override
   void didChangeDependencies() {
@@ -96,22 +118,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  /// Instantly populates fields from pre-fetched cache so the screen renders
-  /// without a spinner on first open. [_loadAll] still runs in background to
-  /// get the freshest data from the server.
+  // ── cache seed (instant render) ───────────────────────────────────────────────
   void _seedFromCache() {
     final udp = Provider.of<UserDataProvider>(context, listen: false);
     final profile = udp.profile;
     if (profile != null) {
-      _displayName = (profile['full_name'] as String?)?.isNotEmpty == true
-          ? profile['full_name'] as String
-          : (profile['email'] as String? ?? '');
-      _email = profile['email'] as String? ?? '';
-      _homeCity = profile['home_city'] as String? ?? '';
-      _bio = profile['bio'] as String? ?? '';
-      _travelStyle = profile['travel_style'] as String? ?? '';
-      final av = profile['avatar_url'] as String?;
-      if (av != null && av.isNotEmpty) _avatarPath = av;
+      _applyProfile(profile);
       _profileLoading = false;
     }
     if (udp.myPlaylistsLoaded) {
@@ -124,13 +136,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // ── load everything in parallel ──────────────────────────────────────────────
+  void _applyProfile(Map<String, dynamic> profile) {
+    _displayName = (profile['full_name'] as String?)?.isNotEmpty == true
+        ? profile['full_name'] as String
+        : (profile['email'] as String? ?? '');
+    _email = profile['email'] as String? ?? '';
+    _homeCity = profile['home_city'] as String? ?? '';
+    _bio = profile['bio'] as String? ?? '';
+    _aiDescription = profile['ai_description'] as String? ?? '';
+    _travelStyle = profile['travel_style'] as String? ?? '';
+    _workingType = profile['working_type'] as String? ?? '';
+    _travelPersonalityType =
+        profile['travel_personality_type'] as String? ?? '';
+    final av = profile['avatar_url'] as String?;
+    if (av != null && av.isNotEmpty) _avatarPath = av;
+    final bn = profile['banner_url'] as String?;
+    if (bn != null && bn.isNotEmpty) _bannerUrl = bn;
+  }
+
+  // ── load all ──────────────────────────────────────────────────────────────────
   Future<void> _loadAll() async {
     await Future.wait([_loadProfile(), _loadPlaylists(), _loadStats()]);
+    _buildActivities();
   }
 
   Future<void> _loadProfile() async {
-    // Fast path: auth metadata
     final user = Supabase.instance.client.auth.currentUser;
     if (user != null && mounted) {
       final meta = user.userMetadata ?? {};
@@ -139,8 +169,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _email = user.email ?? '';
       });
     }
-
-    // Full profile — force refresh so changes from settings appear immediately
     final token = Supabase.instance.client.auth.currentSession?.accessToken;
     final profile = await ApiService.fetchProfile(
       accessToken: token,
@@ -148,19 +176,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
     if (!mounted) return;
     setState(() {
-      if (profile != null) {
-        _displayName = (profile['full_name'] as String?)?.isNotEmpty == true
-            ? profile['full_name'] as String
-            : _displayName;
-        _email = (profile['email'] as String?)?.isNotEmpty == true
-            ? profile['email'] as String
-            : _email;
-        _homeCity = profile['home_city'] as String? ?? '';
-        _bio = profile['bio'] as String? ?? '';
-        _travelStyle = profile['travel_style'] as String? ?? '';
-        final av = profile['avatar_url'] as String?;
-        if (av != null && av.isNotEmpty) _avatarPath = av;
-      }
+      if (profile != null) _applyProfile(profile);
       _profileLoading = false;
     });
   }
@@ -185,10 +201,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
-  // ── avatar: pick → upload → persist ─────────────────────────────────────────
+  /// Derives real activities from playlists + local favorites.
+  /// No new DB tables required.
+  void _buildActivities() {
+    if (!mounted) return;
+    final activities = <UserActivity>[];
+
+    // From playlists
+    for (final pl in _userPlaylists.take(3)) {
+      final count = (pl['destination_count'] as num?)?.toInt() ?? 0;
+      final createdRaw = pl['created_at'] as String?;
+      final ts = createdRaw != null
+          ? DateTime.tryParse(createdRaw) ?? DateTime.now()
+          : DateTime.now();
+      activities.add(UserActivity(
+        id: 'pl_${pl['id']}',
+        type: ActivityType.trip,
+        title: 'Created: ${pl['name'] as String? ?? 'Playlist'}',
+        description:
+            'Trip playlist with $count destination${count == 1 ? '' : 's'}',
+        timestamp: ts,
+      ));
+    }
+
+    // From local favorites
+    final favs =
+        Provider.of<FavoritesProvider>(context, listen: false).favorites;
+    for (final fav in favs.take(3)) {
+      activities.add(UserActivity(
+        id: 'fav_${fav.id}',
+        type: ActivityType.placeAdded,
+        title: 'Saved: ${fav.name}',
+        description: 'Added to your favorites collection',
+        timestamp: DateTime.now().subtract(const Duration(days: 1)),
+        location: fav.location,
+      ));
+    }
+
+    activities.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    setState(() => _activities = activities.take(5).toList());
+  }
+
+  // ── avatar upload ─────────────────────────────────────────────────────────────
   Future<void> _pickAndUploadAvatar() async {
     showAvatarPicker(context, (path) async {
-      // Show local preview immediately
       setState(() {
         _avatarPath = path;
         _avatarUploading = true;
@@ -212,38 +268,109 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
         publicUrl =
             supabase.storage.from('profiles').getPublicUrl(storagePath);
-      } catch (_) {}
+      } catch (e) {
+        if (kDebugMode) debugPrint('Avatar upload error: $e');
+      }
 
       if (!mounted) return;
 
       if (publicUrl != null) {
         final token = supabase.auth.currentSession?.accessToken;
         await ApiService.updateProfile(
-          avatarUrl: publicUrl,
-          accessToken: token,
-        );
+            avatarUrl: publicUrl, accessToken: token);
         ApiService.invalidateProfileCache();
         if (mounted) setState(() => _avatarPath = publicUrl!);
       } else {
-        // Upload failed — show error, revert preview
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Failed to upload photo'),
+              content: Text('Failed to upload photo. Please try again.'),
               behavior: SnackBarBehavior.floating,
             ),
           );
         }
       }
-
       if (mounted) setState(() => _avatarUploading = false);
     });
   }
 
-  // ── build ────────────────────────────────────────────────────────────────────
-  /// =========================================================================
-  /// REDESIGN: GAMIFIED CUSTOM SCROLL VIEW
-  /// =========================================================================
+  // ── banner upload ─────────────────────────────────────────────────────────────
+  Future<void> _pickAndUploadBanner() async {
+    showAvatarPicker(context, (path) async {
+      setState(() => _bannerUploading = true);
+
+      final supabase = Supabase.instance.client;
+      final userId = supabase.auth.currentUser?.id;
+      if (userId == null) {
+        if (mounted) setState(() => _bannerUploading = false);
+        return;
+      }
+
+      final ext = path.split('.').last.toLowerCase();
+      final storagePath = 'banners/$userId.$ext';
+      String? publicUrl;
+      try {
+        await supabase.storage.from('profiles').upload(
+              storagePath,
+              File(path),
+              fileOptions: const FileOptions(upsert: true),
+            );
+        publicUrl =
+            supabase.storage.from('profiles').getPublicUrl(storagePath);
+      } catch (e) {
+        if (kDebugMode) debugPrint('Banner upload error: $e');
+      }
+
+      if (!mounted) return;
+
+      if (publicUrl != null) {
+        // Update banner_url directly via Supabase (new field, backend may not know it yet)
+        try {
+          await supabase
+              .from('profiles')
+              .update({'banner_url': publicUrl})
+              .eq('id', userId);
+          ApiService.invalidateProfileCache();
+          if (mounted) setState(() => _bannerUrl = publicUrl!);
+        } catch (e) {
+          if (kDebugMode) debugPrint('Banner profile update error: $e');
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to upload banner. Please try again.'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+      if (mounted) setState(() => _bannerUploading = false);
+    });
+  }
+
+  // ── helpers ───────────────────────────────────────────────────────────────────
+
+  /// Effective bio: prefer user bio, fall back to AI description, then a
+  /// generated placeholder based on travel style.
+  String get _effectiveBio {
+    if (_bio.isNotEmpty) return _bio;
+    if (_aiDescription.isNotEmpty) return _aiDescription;
+    if (_travelPersonalityType.isNotEmpty) {
+      return 'A passionate $_travelPersonalityType exploring the wonders of Sri Lanka.';
+    }
+    if (_travelStyle.isNotEmpty) {
+      return 'Passionate traveller with a love for ${_travelStyle.toLowerCase()}.';
+    }
+    return 'Explorer of Sri Lanka\'s hidden gems and vibrant culture.';
+  }
+
+  List<Color> get _bannerGradientColors {
+    return _styleGradients[_travelStyle] ??
+        [AppTheme.secondaryLight, AppTheme.primaryLight];
+  }
+
+  // ── build ─────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -257,8 +384,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
+              // ── Banner SliverAppBar ────────────────────────────────────────
               SliverAppBar(
-                expandedHeight: isCompact ? 28.h : 32.h,
+                expandedHeight: isCompact ? 30.h : 34.h,
                 pinned: true,
                 stretch: true,
                 backgroundColor: theme.colorScheme.surface,
@@ -267,86 +395,139 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     StretchMode.zoomBackground,
                     StretchMode.blurBackground,
                   ],
-                  titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
+                  titlePadding:
+                      const EdgeInsets.only(left: 20, bottom: 16),
                   title: Text(
                     _displayName.isNotEmpty ? _displayName : 'Traveller',
                     style: TextStyle(
-                      color: _text,
+                      color: Colors.white,
                       fontWeight: FontWeight.w800,
-                      shadows: [
-                        Shadow(
-                          color: Colors.white.withOpacity(0.8),
-                          blurRadius: 10,
-                        )
-                      ]
+                      fontSize: 15,
+                      shadows: const [
+                        Shadow(color: Colors.black38, blurRadius: 8),
+                      ],
                     ),
                   ),
                   background: Stack(
                     fit: StackFit.expand,
                     children: [
-                      // Premium Gradient Background
+                      // Banner: real image or gradient
+                      _bannerUrl.isNotEmpty
+                          ? Image.network(
+                              _bannerUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) =>
+                                  _buildGradientBanner(),
+                            )
+                          : _buildGradientBanner(),
+
+                      // Scrim for readability
                       Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            begin: Alignment.topRight,
-                            end: Alignment.bottomLeft,
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
                             colors: [
-                              AppTheme.primaryLight.withOpacity(0.15),
-                              AppTheme.secondaryLight.withOpacity(0.05),
-                              theme.scaffoldBackgroundColor,
+                              Colors.transparent,
+                              Colors.black.withOpacity(0.45),
                             ],
                           ),
                         ),
                       ),
+
+                      // Banner edit button
                       Positioned(
-                        right: -30,
-                        top: -20,
-                        child: Icon(
-                          Icons.travel_explore,
-                          size: 200,
-                          color: AppTheme.primaryLight.withOpacity(0.05),
+                        top: 48,
+                        right: 16,
+                        child: GestureDetector(
+                          onTap: _pickAndUploadBanner,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.4),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: _bannerUploading
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 1.5,
+                                        color: Colors.white),
+                                  )
+                                : const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.camera_alt_outlined,
+                                          size: 14, color: Colors.white),
+                                      SizedBox(width: 4),
+                                      Text('Banner',
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 11,
+                                              fontWeight:
+                                                  FontWeight.w600)),
+                                    ],
+                                  ),
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
                 actions: [
-                   IconButton(
-                     icon: const Icon(Icons.settings_outlined),
-                     onPressed: () {}, // Handled in later commits
-                     color: _text,
-                   )
-                ]
+                  IconButton(
+                    icon: const Icon(Icons.settings_outlined,
+                        color: Colors.white),
+                    onPressed: () {},
+                  ),
+                ],
               ),
+
+              // ── Content ───────────────────────────────────────────────────
               SliverPadding(
                 padding: EdgeInsets.fromLTRB(
-                  isCompact ? 8.w : 7.w,
+                  isCompact ? 4.w : 5.w,
                   2.h,
-                  isCompact ? 6.w : 7.w,
-                  12.h, // padding for floating assist
+                  isCompact ? 4.w : 5.w,
+                  12.h,
                 ),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
+                    // Profile hero
                     _buildProfileHero(isCompact),
                     SizedBox(height: isCompact ? 3.h : 3.5.h),
-                    
-                    // Gamification: Achievements
-                    ProfileBadgesWidget(badges: _badges, isCompact: isCompact),
+
+                    // Stats row
+                    _buildStatsRow(isCompact),
                     SizedBox(height: isCompact ? 3.h : 4.h),
-                    
-                    // Historical Map Timeline
-                    ProfileActivityWidget(activities: _activities, isCompact: isCompact),
+
+                    // Badges
+                    ProfileBadgesWidget(
+                        badges: _badges, isCompact: isCompact),
                     SizedBox(height: isCompact ? 3.h : 4.h),
-                    
-                    // Core Map Statistics
+
+                    // Recent activity (real data)
+                    _buildActivitiesSection(isCompact),
+                    SizedBox(height: isCompact ? 3.h : 4.h),
+
+                    // Map stats
                     ProfileMapStatsWidget(isCompact: isCompact),
                     SizedBox(height: isCompact ? 3.h : 4.h),
-                    
-                    // Editable Preferences
-                    ProfilePreferencesWidget(initialStyle: _travelStyle.isNotEmpty ? _travelStyle : 'Adventure & Hiking', isCompact: isCompact),
+
+                    // Travel DNA
+                    ProfilePreferencesWidget(
+                      initialStyle: _travelStyle.isNotEmpty
+                          ? _travelStyle
+                          : 'Adventure & Hiking',
+                      initialWorkingType: _workingType,
+                      onWorkingTypeChanged: _saveWorkingType,
+                      isCompact: isCompact,
+                    ),
                     SizedBox(height: isCompact ? 3.h : 4.h),
-                    
-                    // Legacy Playlists Fallback
+
+                    // Playlists card
                     _buildPlaylistsCard(isCompact),
                     SizedBox(height: isCompact ? 2.4.h : 3.h),
                     Align(
@@ -358,8 +539,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ],
           ),
-          
-          // Original floating logic remains overlaying the ScrollView
+
+          // Side rail (quick actions)
           Positioned(
             left: 0,
             right: 0,
@@ -373,7 +554,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Align(
                 alignment: Alignment.bottomLeft,
                 child: Padding(
-                  padding: EdgeInsets.only(left: isCompact ? 4.w : 5.w),
+                  padding:
+                      EdgeInsets.only(left: isCompact ? 4.w : 5.w),
                   child: _buildSideRail(isCompact),
                 ),
               ),
@@ -391,7 +573,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Align(
                   alignment: Alignment.bottomLeft,
                   child: Padding(
-                    padding: EdgeInsets.only(left: isCompact ? 4.w : 5.w),
+                    padding: EdgeInsets.only(
+                        left: isCompact ? 4.w : 5.w),
                     child: _buildAssistiveTouch(isCompact),
                   ),
                 ),
@@ -403,7 +586,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ── hero section ─────────────────────────────────────────────────────────────
+  // ── gradient banner fallback ──────────────────────────────────────────────────
+  Widget _buildGradientBanner() {
+    final colors = _bannerGradientColors;
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: colors,
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -40,
+            top: -20,
+            child: Icon(
+              Icons.travel_explore,
+              size: 220,
+              color: Colors.white.withOpacity(0.07),
+            ),
+          ),
+          Positioned(
+            left: -30,
+            bottom: -30,
+            child: Icon(
+              Icons.landscape_rounded,
+              size: 180,
+              color: Colors.white.withOpacity(0.05),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── profile hero ──────────────────────────────────────────────────────────────
   Widget _buildProfileHero(bool isCompact) {
     final ImageProvider? avatarImage = _avatarPath.isEmpty
         ? null
@@ -419,14 +638,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Welcome',
+                'Welcome back',
                 style: TextStyle(
-                  fontFamily: 'Georgia',
-                  fontSize: isCompact ? 14.5.sp : 17.sp,
+                  fontSize: isCompact ? 13.sp : 15.sp,
                   color: _mutedText,
                 ),
               ),
-              SizedBox(height: isCompact ? 0.4.h : 0.8.h),
+              SizedBox(height: 0.5.h),
               Text(
                 _displayName.isNotEmpty ? _displayName : 'Traveller',
                 style: TextStyle(
@@ -435,31 +653,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   color: _text,
                 ),
               ),
-              SizedBox(height: isCompact ? 0.7.h : 1.h),
+              SizedBox(height: 0.5.h),
               Text(
                 _homeCity.isNotEmpty
                     ? _homeCity
                     : (_email.isNotEmpty ? _email : 'Sri Lanka'),
                 style: TextStyle(
-                  fontSize: isCompact ? 12.5.sp : 15.sp,
+                  fontSize: isCompact ? 12.sp : 13.5.sp,
                   color: _mutedText,
                 ),
               ),
-              if (_bio.isNotEmpty) ...[
-                SizedBox(height: isCompact ? 0.5.h : 0.8.h),
-                Text(
-                  _bio,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: isCompact ? 11.sp : 13.sp,
-                    color: _mutedText,
+              SizedBox(height: 1.h),
+              Text(
+                _effectiveBio,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: isCompact ? 11.sp : 12.5.sp,
+                  color: _mutedText,
+                  height: 1.5,
+                ),
+              ),
+              if (_travelPersonalityType.isNotEmpty) ...[
+                SizedBox(height: 1.h),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _accent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                        color: _accent.withOpacity(0.25), width: 1),
+                  ),
+                  child: Text(
+                    _travelPersonalityType,
+                    style: TextStyle(
+                      fontSize: isCompact ? 10.sp : 11.sp,
+                      color: _accent,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
             ],
           ),
         ),
+        SizedBox(width: 3.w),
+
+        // Avatar
         GestureDetector(
           onTap: _pickAndUploadAvatar,
           child: Stack(
@@ -470,23 +711,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 height: isCompact ? 24.w : 27.w,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: _border),
+                  border: Border.all(color: _border, width: 2),
                 ),
-                child: Center(
-                  child: CircleAvatar(
-                    radius: isCompact ? 9.7.w : 11.w,
-                    backgroundColor: _accent.withOpacity(0.7),
-                    backgroundImage: avatarImage,
-                    child: avatarImage == null
-                        ? Text(
-                            'Photo',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: isCompact ? 11.sp : 14.sp,
-                            ),
-                          )
-                        : null,
-                  ),
+                child: CircleAvatar(
+                  radius: isCompact ? 9.7.w : 11.w,
+                  backgroundColor: _accent.withOpacity(0.7),
+                  backgroundImage: avatarImage,
+                  child: avatarImage == null
+                      ? Icon(Icons.person_rounded,
+                          color: Colors.white,
+                          size: isCompact ? 10.w : 12.w)
+                      : null,
                 ),
               ),
               if (_avatarUploading)
@@ -498,9 +733,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     child: const Center(
                       child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
+                          strokeWidth: 2, color: Colors.white),
                     ),
                   ),
                 ),
@@ -513,12 +746,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   decoration: BoxDecoration(
                     color: _chipFill,
                     borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.white, width: 1.5),
                   ),
-                  child: Icon(
-                    Icons.camera_alt_rounded,
-                    size: isCompact ? 3.5.w : 4.w,
-                    color: _accent,
-                  ),
+                  child: Icon(Icons.camera_alt_rounded,
+                      size: isCompact ? 3.5.w : 4.w, color: _accent),
                 ),
               ),
             ],
@@ -528,7 +759,134 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ── your playlists (real data) ───────────────────────────────────────────────
+  // ── stats row ─────────────────────────────────────────────────────────────────
+  Widget _buildStatsRow(bool isCompact) {
+    final items = [
+      ('Playlists', '${_stats['playlists'] ?? 0}'),
+      ('Places', '${_stats['places'] ?? 0}'),
+      ('Reviews', '${_stats['reviews'] ?? 0}'),
+      ('Photos', '${_stats['photos'] ?? 0}'),
+    ];
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+          vertical: isCompact ? 1.8.h : 2.2.h, horizontal: 2.w),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceLight,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _border),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 14,
+              offset: const Offset(0, 6)),
+        ],
+      ),
+      child: _statsLoading
+          ? const Center(
+              child: SizedBox(
+                  height: 30,
+                  child: CircularProgressIndicator(strokeWidth: 2)))
+          : Row(
+              children: items.map((item) {
+                return Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        item.$2,
+                        style: TextStyle(
+                          fontSize: isCompact ? 18.sp : 22.sp,
+                          fontWeight: FontWeight.w800,
+                          color: _text,
+                        ),
+                      ),
+                      SizedBox(height: 0.3.h),
+                      Text(
+                        item.$1,
+                        style: TextStyle(
+                          fontSize: isCompact ? 10.sp : 11.sp,
+                          color: _mutedText,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+    );
+  }
+
+  // ── recent activities section ─────────────────────────────────────────────────
+  Widget _buildActivitiesSection(bool isCompact) {
+    if (_activities.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Recent Activity',
+            style: TextStyle(
+              fontSize: isCompact ? 16.sp : 18.sp,
+              fontWeight: FontWeight.w800,
+              color: _text,
+            ),
+          ),
+          SizedBox(height: 2.h),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(
+                vertical: 3.h, horizontal: 4.w),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceLight,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: _border),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.history_rounded,
+                    size: 12.w,
+                    color: _mutedText.withOpacity(0.3)),
+                SizedBox(height: 1.5.h),
+                Text(
+                  'No recent activity yet',
+                  style: TextStyle(
+                      fontSize: 13.sp, color: _mutedText),
+                ),
+                SizedBox(height: 0.5.h),
+                Text(
+                  'Start saving places and creating playlists',
+                  style: TextStyle(
+                      fontSize: 11.sp,
+                      color: _mutedText.withOpacity(0.6)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    return ProfileActivityWidget(
+        activities: _activities, isCompact: isCompact);
+  }
+
+  // ── save working type via Supabase direct ─────────────────────────────────────
+  Future<void> _saveWorkingType(String type) async {
+    setState(() => _workingType = type);
+    final supabase = Supabase.instance.client;
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return;
+    try {
+      await supabase
+          .from('profiles')
+          .update({'working_type': type})
+          .eq('id', userId);
+      ApiService.invalidateProfileCache();
+    } catch (e) {
+      if (kDebugMode) debugPrint('Working type save error: $e');
+    }
+  }
+
+  // ── playlists card ────────────────────────────────────────────────────────────
   Widget _buildPlaylistsCard(bool isCompact) {
     return Container(
       width: double.infinity,
@@ -543,10 +901,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 18,
+              offset: const Offset(0, 8)),
         ],
       ),
       child: Column(
@@ -563,7 +920,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (_playlistsLoading)
             const SizedBox(
               height: 80,
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              child: Center(
+                  child: CircularProgressIndicator(strokeWidth: 2)),
             )
           else if (_userPlaylists.isEmpty)
             Padding(
@@ -582,7 +940,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: _userPlaylists.take(3).map((playlist) {
-                final title = playlist['name'] as String? ?? 'Playlist';
+                final title =
+                    playlist['name'] as String? ?? 'Playlist';
                 final images = playlist['previewImages'] as List?;
                 final imageUrl = images?.isNotEmpty == true
                     ? images!.first as String
@@ -646,7 +1005,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ── privacy toggle ───────────────────────────────────────────────────────────
+  // ── privacy toggle ────────────────────────────────────────────────────────────
   Widget _buildPrivacyToggle(bool isCompact) {
     return Container(
       padding: EdgeInsets.all(0.5.w),
@@ -664,7 +1023,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           GestureDetector(
             onTap: () => setState(() => _isPrivatePlaylist = true),
-            child: _privacyPill('Private', _isPrivatePlaylist, isCompact),
+            child:
+                _privacyPill('Private', _isPrivatePlaylist, isCompact),
           ),
         ],
       ),
@@ -691,14 +1051,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ── side rail ────────────────────────────────────────────────────────────────
+  // ── side rail ─────────────────────────────────────────────────────────────────
   Widget _buildSideRail(bool isCompact) {
     final items = <(String, VoidCallback)>[
       ('Saved', () => showSavedRoutesModal(context)),
       ('Achievement', () => showAchievementsModal(context)),
       ('Reviews', () => showMyReviewsModal(context)),
     ];
-
     return Container(
       width: isCompact ? 42.w : 34.w,
       padding: EdgeInsets.fromLTRB(
@@ -712,10 +1071,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.18),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
-          ),
+              color: Colors.black.withOpacity(0.18),
+              blurRadius: 22,
+              offset: const Offset(0, 10)),
         ],
       ),
       child: Column(
@@ -727,33 +1085,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: GestureDetector(
               onTap: () => setState(() => _isSideRailVisible = false),
               child: Padding(
-                padding: EdgeInsets.only(bottom: isCompact ? 0.8.h : 0.9.h),
-                child: Icon(
-                  Icons.close_rounded,
-                  color: Colors.white,
-                  size: isCompact ? 5.2.w : 4.2.w,
-                ),
+                padding: EdgeInsets.only(
+                    bottom: isCompact ? 0.8.h : 0.9.h),
+                child: Icon(Icons.close_rounded,
+                    color: Colors.white,
+                    size: isCompact ? 5.2.w : 4.2.w),
               ),
             ),
           ),
-          ...items.map((item) {
-            return GestureDetector(
-              onTap: item.$2,
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  vertical: isCompact ? 0.95.h : 1.15.h,
-                ),
-                child: Text(
-                  '- ${item.$1}',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: isCompact ? 13.sp : 15.sp,
-                    fontWeight: FontWeight.w700,
+          ...items.map((item) => GestureDetector(
+                onTap: item.$2,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                      vertical: isCompact ? 0.95.h : 1.15.h),
+                  child: Text(
+                    '- ${item.$1}',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: isCompact ? 13.sp : 15.sp,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-            );
-          }),
+              )),
         ],
       ),
     );
@@ -770,19 +1124,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.18),
-              blurRadius: 14,
-              offset: const Offset(0, 8),
-            ),
+                color: Colors.black.withOpacity(0.18),
+                blurRadius: 14,
+                offset: const Offset(0, 8)),
           ],
         ),
-        child: Icon(
-          Icons.more_horiz_rounded,
-          color: Colors.white,
-          size: isCompact ? 5.4.w : 4.6.w,
-        ),
+        child: Icon(Icons.more_horiz_rounded,
+            color: Colors.white,
+            size: isCompact ? 5.4.w : 4.6.w),
       ),
     );
   }
 }
-

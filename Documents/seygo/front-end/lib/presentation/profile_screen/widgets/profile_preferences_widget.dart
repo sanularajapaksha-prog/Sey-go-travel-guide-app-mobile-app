@@ -4,30 +4,34 @@ import 'package:sizer/sizer.dart';
 import '../../../theme/app_theme.dart';
 
 /// =========================================================================
-/// PROFILE PREFERENCES WIDGET
+/// TRAVEL DNA WIDGET
 /// =========================================================================
-/// An interactive component allowing users to mutate their travel style
-/// and budget affinities directly from their public profile view, leveraging
-/// smooth animations and ChoiceChips.
+/// Lets users set their travel style and working type.
+/// Budget slider removed — replaced by a meaningful working-type selector.
+/// AI-ready: working_type and travel_style are stored in Supabase profiles.
 class ProfilePreferencesWidget extends StatefulWidget {
   final String initialStyle;
-  final double initialBudgetMax;
+  final String initialWorkingType;
+  final ValueChanged<String>? onWorkingTypeChanged;
   final bool isCompact;
 
   const ProfilePreferencesWidget({
     super.key,
     this.initialStyle = 'Adventure & Hiking',
-    this.initialBudgetMax = 500.0,
+    this.initialWorkingType = '',
+    this.onWorkingTypeChanged,
     this.isCompact = false,
   });
 
   @override
-  State<ProfilePreferencesWidget> createState() => _ProfilePreferencesWidgetState();
+  State<ProfilePreferencesWidget> createState() =>
+      _ProfilePreferencesWidgetState();
 }
 
-class _ProfilePreferencesWidgetState extends State<ProfilePreferencesWidget> {
+class _ProfilePreferencesWidgetState
+    extends State<ProfilePreferencesWidget> {
   late String _selectedStyle;
-  late double _currentBudget;
+  late String _selectedWorkingType;
 
   final List<String> _availableStyles = [
     'Beach & Culture',
@@ -39,11 +43,39 @@ class _ProfilePreferencesWidgetState extends State<ProfilePreferencesWidget> {
     'Culinary Tours',
   ];
 
+  /// Working types with icon + label pairs.
+  static const List<({String type, IconData icon})> _workingTypes = [
+    (type: 'Solo Traveler', icon: Icons.person_rounded),
+    (type: 'Couple', icon: Icons.favorite_rounded),
+    (type: 'Family', icon: Icons.family_restroom_rounded),
+    (type: 'Group', icon: Icons.groups_rounded),
+    (type: 'Digital Nomad', icon: Icons.laptop_mac_rounded),
+    (type: 'Business', icon: Icons.business_center_rounded),
+  ];
+
   @override
   void initState() {
     super.initState();
     _selectedStyle = widget.initialStyle;
-    _currentBudget = widget.initialBudgetMax;
+    _selectedWorkingType = widget.initialWorkingType;
+  }
+
+  @override
+  void didUpdateWidget(ProfilePreferencesWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialWorkingType != widget.initialWorkingType &&
+        widget.initialWorkingType.isNotEmpty) {
+      _selectedWorkingType = widget.initialWorkingType;
+    }
+    if (oldWidget.initialStyle != widget.initialStyle &&
+        widget.initialStyle.isNotEmpty) {
+      _selectedStyle = widget.initialStyle;
+    }
+  }
+
+  void _selectWorkingType(String type) {
+    setState(() => _selectedWorkingType = type);
+    widget.onWorkingTypeChanged?.call(type);
   }
 
   @override
@@ -51,8 +83,10 @@ class _ProfilePreferencesWidgetState extends State<ProfilePreferencesWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ── Section header ───────────────────────────────────────────────
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: widget.isCompact ? 4.w : 5.w),
+          padding: EdgeInsets.symmetric(
+              horizontal: widget.isCompact ? 0 : 0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -75,59 +109,73 @@ class _ProfilePreferencesWidgetState extends State<ProfilePreferencesWidget> {
             ],
           ),
         ),
-        SizedBox(height: 2.5.h),
-        
-        // Travel Style Chips (Horizontal Scroll)
+        SizedBox(height: 2.h),
+
+        // ── Travel Style chips ────────────────────────────────────────────
+        Text(
+          'Travel Style',
+          style: TextStyle(
+            fontSize: widget.isCompact ? 12.sp : 13.sp,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.neutralLight,
+          ),
+        ),
+        SizedBox(height: 1.2.h),
         _buildStyleSelector(),
-        
-        SizedBox(height: 3.5.h),
-        
-        // Budget Slider Configuration
-        _buildBudgetSlider(),
+        SizedBox(height: 3.h),
+
+        // ── Working Type ──────────────────────────────────────────────────
+        Text(
+          'How do you travel?',
+          style: TextStyle(
+            fontSize: widget.isCompact ? 12.sp : 13.sp,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.neutralLight,
+          ),
+        ),
+        SizedBox(height: 1.5.h),
+        _buildWorkingTypeGrid(),
       ],
     );
   }
 
   Widget _buildStyleSelector() {
     return SizedBox(
-      height: 6.h,
+      height: 5.5.h,
       child: ListView.separated(
-        padding: EdgeInsets.symmetric(horizontal: widget.isCompact ? 4.w : 5.w),
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         itemCount: _availableStyles.length,
-        separatorBuilder: (context, index) => SizedBox(width: 2.w),
+        separatorBuilder: (_, _) => SizedBox(width: 2.w),
         itemBuilder: (context, index) {
           final style = _availableStyles[index];
           final isSelected = _selectedStyle == style;
-          
           return AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
+            duration: const Duration(milliseconds: 250),
             curve: Curves.easeOutCubic,
             child: ChoiceChip(
               label: Text(style),
               selected: isSelected,
-              onSelected: (selected) {
-                if (selected) {
-                  setState(() => _selectedStyle = style);
-                }
+              onSelected: (sel) {
+                if (sel) setState(() => _selectedStyle = style);
               },
               labelStyle: TextStyle(
                 color: isSelected ? Colors.white : AppTheme.neutralLight,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontWeight:
+                    isSelected ? FontWeight.w700 : FontWeight.normal,
                 fontSize: widget.isCompact ? 11.sp : 12.sp,
               ),
               backgroundColor: Colors.white,
               selectedColor: AppTheme.secondaryLight,
-              elevation: isSelected ? 4 : 0,
+              elevation: isSelected ? 3 : 0,
               padding: EdgeInsets.symmetric(
-                horizontal: 3.w,
-                vertical: 1.2.h,
-              ),
+                  horizontal: 3.w, vertical: 1.h),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(24),
                 side: BorderSide(
-                  color: isSelected ? AppTheme.secondaryLight : AppTheme.dividerLight,
+                  color: isSelected
+                      ? AppTheme.secondaryLight
+                      : AppTheme.dividerLight,
                   width: 1.5,
                 ),
               ),
@@ -139,100 +187,78 @@ class _ProfilePreferencesWidgetState extends State<ProfilePreferencesWidget> {
     );
   }
 
-  Widget _buildBudgetSlider() {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: widget.isCompact ? 4.w : 5.w),
-      child: Container(
-        padding: EdgeInsets.all(widget.isCompact ? 16.0 : 20.0),
-        decoration: BoxDecoration(
-          color: AppTheme.surfaceLight,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.dividerLight),
-          boxShadow: [
-             BoxShadow(
-               color: AppTheme.primaryLight.withOpacity(0.04),
-               blurRadius: 10,
-               offset: const Offset(0, 4),
-             )
-          ]
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Daily Comfort Budget',
-                  style: TextStyle(
-                    fontSize: widget.isCompact ? 12.sp : 14.sp,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.tertiaryLight,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryLight.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '\$${_currentBudget.toInt()}',
-                    style: TextStyle(
-                      fontSize: widget.isCompact ? 13.sp : 15.sp,
-                      fontWeight: FontWeight.w800,
-                      color: AppTheme.primaryLight,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 2.h),
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                activeTrackColor: AppTheme.primaryLight,
-                inactiveTrackColor: AppTheme.dividerLight,
-                trackHeight: 6.0,
-                thumbColor: Colors.white,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 12.0),
-                overlayColor: AppTheme.primaryLight.withOpacity(0.2),
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 24.0),
-                valueIndicatorShape: const RectangularSliderValueIndicatorShape(),
-                valueIndicatorColor: AppTheme.primaryLight,
-              ),
-              child: Slider(
-                value: _currentBudget,
-                min: 50,
-                max: 1000,
-                divisions: 19,
-                label: '\$${_currentBudget.toInt()}/day',
-                onChanged: (value) {
-                  setState(() => _currentBudget = value);
-                },
-              ),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Backpacker (\$50)',
-                  style: TextStyle(
-                    fontSize: widget.isCompact ? 9.sp : 10.sp,
-                    color: AppTheme.neutralLight,
-                  ),
-                ),
-                Text(
-                  'Luxury (\$1000+)',
-                  style: TextStyle(
-                    fontSize: widget.isCompact ? 9.sp : 10.sp,
-                    color: AppTheme.neutralLight,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+  Widget _buildWorkingTypeGrid() {
+    return GridView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 1.5.h,
+        crossAxisSpacing: 2.w,
+        childAspectRatio: 1.55,
       ),
+      itemCount: _workingTypes.length,
+      itemBuilder: (context, index) {
+        final item = _workingTypes[index];
+        final isSelected = _selectedWorkingType == item.type;
+        return GestureDetector(
+          onTap: () => _selectWorkingType(item.type),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? AppTheme.secondaryLight
+                  : AppTheme.surfaceLight,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isSelected
+                    ? AppTheme.secondaryLight
+                    : AppTheme.dividerLight,
+                width: 1.5,
+              ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color:
+                            AppTheme.secondaryLight.withOpacity(0.25),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      )
+                    ]
+                  : [],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  item.icon,
+                  size: widget.isCompact ? 5.w : 5.5.w,
+                  color: isSelected
+                      ? Colors.white
+                      : AppTheme.neutralLight,
+                ),
+                SizedBox(height: 0.5.h),
+                Text(
+                  item.type,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  style: TextStyle(
+                    fontSize: widget.isCompact ? 9.sp : 10.sp,
+                    fontWeight: isSelected
+                        ? FontWeight.w700
+                        : FontWeight.w500,
+                    color: isSelected
+                        ? Colors.white
+                        : AppTheme.tertiaryLight,
+                    height: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
