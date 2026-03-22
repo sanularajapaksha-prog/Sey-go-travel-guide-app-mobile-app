@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:provider/provider.dart';
 import 'package:sizer/sizer.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_export.dart';
+import '../../data/models/offline_cache_item.dart';
 import '../../data/services/api_service.dart';
+import '../../providers/user_data_provider.dart';
 import '../../widgets/custom_icon_widget.dart';
+import '../../widgets/offline_download_button.dart';
+import '../playlists_screen/widgets/create_playlist_dialog.dart';
 import './widgets/destination_header_widget.dart';
 import './widgets/destination_info_widget.dart';
 import './widgets/highlights_widget.dart';
 import './widgets/map_preview_widget.dart';
 import './widgets/related_destinations_widget.dart';
+import './widgets/reviews_widget.dart';
 
 class DestinationDetailScreen extends StatefulWidget {
   const DestinationDetailScreen({super.key});
@@ -428,15 +435,12 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
 
   Widget _buildPlaylistBottomSheet() {
     final theme = Theme.of(context);
-    final playlists = [
-      {"name": "Summer Vacation 2026", "count": 12},
-      {"name": "Adventure Destinations", "count": 8},
-      {"name": "Cultural Heritage Sites", "count": 15},
-      {"name": "Beach Getaways", "count": 6},
-    ];
+    final userDataProvider = Provider.of<UserDataProvider>(context);
+    final playlists = userDataProvider.myPlaylists;
 
     return Container(
       padding: EdgeInsets.all(4.w),
+      constraints: BoxConstraints(maxHeight: 60.h),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -482,10 +486,9 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
             ),
             onTap: () {
               Navigator.pop(context);
-              Fluttertoast.showToast(
-                msg: "Create playlist feature coming soon",
-                toastLength: Toast.LENGTH_SHORT,
-                gravity: ToastGravity.BOTTOM,
+              showDialog(
+                context: context,
+                builder: (context) => const CreatePlaylistDialog(),
               );
             },
           ),
@@ -493,45 +496,73 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
           Divider(height: 3.h),
 
           // Existing playlists
-          ...playlists.map((playlist) {
-            return ListTile(
-              leading: Container(
-                width: 12.w,
-                height: 12.w,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surface,
-                  borderRadius: BorderRadius.circular(2.w),
-                  border: Border.all(color: theme.dividerColor, width: 1),
-                ),
-                child: Center(
-                  child: CustomIconWidget(
-                    iconName: 'playlist_play',
-                    color: theme.colorScheme.onSurface,
-                    size: 6.w,
+          Expanded(
+            child: playlists.isEmpty
+                ? const Center(child: Text("No playlists yet."))
+                : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: playlists.length,
+                    itemBuilder: (context, index) {
+                      final playlist = playlists[index];
+                      return ListTile(
+                        leading: Container(
+                          width: 12.w,
+                          height: 12.w,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface,
+                            borderRadius: BorderRadius.circular(2.w),
+                            border: Border.all(color: theme.dividerColor, width: 1),
+                          ),
+                          child: Center(
+                            child: CustomIconWidget(
+                              iconName: 'playlist_play',
+                              color: theme.colorScheme.onSurface,
+                              size: 6.w,
+                            ),
+                          ),
+                        ),
+                        title: Text(
+                          playlist["name"] as String? ?? 'Unnamed Playlist',
+                          style: theme.textTheme.titleMedium,
+                        ),
+                        subtitle: Text(
+                          '${playlist["places_count"] ?? 0} destinations',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        onTap: () async {
+                          Navigator.pop(context);
+                          final placeId = (_destinationData["place_id"] ?? _destinationData["id"])?.toString() ?? '';
+                          if (placeId.isEmpty) {
+                            Fluttertoast.showToast(msg: "Error: No place ID found.");
+                            return;
+                          }
+                          final token = Supabase.instance.client.auth.currentSession?.accessToken;
+                          final ok = await ApiService.addDestinationToPlaylist(
+                            playlistId: playlist["id"].toString(),
+                            placeId: placeId,
+                            accessToken: token,
+                          );
+                          if (ok) {
+                            userDataProvider.invalidate();
+                            Fluttertoast.showToast(
+                              msg: "Added to ${playlist["name"]}",
+                              toastLength: Toast.LENGTH_SHORT,
+                              gravity: ToastGravity.BOTTOM,
+                            );
+                          } else {
+                            Fluttertoast.showToast(
+                              msg: "Failed to add to playlist.",
+                              toastLength: Toast.LENGTH_SHORT,
+                              gravity: ToastGravity.BOTTOM,
+                            );
+                          }
+                        },
+                      );
+                    },
                   ),
-                ),
-              ),
-              title: Text(
-                playlist["name"] as String,
-                style: theme.textTheme.titleMedium,
-              ),
-              subtitle: Text(
-                '${playlist["count"]} destinations',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                Fluttertoast.showToast(
-                  msg: "Added to ${playlist["name"]}",
-                  toastLength: Toast.LENGTH_SHORT,
-                  gravity: ToastGravity.BOTTOM,
-                );
-              },
-            );
-          }),
-
+          ),
           SizedBox(height: 2.h),
         ],
       ),
@@ -729,6 +760,43 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
                     ),
                   ),
 
+                  SizedBox(height: 1.5.h),
+
+                  // Save offline button
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4.w),
+                    child: OfflineDownloadButton(
+                      itemId: _destinationData['id']?.toString() ??
+                          _destinationData['name']?.toString() ?? 'place',
+                      onBuild: () async {
+                        final id = _destinationData['id']?.toString() ??
+                            _destinationData['name']?.toString() ?? 'place';
+                        return OfflineCacheItem(
+                          id: id,
+                          type: OfflineCacheType.destination,
+                          title: _destinationData['name'] as String? ??
+                              'Unknown Place',
+                          imageUrl: (_destinationData['images'] as List?)
+                              ?.whereType<Map>()
+                              .map((m) => m['googleUrl']?.toString())
+                              .firstWhere((u) => u != null && u.isNotEmpty,
+                                  orElse: () => null),
+                          description:
+                              _destinationData['description'] as String?,
+                          category: _destinationData['category'] as String?,
+                          location: _destinationData['location'] as String?,
+                          latitude: (_destinationData['latitude'] as num?)
+                              ?.toDouble(),
+                          longitude: (_destinationData['longitude'] as num?)
+                              ?.toDouble(),
+                          placeData:
+                              Map<String, dynamic>.from(_destinationData),
+                          savedAt: DateTime.now(),
+                        );
+                      },
+                    ),
+                  ),
+
                   // Key highlights (only when data available)
                   if ((_destinationData["highlights"] as List).isNotEmpty) ...[
                     SizedBox(height: 4.h),
@@ -767,6 +835,14 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
                     SizedBox(height: 1.5.h),
                     _buildAccessibilitySection(theme),
                   ],
+
+                  SizedBox(height: 4.h),
+
+                  // Reviews
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4.w),
+                    child: ReviewsWidget(destinationData: _destinationData),
+                  ),
 
                   SizedBox(height: 4.h),
 

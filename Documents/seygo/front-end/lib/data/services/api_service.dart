@@ -169,7 +169,7 @@ class ApiService {
         .get(uri, headers: headers)
         .timeout(const Duration(seconds: 15));
 
-    if (response.statusCode == 200) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
       return jsonDecode(response.body) as List<dynamic>;
     }
 
@@ -205,7 +205,7 @@ class ApiService {
     final response = await http
         .post(uri, headers: headers, body: body)
         .timeout(const Duration(seconds: 30));
-    if (response.statusCode == 200) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
     throw Exception(
@@ -258,7 +258,9 @@ class ApiService {
       '$baseUrl/places/search',
     ).replace(queryParameters: params);
 
-    final response = await http.get(uri, headers: headers);
+    final response = await http
+        .get(uri, headers: headers)
+        .timeout(const Duration(seconds: 15));
     if (response.statusCode != 200) {
       throw Exception(
         'Failed to search places: ${response.statusCode} ${response.body}',
@@ -490,15 +492,17 @@ class ApiService {
     required String email,
     required String password,
   }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/register'),
-      headers: const {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'full_name': fullName.trim(),
-        'email': email.trim().toLowerCase(),
-        'password': password,
-      }),
-    );
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/auth/register'),
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'full_name': fullName.trim(),
+            'email': email.trim().toLowerCase(),
+            'password': password,
+          }),
+        )
+        .timeout(const Duration(seconds: 20));
 
     final bodyText = response.body.isEmpty ? '{}' : response.body;
     final decoded = jsonDecode(bodyText);
@@ -519,14 +523,16 @@ class ApiService {
     required String email,
     required String password,
   }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/login'),
-      headers: const {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': email.trim().toLowerCase(),
-        'password': password,
-      }),
-    );
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/auth/login'),
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'email': email.trim().toLowerCase(),
+            'password': password,
+          }),
+        )
+        .timeout(const Duration(seconds: 20));
 
     final bodyText = response.body.isEmpty ? '{}' : response.body;
     final decoded = jsonDecode(bodyText);
@@ -561,11 +567,13 @@ class ApiService {
   }
 
   static Future<void> sendLoginOtp({required String email}) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/login/send-otp'),
-      headers: const {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email.trim().toLowerCase()}),
-    );
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/auth/login/send-otp'),
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode({'email': email.trim().toLowerCase()}),
+        )
+        .timeout(const Duration(seconds: 15));
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return;
@@ -583,14 +591,16 @@ class ApiService {
     required String email,
     required String code,
   }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/login/verify-otp'),
-      headers: const {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': email.trim().toLowerCase(),
-        'code': code.trim(),
-      }),
-    );
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/auth/login/verify-otp'),
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'email': email.trim().toLowerCase(),
+            'code': code.trim(),
+          }),
+        )
+        .timeout(const Duration(seconds: 15));
 
     final bodyText = response.body.isEmpty ? '{}' : response.body;
     final decoded = jsonDecode(bodyText);
@@ -608,11 +618,13 @@ class ApiService {
   }
 
   static Future<void> resendVerificationCode({required String email}) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/resend-verification'),
-      headers: const {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email.trim().toLowerCase()}),
-    );
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/auth/resend-verification'),
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode({'email': email.trim().toLowerCase()}),
+        )
+        .timeout(const Duration(seconds: 15));
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return;
@@ -630,14 +642,16 @@ class ApiService {
     required String email,
     required String code,
   }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/verify-otp'),
-      headers: const {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': email.trim().toLowerCase(),
-        'code': code.trim(),
-      }),
-    );
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/auth/verify-otp'),
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'email': email.trim().toLowerCase(),
+            'code': code.trim(),
+          }),
+        )
+        .timeout(const Duration(seconds: 15));
 
     final bodyText = response.body.isEmpty ? '{}' : response.body;
     final decoded = jsonDecode(bodyText);
@@ -655,11 +669,13 @@ class ApiService {
   }
 
   static Future<void> forgotPassword({required String email}) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/forgot-password'),
-      headers: const {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email.trim().toLowerCase()}),
-    );
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/auth/forgot-password'),
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode({'email': email.trim().toLowerCase()}),
+        )
+        .timeout(const Duration(seconds: 15));
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return;
@@ -680,15 +696,17 @@ class ApiService {
     required String refreshToken,
     required String newPassword,
   }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/reset-password'),
-      headers: const {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'access_token': accessToken,
-        'refresh_token': refreshToken,
-        'new_password': newPassword,
-      }),
-    );
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/auth/reset-password'),
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'access_token': accessToken,
+            'refresh_token': refreshToken,
+            'new_password': newPassword,
+          }),
+        )
+        .timeout(const Duration(seconds: 15));
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return;
@@ -767,7 +785,7 @@ class ApiService {
       final response = await http
           .get(uri, headers: headers)
           .timeout(const Duration(seconds: 15));
-      if (response.statusCode == 200) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         _profileCache = jsonDecode(response.body) as Map<String, dynamic>;
         _profileCacheTime = DateTime.now();
         return _profileCache;
@@ -797,6 +815,8 @@ class ApiService {
         'Authorization': 'Bearer $accessToken',
     };
     final uri = Uri.parse('$baseUrl/users/me');
+    // Null-aware map entries (Dart 3.9+): only includes a key if value != null,
+    // enabling safe partial-update PATCH semantics over PUT.
     final payload = <String, dynamic>{
       'full_name': ?fullName,
       'bio': ?bio,
@@ -804,11 +824,12 @@ class ApiService {
       'travel_style': ?travelStyle,
       'avatar_url': ?avatarUrl,
     };
+    if (payload.isEmpty) return false;
     try {
       final response = await http
           .put(uri, headers: headers, body: jsonEncode(payload))
           .timeout(const Duration(seconds: 15));
-      if (response.statusCode == 200) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         invalidateProfileCache();
         return true;
       }
@@ -835,10 +856,10 @@ class ApiService {
       final response = await http
           .get(uri, headers: headers)
           .timeout(const Duration(seconds: 15));
-      if (response.statusCode == 200) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         final body = jsonDecode(response.body) as Map<String, dynamic>;
         final list = body['playlists'] as List? ?? [];
-        return list.cast<Map<String, dynamic>>();
+        return list.whereType<Map<String, dynamic>>().toList();
       }
     } catch (error, stackTrace) {
       if (kDebugMode) debugPrint('API Error Detected: $error\n$stackTrace');
@@ -860,10 +881,10 @@ class ApiService {
       final response = await http
           .get(uri, headers: headers)
           .timeout(const Duration(seconds: 15));
-      if (response.statusCode == 200) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         final body = jsonDecode(response.body) as Map<String, dynamic>;
         final list = body['playlists'] as List? ?? [];
-        return list.cast<Map<String, dynamic>>();
+        return list.whereType<Map<String, dynamic>>().toList();
       }
     } catch (error, stackTrace) {
       if (kDebugMode) debugPrint('API Error Detected: $error\n$stackTrace');
@@ -885,7 +906,7 @@ class ApiService {
       final response = await http
           .get(uri, headers: headers)
           .timeout(const Duration(seconds: 15));
-      if (response.statusCode == 200) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       }
     } catch (error, stackTrace) {
@@ -908,7 +929,7 @@ class ApiService {
       final response = await http
           .get(uri, headers: headers)
           .timeout(const Duration(seconds: 15));
-      if (response.statusCode == 200) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         final body = jsonDecode(response.body);
         if (body is Map<String, dynamic>) {
           return body;
@@ -1013,17 +1034,17 @@ class ApiService {
     };
     final uri = Uri.parse('$baseUrl/playlists/$playlistId');
     final payload = <String, dynamic>{
-      'name': ?name,
-      'description': ?description,
-      'icon': ?icon,
-      'visibility': ?visibility,
+      if (name != null) 'name': name,
+      if (description != null) 'description': description,
+      if (icon != null) 'icon': icon,
+      if (visibility != null) 'visibility': visibility,
     };
     if (payload.isEmpty) return false;
     try {
       final response = await http
           .put(uri, headers: headers, body: jsonEncode(payload))
           .timeout(const Duration(seconds: 15));
-      return response.statusCode == 200;
+      return response.statusCode >= 200 && response.statusCode < 300;
     } catch (_) {
       return false;
     }
@@ -1036,7 +1057,7 @@ class ApiService {
         'Content-Type': 'application/json',
         if (accessToken != null && accessToken.isNotEmpty) 'Authorization': 'Bearer $accessToken',
       }).timeout(const Duration(seconds: 15));
-      if (response.statusCode == 200) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         final list = jsonDecode(response.body) as List<dynamic>;
         return list.whereType<Map<String, dynamic>>().toList();
       }
@@ -1051,7 +1072,7 @@ class ApiService {
     try {
       final response = await http.get(uri, headers: {'Content-Type': 'application/json'})
           .timeout(const Duration(seconds: 15));
-      if (response.statusCode == 200) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         final list = jsonDecode(response.body) as List<dynamic>;
         return list.whereType<Map<String, dynamic>>().toList();
       }
@@ -1078,8 +1099,8 @@ class ApiService {
         body: jsonEncode({
           'place_name': placeName,
           'rating': rating,
-          'place_id': ?placeId,
-          'review_text': ?reviewText,
+          if (placeId != null) 'place_id': placeId,
+          if (reviewText != null) 'review_text': reviewText,
         }),
       ).timeout(const Duration(seconds: 15));
       return response.statusCode == 201;
