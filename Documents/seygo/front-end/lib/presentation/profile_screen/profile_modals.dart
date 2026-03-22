@@ -925,6 +925,7 @@ class _WriteReviewDialogState extends State<_WriteReviewDialog> {
   int rating = 0;
   final _placeController = TextEditingController();
   bool _submitting = false;
+  List<XFile> _pickedImages = [];
 
   @override
   void dispose() {
@@ -1049,7 +1050,12 @@ class _WriteReviewDialogState extends State<_WriteReviewDialog> {
                 ),
                 SizedBox(height: 1.7.h),
                 OutlinedButton.icon(
-                  onPressed: () {},
+                  onPressed: () async {
+                    final images = await ImagePicker().pickMultiImage();
+                    if (images.isNotEmpty) {
+                      setState(() => _pickedImages = images);
+                    }
+                  },
                   style: OutlinedButton.styleFrom(
                     minimumSize: Size(double.infinity, 6.h),
                     side: const BorderSide(color: Color(0xFFD6DCE6)),
@@ -1059,7 +1065,9 @@ class _WriteReviewDialogState extends State<_WriteReviewDialog> {
                   ),
                   icon: const Icon(Icons.photo_library_outlined),
                   label: Text(
-                    'Add Photos (Optional)',
+                    _pickedImages.isEmpty
+                        ? 'Add Photos (Optional)'
+                        : '${_pickedImages.length} photo${_pickedImages.length == 1 ? '' : 's'} selected',
                     style: TextStyle(fontSize: 13.sp),
                   ),
                 ),
@@ -1123,4 +1131,5 @@ class _AchievementData {
     required this.icon,
   });
 }
+
 

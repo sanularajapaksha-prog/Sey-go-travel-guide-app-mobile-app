@@ -75,7 +75,9 @@ class UserDataProvider extends ChangeNotifier {
       _profile = data;
       _profileLoaded = true;
       notifyListeners();
-    } catch (_) {}
+    } catch (e, st) {
+      if (kDebugMode) debugPrint('[UserDataProvider] fetchProfile error: $e\n$st');
+    }
   }
 
   Future<void> _fetchMyPlaylists(String token) async {
@@ -86,7 +88,9 @@ class UserDataProvider extends ChangeNotifier {
       _myPlaylists = data;
       _myPlaylistsLoaded = true;
       notifyListeners();
-    } catch (_) {}
+    } catch (e, st) {
+      if (kDebugMode) debugPrint('[UserDataProvider] fetchMyPlaylists error: $e\n$st');
+    }
   }
 
   Future<void> _fetchFeaturedPlaylists(String token) async {
@@ -97,7 +101,9 @@ class UserDataProvider extends ChangeNotifier {
       _featuredPlaylists = data;
       _featuredPlaylistsLoaded = true;
       notifyListeners();
-    } catch (_) {}
+    } catch (e, st) {
+      if (kDebugMode) debugPrint('[UserDataProvider] fetchFeaturedPlaylists error: $e\n$st');
+    }
   }
 
   Future<void> _fetchStats(String token) async {
@@ -108,6 +114,8 @@ class UserDataProvider extends ChangeNotifier {
       _stats = data;
       _statsLoaded = true;
       notifyListeners();
-    } catch (_) {}
+    } catch (e, st) {
+      if (kDebugMode) debugPrint('[UserDataProvider] fetchStats error: $e\n$st');
+    }
   }
 }
