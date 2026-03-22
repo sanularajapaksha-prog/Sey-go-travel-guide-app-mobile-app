@@ -223,6 +223,11 @@ class _MapViewScreenState extends State<MapViewScreen> {
     super.didChangeDependencies();
     if (!_initialized) {
       _initialized = true;
+      // Open destination list view directly when navigated with showList: true
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map && args['showList'] == true) {
+        _showListView = true;
+      }
       _initializeMap();
     }
   }
