@@ -193,9 +193,9 @@ class _ProfilePreferencesWidgetState
       shrinkWrap: true,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
-        mainAxisSpacing: 1.5.h,
-        crossAxisSpacing: 2.w,
-        childAspectRatio: 1.55,
+        mainAxisSpacing: 2.h,
+        crossAxisSpacing: 3.w,
+        childAspectRatio: 1.1,
       ),
       itemCount: _workingTypes.length,
       itemBuilder: (context, index) {
@@ -233,18 +233,18 @@ class _ProfilePreferencesWidgetState
               children: [
                 Icon(
                   item.icon,
-                  size: widget.isCompact ? 5.w : 5.5.w,
+                  size: widget.isCompact ? 7.w : 8.w,
                   color: isSelected
                       ? Colors.white
                       : AppTheme.neutralLight,
                 ),
-                SizedBox(height: 0.5.h),
+                SizedBox(height: 1.h),
                 Text(
                   item.type,
                   textAlign: TextAlign.center,
                   maxLines: 2,
                   style: TextStyle(
-                    fontSize: widget.isCompact ? 9.sp : 10.sp,
+                    fontSize: widget.isCompact ? 11.sp : 12.sp,
                     fontWeight: isSelected
                         ? FontWeight.w700
                         : FontWeight.w500,
