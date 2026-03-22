@@ -60,10 +60,10 @@ class _PlacePhotoWidgetState extends State<PlacePhotoWidget> {
       return ApiService.resolveBestPlaceImage(place);
     }
     final rawGoogleUrl = widget.googleUrl;
-    if (rawGoogleUrl == null || rawGoogleUrl.isEmpty) {
-      return Future.value(null);
-    }
-    return ApiService.resolvePhotoFromRawGoogleUrl(rawGoogleUrl);
+    return ApiService.resolvePhotoFromRawGoogleUrl(
+      rawGoogleUrl ?? '',
+      fallbackName: widget.place?.name,
+    );
   }
 
   @override
@@ -129,6 +129,7 @@ class _PlacePhotoWidgetState extends State<PlacePhotoWidget> {
       googleUrl,
       cacheKey: 'resolver:${place?.id ?? googleUrl}',
       placeId: place?.id,
+      fallbackName: place?.name,
     );
 
     if (mounted) {

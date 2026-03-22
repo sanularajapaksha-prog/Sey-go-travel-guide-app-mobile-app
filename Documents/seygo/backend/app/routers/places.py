@@ -706,7 +706,26 @@ async def photo_from_google_url(
                     'cached': True,
                 }
 
-        resolved_url = resolve_photo_url_from_google_url(normalized_url)
+        # Extract the name to use as a fallback if the URL resolution fails
+        place_name: str | None = None
+        if place_id:
+            try:
+                name_resp = (
+                    supabase.table(PLACES_TABLE)
+                    .select('name')
+                    .eq('place_id', place_id)
+                    .limit(1)
+                    .execute()
+                )
+                if name_resp.data:
+                    place_name = name_resp.data[0].get('name')
+            except Exception:
+                pass
+
+        resolved_url = resolve_photo_url_from_google_url(
+            normalized_url,
+            fallback_name=place_name,
+        )
         if resolved_url:
             if place_id:
                 update_place_photo_cache(

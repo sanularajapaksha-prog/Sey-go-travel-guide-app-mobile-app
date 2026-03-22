@@ -292,10 +292,7 @@ class ApiService {
     }
 
     final googleUrl = place.googleUrl;
-    if (googleUrl == null || googleUrl.isEmpty) {
-      _resolvedPhotoCache[cacheKey] = null;
-      return null;
-    }
+    final fallbackName = place.name;
 
     final pending = _pendingPhotoRequests[cacheKey];
     if (pending != null) {
@@ -303,8 +300,9 @@ class ApiService {
     }
 
     final future = _resolvePhotoFromGoogleUrl(
-      googleUrl: googleUrl,
+      googleUrl: googleUrl ?? '',
       placeId: place.id,
+      fallbackName: fallbackName,
     );
     _pendingPhotoRequests[cacheKey] = future;
 
@@ -321,6 +319,7 @@ class ApiService {
     String googleUrl, {
     String? cacheKey,
     String? placeId,
+    String? fallbackName,
   }) async {
     final key = cacheKey ?? placeId ?? googleUrl;
     if (_resolvedPhotoCache.containsKey(key)) {
@@ -333,6 +332,7 @@ class ApiService {
     final future = _resolvePhotoFromGoogleUrl(
       googleUrl: googleUrl,
       placeId: placeId,
+      fallbackName: fallbackName,
     );
     _pendingPhotoRequests[key] = future;
     try {
@@ -347,16 +347,27 @@ class ApiService {
   static Future<String?> _resolvePhotoFromGoogleUrl({
     required String googleUrl,
     String? placeId,
+    String? fallbackName,
   }) async {
     // --- Direct Google Places API resolution using GOOGLE_PLACES_API_KEY ---
     final apiKey = dotenv.env['GOOGLE_PLACES_API_KEY'] ?? '';
 
     if (apiKey.isNotEmpty) {
       // Try resolving directly via Google Places API (no backend needed)
-      final directUrl = await _resolveViaGooglePlacesApi(
-        googleUrl: googleUrl,
-        apiKey: apiKey,
-      );
+      String? directUrl;
+      if (googleUrl.isNotEmpty) {
+        directUrl = await _resolveViaGooglePlacesApi(
+          googleUrl: googleUrl,
+          apiKey: apiKey,
+        );
+      }
+
+      if (directUrl == null && fallbackName != null && fallbackName.isNotEmpty) {
+        directUrl = await _resolveViaGooglePlacesApi(
+          googleUrl: 'https://maps.google.com/?q=${Uri.encodeComponent(fallbackName)}',
+          apiKey: apiKey,
+        );
+      }
       if (directUrl != null) return directUrl;
     }
 
@@ -410,12 +421,25 @@ class ApiService {
       final cid = uri?.queryParameters['cid'];
       final q = uri?.queryParameters['q'];
 
-      String searchInput;
+      String? searchInput;
       if (cid != null && cid.isNotEmpty) {
         searchInput = 'cid:$cid';
       } else if (q != null && q.isNotEmpty) {
         searchInput = q;
-      } else {
+      } else if (uri != null) {
+        // Fallback: Extract from path (e.g., .../place/Name/@lat,lng,...)
+        final pathSegments = uri.pathSegments;
+        final placeIdx = pathSegments.indexOf('place');
+        if (placeIdx >= 0 && placeIdx + 1 < pathSegments.length) {
+          final rawName = pathSegments[placeIdx + 1];
+          // Many path-based URLs use @lat,lng after the name, e.g. /place/Name/@7,8,15z
+          if (!rawName.startsWith('@')) {
+            searchInput = Uri.decodeComponent(rawName).replaceAll('+', ' ');
+          }
+        }
+      }
+
+      if (searchInput == null || searchInput.isEmpty) {
         return null;
       }
 

@@ -89,30 +89,45 @@ def _resolve_via_google_places_api(google_url: str, api_key: str, timeout_second
         cid = params.get('cid', '').strip()
         q = params.get('q', '').strip()
 
+        search_input: str | None = None
         if cid:
             search_input = f'cid:{cid}'
         elif q:
             search_input = q
         else:
+            # Fallback: Extract from path (e.g., .../place/Name/@lat,lng,...)
+            path = parsed.path
+            match = re.search(r'/place/([^/@]+)/', path)
+            if match:
+                search_input = match.group(1).replace('+', ' ')
+                # If it's still a place_id starting with ChIJ, use it as-is
+                if not search_input.startswith('ChIJ'):
+                    search_input = html.unescape(search_input)
+
+        if not search_input:
             return None
 
         with httpx.Client(timeout=timeout_seconds, headers=GOOGLE_IMAGE_HEADERS) as client:
-            # Step 1: Find Place → get place_id
-            find_resp = client.get(
-                'https://maps.googleapis.com/maps/api/place/findplacefromtext/json',
-                params={
-                    'input': search_input,
-                    'inputtype': 'textquery',
-                    'fields': 'place_id',
-                    'key': api_key,
-                },
-            )
-            find_resp.raise_for_status()
-            find_data = find_resp.json()
-            candidates = find_data.get('candidates') or []
-            if not candidates:
-                return None
-            place_id = (candidates[0] or {}).get('place_id', '').strip()
+            # Step 1: Find Place → get place_id (only if we didn't already extract a place_id)
+            if search_input.startswith('ChIJ'):
+                place_id = search_input
+            else:
+                find_resp = client.get(
+                    'https://maps.googleapis.com/maps/api/place/findplacefromtext/json',
+                    params={
+                        'input': search_input,
+                        'inputtype': 'textquery',
+                        'fields': 'place_id',
+                        'key': api_key,
+                    },
+                )
+                find_resp.raise_for_status()
+                find_data = find_resp.json()
+                candidates = find_data.get('candidates') or []
+                if not candidates:
+                    return None
+                place_id = (candidates[0] or {}).get('place_id', '').strip()
+
             if not place_id:
                 return None
 
@@ -148,6 +163,7 @@ def resolve_photo_url_from_google_url(
     google_url: str,
     timeout_seconds: float = 12.0,
     api_key: str = '',
+    fallback_name: str | None = None,
 ) -> str | None:
     import os
     normalized_url = (google_url or '').strip()
@@ -157,14 +173,24 @@ def resolve_photo_url_from_google_url(
     if is_direct_image_url(normalized_url):
         return append_maxwidth(normalized_url)
 
-    # Try Google Places API first (reliable, works for both ?cid= and ?q= URLs)
+    # Try Google Places API first (reliable, works for ?cid=, ?q=, and path-based URLs)
     resolved_api_key = api_key or os.getenv('GOOGLE_MAPS_API_KEY', '').strip()
     if resolved_api_key:
         result = _resolve_via_google_places_api(normalized_url, resolved_api_key, timeout_seconds)
         if result:
             return result
 
-    # Fallback: HTML scraping (works when Google embeds og:image in page HTML)
+        # If URL resolution failed, try the fallback name if provided
+        if fallback_name and fallback_name.strip():
+            result = _resolve_via_google_places_api(
+                f'https://maps.google.com/?q={fallback_name}',
+                resolved_api_key,
+                timeout_seconds,
+            )
+            if result:
+                return result
+
+    # Fallback to scraping (can work with shortened URLs or if API fails)
     try:
         with httpx.Client(
             timeout=timeout_seconds,
