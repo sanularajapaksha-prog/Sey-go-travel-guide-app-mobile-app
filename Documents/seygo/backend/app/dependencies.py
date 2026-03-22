@@ -1,5 +1,4 @@
 import os
-from functools import lru_cache
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -13,8 +12,15 @@ load_dotenv(dotenv_path=_ENV_PATH)
 security = HTTPBearer()
 
 
-@lru_cache
 def get_supabase_client() -> Client:
+    """
+    Creates a fresh Supabase client on every call.
+    
+    NOTE: Do NOT use @lru_cache here. The Supabase Python client stores
+    an internal PostgREST JWT that expires after 1 hour. Caching the client
+    object would cause PGRST303 (JWT expired) errors on all subsequent
+    requests after the first hour of server uptime.
+    """
     url = os.getenv('SUPABASE_URL', '')
     service_role_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY', '')
 

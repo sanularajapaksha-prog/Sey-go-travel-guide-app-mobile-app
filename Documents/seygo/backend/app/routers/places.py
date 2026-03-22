@@ -1,9 +1,15 @@
+import logging
 import os
 import json
 import re
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import Response
 import httpx
+
+from ..main import limiter
+
+logger = logging.getLogger(__name__)
 
 from ..dependencies import get_current_user, get_supabase_client
 from ..schemas.google_places import GooglePlacesSearchRequest
@@ -344,7 +350,7 @@ _PLACE_COLUMNS = '*'
 
 
 @router.get('/')
-def get_places(limit: int = 500, offset: int = 0):
+def get_places(limit: int = Query(500, ge=1, le=1000), offset: int = Query(0, ge=0)):
     import os as _os
     from supabase import create_client as _cc
     # Use a fresh client each time — the lru_cached client's PostgREST schema
@@ -360,9 +366,10 @@ def get_places(limit: int = 500, offset: int = 0):
         rows = response.data or []
         return [_normalize_place_row(sb, row) for row in rows]
     except Exception as exc:
+        logger.exception('get_places failed: %s', exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'Failed to fetch places: {exc}',
+            detail='Failed to fetch places. Please try again.',
         ) from exc
 
 
@@ -389,7 +396,7 @@ async def create_place(
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f'Failed to create place: {exc}',
+            detail='Failed to create place. Please check your input and try again.',
         ) from exc
 
 
@@ -512,7 +519,6 @@ async def search_places(
             )
             rows = response.data or []
         except Exception:
-            
             response = (
                 supabase.table(PLACES_TABLE)
                 .select('*')
@@ -522,8 +528,7 @@ async def search_places(
             )
             rows = response.data or []
 
-        supabase_client = get_supabase_client()
-        normalized = [_normalize_place_row(supabase_client, row) for row in rows]
+        normalized = [_normalize_place_row(supabase, row) for row in rows]
 
         if latitude is not None and longitude is not None:
             normalized = [
@@ -541,48 +546,59 @@ async def search_places(
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'Search failed: {exc}',
+            detail='Place search failed. Please try again.',
         ) from exc
 
 @router.post('/google/search')
-async def google_places_search(request: GooglePlacesSearchRequest):
+@limiter.limit('20/minute')
+async def google_places_search(request: Request, payload: GooglePlacesSearchRequest):
     try:
-        return google_places_service.search_places(request)
+        return google_places_service.search_places(payload)
     except httpx.HTTPStatusError as exc:
+        logger.warning('Google Places search HTTP error: %s', exc.response.status_code)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f'Google Places search failed: {exc.response.text}',
+            detail='Google Places search failed. Please try again.',
         ) from exc
     except Exception as exc:
+        logger.exception('Google Places search error')
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'Google Places search error: {exc}',
+            detail='Google Places search failed. Please try again.',
         ) from exc
 
 
 @router.get('/google/details/{place_id}')
-async def google_place_details(place_id: str):
+@limiter.limit('20/minute')
+async def google_place_details(request: Request, place_id: str):
     try:
         return google_places_service.place_details(place_id)
     except httpx.HTTPStatusError as exc:
+        logger.warning('Google Place details HTTP error: %s', exc.response.status_code)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f'Google Place details failed: {exc.response.text}',
+            detail='Google Place details failed. Please try again.',
         ) from exc
     except Exception as exc:
+        logger.exception('Google Place details error for place_id=%r', place_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'Google Place details error: {exc}',
+            detail='Google Place details failed. Please try again.',
         ) from exc
 
 
 @router.get('/photo/{place_id}')
-async def google_place_photo(place_id: str):
+@limiter.limit('30/minute')
+async def google_place_photo(request: Request, place_id: str):
+    """
+    Fetches and PROXIES the photo bytes for a Google place_id.
+    The API key is kept server-side and never sent to the client.
+    """
     api_key = os.getenv('GOOGLE_MAPS_API_KEY', '').strip()
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail='GOOGLE_MAPS_API_KEY is not configured.',
+            detail='Photo service is not configured.',
         )
 
     try:
@@ -620,27 +636,33 @@ async def google_place_photo(place_id: str):
                     detail='No photo available for this place.',
                 )
 
-            return {
-                'success': True,
-                'photo_url': append_maxwidth(photo_url),
-                'source': 'google_place_id',
-            }
+            # Proxy the image bytes — API key stays on the server side.
+            img_response = client.get(photo_url)
+            img_response.raise_for_status()
+            content_type = img_response.headers.get('content-type', 'image/jpeg')
+            return Response(
+                content=img_response.content,
+                media_type=content_type,
+                headers={'Cache-Control': 'public, max-age=86400'},
+            )
     except HTTPException:
         raise
     except httpx.HTTPError as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f'Failed to fetch Google place photo: {exc}',
+            detail='Failed to fetch place photo.',
         ) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'Failed to resolve Google place photo: {exc}',
+            detail='Failed to resolve place photo.',
         ) from exc
 
 
 @router.get('/photo-from-google-url')
+@limiter.limit('30/minute')
 async def photo_from_google_url(
+    request: Request,
     url: str = Query(..., min_length=1),
     place_id: str | None = Query(default=None),
 ):
@@ -717,9 +739,10 @@ async def photo_from_google_url(
             'cached': False,
         }
     except Exception as exc:
+        logger.exception('Failed to resolve photo from google_url')
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'Failed to resolve photo from google_url: {exc}',
+            detail='Failed to resolve photo. Please try again.',
         ) from exc
 
 
