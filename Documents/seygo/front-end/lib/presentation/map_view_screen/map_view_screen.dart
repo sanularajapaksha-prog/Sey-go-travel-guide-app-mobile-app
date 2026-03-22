@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -1101,7 +1102,9 @@ class _MapViewScreenState extends State<MapViewScreen> {
                   (item['latitude'] as double) != 0.0 ||
                   (item['longitude'] as double) != 0.0)
               .toList();
-        } catch (_) {}
+        } catch (e) {
+          if (kDebugMode) debugPrint('MapView: keyword search fallback failed: $e');
+        }
       }
 
       final merged = <Map<String, dynamic>>[...local, ...mapped];
@@ -1185,7 +1188,9 @@ class _MapViewScreenState extends State<MapViewScreen> {
               .map((item) => _mapPlaceRow(Map<String, dynamic>.from(item), 0))
               .whereType<Map<String, dynamic>>()
               .toList();
-        } catch (_) {}
+        } catch (e) {
+          if (kDebugMode) debugPrint('MapView: DB search fallback failed: $e');
+        }
       }
 
       final merged = <Map<String, dynamic>>[...local, ...mapped];

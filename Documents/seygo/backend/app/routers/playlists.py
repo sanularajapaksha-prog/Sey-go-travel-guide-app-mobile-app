@@ -3,7 +3,7 @@ import math
 import os
 from urllib.parse import quote_plus
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from supabase import create_client
 
@@ -72,8 +72,8 @@ def get_playlists():
 
 @router.get('/mine')
 async def get_my_playlists(
-    page: int = 1,
-    limit: int = 50,
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=200),
     user=Depends(get_current_user),
 ):
     """Return playlists owned by the current user (paginated, default 50/page)."""
@@ -91,6 +91,7 @@ async def get_my_playlists(
         )
         rows = response.data or []
     except Exception:
+        logger.exception('Failed to fetch playlists for user=%s', user.id)
         rows = []
     playlists = []
     for row in rows:
@@ -303,7 +304,7 @@ async def add_destination(
     )
     raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=f'Failed to add destination to playlist. DB error: {last_exc}',
+        detail='Failed to add destination to playlist. Please try again.',
     )
 
 

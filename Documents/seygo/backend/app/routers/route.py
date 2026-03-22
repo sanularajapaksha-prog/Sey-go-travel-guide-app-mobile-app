@@ -15,9 +15,10 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
+from ..main import limiter
 from ..services.route_optimizer import optimize_route
 
 router = APIRouter(prefix='/route', tags=['route'])
@@ -90,15 +91,16 @@ def _validate_coords(lat: Any, lng: Any, label: str) -> None:
         'the Google APIs are unavailable.'
     ),
 )
-async def optimize_route_endpoint(request: RouteOptimizeRequest):
-    if 'latitude' not in request.origin or 'longitude' not in request.origin:
+@limiter.limit('10/minute')
+async def optimize_route_endpoint(request: Request, body: RouteOptimizeRequest):
+    if 'latitude' not in body.origin or 'longitude' not in body.origin:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail='origin must contain latitude and longitude.',
         )
-    _validate_coords(request.origin['latitude'], request.origin['longitude'], 'origin')
+    _validate_coords(body.origin['latitude'], body.origin['longitude'], 'origin')
 
-    for i, dest in enumerate(request.destinations):
+    for i, dest in enumerate(body.destinations):
         if 'latitude' not in dest or 'longitude' not in dest:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -108,12 +110,12 @@ async def optimize_route_endpoint(request: RouteOptimizeRequest):
 
     try:
         result = optimize_route(
-            origin=request.origin,
-            destinations=request.destinations,
+            origin=body.origin,
+            destinations=body.destinations,
         )
         return result
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'Route optimization failed: {exc}',
+            detail='Route optimization failed. Please try again.',
         ) from exc

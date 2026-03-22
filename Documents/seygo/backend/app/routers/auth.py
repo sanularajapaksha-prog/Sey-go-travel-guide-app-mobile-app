@@ -270,7 +270,8 @@ async def forgot_password(request: Request, payload: ForgotPasswordRequest):
 
 
 @router.post('/reset-password')
-async def reset_password(payload: ResetPasswordRequest):
+@limiter.limit('5/minute')
+async def reset_password(request: Request, payload: ResetPasswordRequest):
     try:
         import os
         from supabase import create_client

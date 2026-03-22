@@ -370,7 +370,7 @@ def optimize_route(
             'optimization_method': 'no_destinations',
         }
 
-    with httpx.Client(follow_redirects=True) as client:
+    with httpx.Client(follow_redirects=True, timeout=20.0) as client:
         # ---- Step 1: Fetch weather for all locations ----
         all_locations = [origin] + list(destinations)
         weather_data: list[dict] = []

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 
+import '../../routes/app_routes.dart';
+
 /// Splash Screen - Branded app launch experience with initialization
 /// Displays SeyGo logo with subtle animation during 2-3 second initialization
 /// Handles background tasks: cache loading, network check, image optimization
@@ -75,15 +77,15 @@ class _SplashScreenState extends State<SplashScreen>
       if (!mounted) return;
 
       Navigator.of(context, rootNavigator: true)
-          .pushReplacementNamed('/welcome-home-screen');
+          .pushReplacementNamed(AppRoutes.welcomeHome);
     } catch (e) {
       // In the event of a critical startup component failure, fallback gracefully
       if (!mounted) return;
       await Future.delayed(const Duration(seconds: 1));
-      
+
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true)
-          .pushReplacementNamed('/welcome-home-screen');
+          .pushReplacementNamed(AppRoutes.welcomeHome);
     }
   }
 
@@ -239,7 +241,7 @@ class _SplashScreenState extends State<SplashScreen>
         ),
         SizedBox(height: 1.h),
         Text(
-          'Version 1.0.0 (Build 42)',
+          'Version 1.0.0',
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             fontWeight: FontWeight.w500,

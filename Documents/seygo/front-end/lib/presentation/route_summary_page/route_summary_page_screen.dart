@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../widgets/place_photo_widget.dart';
 
 /// Route summary / itinerary screen (standalone prototype version).
@@ -99,7 +101,18 @@ class RouteSummaryPageScreen extends StatelessWidget {
               width: double.infinity,
               height: 56,
               child: ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: () async {
+                  final uri = Uri.parse(
+                    'https://www.google.com/maps/dir/?api=1'
+                    '&origin=Ella,Sri+Lanka'
+                    '&destination=Mirissa+Beach,Sri+Lanka'
+                    '&waypoints=Kandy,Sri+Lanka|Unawatuna,Sri+Lanka'
+                    '&travelmode=driving',
+                  );
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.black,
                   shape: RoundedRectangleBorder(

@@ -18,10 +18,11 @@ import os
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from ..dependencies import get_current_user
+from ..main import limiter
 
 _SEMANTIC_ENABLED = os.getenv('SEMANTIC_ENABLED', 'false').lower() == 'true'
 
@@ -103,7 +104,10 @@ def _format_result(r: dict) -> dict:
 def _keyword_search(sb, query: str, top_n: int) -> list[dict]:
     """Simple ilike keyword search used when semantic model is not loaded."""
     from .places import PLACES_TABLE
-    term = f'%{query.strip()}%'
+    # Use three separate ilike filters chained with .or_() to avoid injection
+    # through commas or PostgREST-special characters in the search term.
+    safe_term = query.strip().replace('%', r'\%').replace('_', r'\_')
+    term = f'%{safe_term}%'
     try:
         resp = (
             sb.table(PLACES_TABLE)
@@ -114,6 +118,7 @@ def _keyword_search(sb, query: str, top_n: int) -> list[dict]:
         )
         rows = resp.data or []
     except Exception:
+        logger.exception('_keyword_search failed for query=%r', query)
         rows = []
     for r in rows:
         r['_score'] = 1.0
@@ -127,7 +132,8 @@ def _keyword_search(sb, query: str, top_n: int) -> list[dict]:
 
 
 @router.post('/')
-def semantic_search(req: SearchRequest):
+@limiter.limit('30/minute')
+def semantic_search(request: Request, req: SearchRequest):
     """
     Place search. Uses semantic vector search when SEMANTIC_ENABLED=true,
     otherwise falls back to fast keyword (ilike) search.

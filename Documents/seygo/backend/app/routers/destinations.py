@@ -1,6 +1,6 @@
 import os
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from supabase import create_client
 
@@ -111,14 +111,20 @@ async def save_from_google(
 @router.get('/me')
 async def get_my_destinations(user=Depends(get_current_user)):
     supabase = _sb()
-    response = supabase.table(SAVED_TABLE).select('*').eq('user_id', str(user.id)).execute()
+    response = (
+        supabase.table(SAVED_TABLE)
+        .select('*')
+        .eq('user_id', str(user.id))
+        .order('created_at', desc=True)
+        .execute()
+    )
     return {'destinations': response.data}
 
 
 @router.get('/me/paginated')
 async def get_my_destinations_paginated(
-    page: int = 1,
-    limit: int = 10,
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
     user=Depends(get_current_user),
 ):
     supabase = _sb()
@@ -128,6 +134,7 @@ async def get_my_destinations_paginated(
         supabase.table(SAVED_TABLE)
         .select('*')
         .eq('user_id', str(user.id))
+        .order('created_at', desc=True)
         .range(start, end)
         .execute()
     )

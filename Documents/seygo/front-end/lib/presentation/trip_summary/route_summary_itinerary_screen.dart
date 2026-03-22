@@ -23,6 +23,66 @@ class RouteSummaryItineraryScreen extends StatelessWidget {
     required this.routePoints,
   });
 
+  void _shareItinerary(BuildContext context) {
+    final stopNames = optimizedStops
+        .map((s) => s['name']?.toString() ?? 'Unknown')
+        .join(' → ');
+    final distText =
+        totalDistanceKm > 0 ? '${totalDistanceKm.toStringAsFixed(1)} km' : '';
+    final durText = totalDurationMin > 0
+        ? '${(totalDurationMin / 60).toStringAsFixed(1)} hrs'
+        : '';
+    final summary = [
+      '🗺️ My SeyGo Itinerary',
+      if (stopNames.isNotEmpty) stopNames,
+      if (distText.isNotEmpty || durText.isNotEmpty)
+        [distText, durText].where((s) => s.isNotEmpty).join(' • '),
+    ].join('\n');
+
+    final gmapsUri = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1'
+      '&origin=${origin.latitude},${origin.longitude}'
+      '&travelmode=driving',
+    );
+
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Share Itinerary',
+                style: Theme.of(context).textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Text(summary,
+                style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  if (await canLaunchUrl(gmapsUri)) {
+                    await launchUrl(gmapsUri,
+                        mode: LaunchMode.externalApplication);
+                  }
+                },
+                icon: const Icon(Icons.map_outlined),
+                label: const Text('Open in Google Maps'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -38,7 +98,7 @@ class RouteSummaryItineraryScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.share_outlined),
-            onPressed: () {},
+            onPressed: () => _shareItinerary(context),
           ),
         ],
       ),

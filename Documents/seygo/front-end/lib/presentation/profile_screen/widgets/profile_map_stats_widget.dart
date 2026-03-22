@@ -29,13 +29,8 @@ class ProfileMapStatsWidget extends StatefulWidget {
 
   const ProfileMapStatsWidget({
     super.key,
-    this.overallExplored = 0.15, // Default mock data
-    this.activeProvinces = const [
-      ProvinceStat(name: 'Western', exploredPercentage: 0.8, placesVisited: 24, landmarkIcon: Icons.location_city),
-      ProvinceStat(name: 'Southern', exploredPercentage: 0.6, placesVisited: 14, landmarkIcon: Icons.beach_access),
-      ProvinceStat(name: 'Central', exploredPercentage: 0.3, placesVisited: 5, landmarkIcon: Icons.terrain),
-      ProvinceStat(name: 'Sabaragamuwa', exploredPercentage: 0.1, placesVisited: 2, landmarkIcon: Icons.forest),
-    ],
+    this.overallExplored = 0.0,
+    this.activeProvinces = const [],
     this.isCompact = false,
   });
 
@@ -194,6 +189,19 @@ class _ProfileMapStatsWidgetState extends State<ProfileMapStatsWidget>
   }
 
   Widget _buildProvinceGrid() {
+    if (widget.activeProvinces.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          'Visit destinations to unlock province stats',
+          style: TextStyle(
+            fontSize: 11.sp,
+            color: AppTheme.neutralLight,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),

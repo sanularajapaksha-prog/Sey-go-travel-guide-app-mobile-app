@@ -17,6 +17,7 @@ import 'providers/theme_provider.dart';
 import 'providers/font_scale_provider.dart';
 import 'providers/favorites_provider.dart';
 import 'providers/locale_provider.dart';
+import 'providers/offline_provider.dart';
 import 'providers/places_provider.dart';
 import 'providers/user_data_provider.dart';
 import 'widgets/custom_error_widget.dart';
@@ -88,6 +89,13 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
         ChangeNotifierProvider(create: (_) => PlacesProvider()),
         ChangeNotifierProvider(create: (_) => UserDataProvider()),
+        ChangeNotifierProvider(
+          create: (_) {
+            final provider = OfflineProvider();
+            provider.load();
+            return provider;
+          },
+        ),
       ],
       child: const SeygoTravelApp(),
     ),

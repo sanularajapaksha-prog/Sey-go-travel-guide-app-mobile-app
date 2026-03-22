@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../data/models/offline_cache_item.dart';
 import '../../data/services/api_service.dart';
 import '../../data/services/offline_trip_service.dart';
+import '../../providers/offline_provider.dart';
 import '../../providers/user_data_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/place_photo_widget.dart';
@@ -51,11 +52,13 @@ class TripSummaryOverviewScreen extends StatefulWidget {
 }
 
 class _TripSummaryOverviewScreenState extends State<TripSummaryOverviewScreen> {
-  static const String _offlineEnabledKey = 'offline_trip_mode_enabled';
-
   bool _offlineMode = false;
   bool _offlineReady = false;
   bool _isSavingPlaylist = false;
+
+  /// Stable id for this trip in the offline cache.
+  String get _tripCacheId =>
+      'trip_${widget.tripName.replaceAll(RegExp(r'\s+'), '_').toLowerCase()}';
 
   @override
   void initState() {
@@ -64,19 +67,20 @@ class _TripSummaryOverviewScreenState extends State<TripSummaryOverviewScreen> {
   }
 
   Future<void> _loadOfflineState() async {
-    final prefs = await SharedPreferences.getInstance();
-    final enabled = prefs.getBool(_offlineEnabledKey) ?? false;
-    final hasCachedTrip = await OfflineTripService.hasOfflineTrip();
+    final provider = context.read<OfflineProvider>();
+    // Ensure cache is loaded
+    if (provider.items.isEmpty) await provider.load();
     if (!mounted) return;
     setState(() {
-      _offlineMode = enabled && hasCachedTrip;
+      _offlineMode = provider.isCached(_tripCacheId);
       _offlineReady = true;
     });
   }
 
   Future<void> _toggleOfflineMode(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
+    final provider = context.read<OfflineProvider>();
     if (value) {
+      // Also keep legacy OfflineTripService in sync for backward compat
       await OfflineTripService.saveTrip(
         tripName: widget.tripName,
         tripGoogleUrl: widget.tripGoogleUrl,
@@ -92,10 +96,34 @@ class _TripSummaryOverviewScreenState extends State<TripSummaryOverviewScreen> {
         routePoints: widget.routePoints,
         optimizedStops: widget.optimizedStops,
       );
-      await prefs.setBool(_offlineEnabledKey, true);
+      await provider.save(OfflineCacheItem(
+        id: _tripCacheId,
+        type: OfflineCacheType.routeTrip,
+        title: widget.tripName,
+        imageUrl: widget.tripGoogleUrl.isNotEmpty ? widget.tripGoogleUrl : null,
+        dateRange: widget.dateRange,
+        days: widget.days,
+        stops: widget.stops,
+        distanceKm: widget.totalDistanceKm,
+        budgetLKR: widget.totalBudgetLKR,
+        transportMode: widget.transportMode,
+        travelTime: widget.travelTime,
+        emergencyContact: widget.emergencyContact,
+        routeData: {
+          'origin': {
+            'latitude': widget.origin.latitude,
+            'longitude': widget.origin.longitude,
+          },
+          'routePoints': widget.routePoints
+              .map((p) => {'latitude': p.latitude, 'longitude': p.longitude})
+              .toList(),
+          'optimizedStops': widget.optimizedStops,
+        },
+        savedAt: DateTime.now(),
+      ));
     } else {
+      await provider.deleteById(_tripCacheId);
       await OfflineTripService.clearTrip();
-      await prefs.setBool(_offlineEnabledKey, false);
     }
     if (!mounted) return;
     setState(() => _offlineMode = value);

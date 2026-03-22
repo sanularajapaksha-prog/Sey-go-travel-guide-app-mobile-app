@@ -1,3 +1,4 @@
+import logging
 import os
 
 from fastapi import APIRouter, Depends
@@ -5,6 +6,8 @@ from pydantic import BaseModel
 from supabase import create_client
 
 from ..dependencies import get_current_user
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix='/users', tags=['users'])
 
@@ -49,14 +52,17 @@ async def get_profile(user=Depends(get_current_user)):
     }
 
 
-def _safe_count(supabase, table: str, filters: dict) -> list:
+def _safe_count(supabase, table: str, filters: dict) -> int:
+    """Return a server-side COUNT(*) — avoids fetching all rows."""
     try:
-        q = supabase.table(table).select('id')
+        q = supabase.table(table).select('id', count='exact')
         for col, val in filters.items():
             q = q.eq(col, val)
-        return q.execute().data or []
+        result = q.execute()
+        return result.count or 0
     except Exception:
-        return []
+        logger.exception('_safe_count failed for table=%s filters=%s', table, filters)
+        return 0
 
 
 def _safe_playlist_rows(supabase, uid: str) -> list:
@@ -70,6 +76,7 @@ def _safe_playlist_rows(supabase, uid: str) -> list:
             .data or []
         )
     except Exception:
+        logger.exception('_safe_playlist_rows failed for user=%s', uid)
         return []
 
 
@@ -80,14 +87,14 @@ async def get_user_stats(user=Depends(get_current_user)):
     uid = str(user.id)
 
     playlist_rows = _safe_playlist_rows(supabase, uid)
-    review_rows  = _safe_count(supabase, 'reviews', {'user_id': uid})
-    photo_rows   = _safe_count(supabase, 'photos',  {'user_id': uid})
+    review_count  = _safe_count(supabase, 'reviews', {'user_id': uid})
+    photo_count   = _safe_count(supabase, 'photos',  {'user_id': uid})
 
     return {
         'playlists': len(playlist_rows),
         'places': sum(int(r.get('places_count') or 0) for r in playlist_rows),
-        'reviews': len(review_rows),
-        'photos': len(photo_rows),
+        'reviews': review_count,
+        'photos': photo_count,
     }
 
 @router.put('/me')

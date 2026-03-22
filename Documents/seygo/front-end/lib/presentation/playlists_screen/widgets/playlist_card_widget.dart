@@ -89,7 +89,20 @@ class PlaylistCardWidget extends StatelessWidget {
     final fallbackLabel = (playlist['name'] as String?) ?? 'Playlist';
 
     if (images.isEmpty) {
-      return _buildGradientBanner(context, fallbackLabel);
+      // Use a generated image based on the playlist name instead of a gradient banner
+      final nameQuery = Uri.encodeComponent(fallbackLabel.toLowerCase().replaceAll(' ', ','));
+      final randomImageUrl = 'https://loremflickr.com/600/400/travel,$nameQuery/all';
+      
+      return ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(12.0)),
+        child: CustomImageWidget(
+          imageUrl: randomImageUrl,
+          width: double.infinity,
+          height: 20.h,
+          fit: BoxFit.cover,
+          semanticLabel: fallbackLabel,
+        ),
+      );
     }
 
     return ClipRRect(

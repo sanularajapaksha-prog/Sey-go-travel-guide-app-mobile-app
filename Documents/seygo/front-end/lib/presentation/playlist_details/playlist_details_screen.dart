@@ -383,20 +383,15 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
   ];
 
   Widget _buildStopGradient(String name, int index) {
-    final colors = _kStopGradients[index % _kStopGradients.length];
-    return Container(
+    final nameQuery = Uri.encodeComponent(name.toLowerCase().replaceAll(' ', ','));
+    final randomImageUrl = 'https://loremflickr.com/600/400/travel,$nameQuery/all';
+      
+    return CustomImageWidget(
+      imageUrl: randomImageUrl,
       width: double.infinity,
       height: 20.h,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: colors,
-        ),
-      ),
-      child: Center(
-        child: Icon(Icons.place_rounded, color: Colors.white.withValues(alpha: 0.4), size: 40),
-      ),
+      fit: BoxFit.cover,
+      semanticLabel: name,
     );
   }
 

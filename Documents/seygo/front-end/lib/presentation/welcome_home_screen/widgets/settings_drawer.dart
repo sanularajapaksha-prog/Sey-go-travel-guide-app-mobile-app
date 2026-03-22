@@ -157,6 +157,17 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                 ),
                                 _buildMenuItem(
                                   colors,
+                                  icon: Icons.offline_bolt_outlined,
+                                  title: 'Offline Content',
+                                  subtitle: 'Trips & places saved for offline',
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    Navigator.of(context).pushNamed(
+                                        '/offline-trips-screen');
+                                  },
+                                ),
+                                _buildMenuItem(
+                                  colors,
                                   icon: Icons.help_outline_rounded,
                                   title: t.t('help_support'),
                                   subtitle: t.t('faqs_contact_support'),

@@ -2,7 +2,7 @@ import logging
 import os
 import re as _re
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 
 from ..dependencies import get_current_user
@@ -40,7 +40,7 @@ class CreateReviewRequest(BaseModel):
 
 
 @router.get('/')
-def get_community_reviews(limit: int = 20, offset: int = 0):
+def get_community_reviews(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0)):
     """Approved community reviews."""
     sb = _sb()
     try:
@@ -76,7 +76,7 @@ async def create_review(body: CreateReviewRequest, user=Depends(get_current_user
         'place_name': body.place_name,
         'rating': max(1, min(5, body.rating)),
         'review_text': body.review_text,
-        'status': 'pending',
+        'status': 'pending',  # Explicitly require admin approval
         'user_name': user_name,
         'user_badge': 'Explorer',
         'likes_count': 0,
