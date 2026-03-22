@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../routes/app_routes.dart';
 import '../../widgets/custom_bottom_bar.dart';
 import './welcome_home_screen_initial_page.dart';
+import '../map_view_screen/map_view_screen.dart';
+import '../playlists_screen/playlists_screen.dart';
+import '../favorite_screen/favorites_screen.dart';
+import '../profile_screen/profile_screen.dart';
 
 class WelcomeHomeScreen extends StatefulWidget {
   const WelcomeHomeScreen({super.key});
@@ -12,51 +15,28 @@ class WelcomeHomeScreen extends StatefulWidget {
 }
 
 class WelcomeHomeScreenState extends State<WelcomeHomeScreen> {
-  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
   int currentIndex = 0;
 
-  final List<String> routes = [
-    AppRoutes.welcomeHomeScreen,
-    AppRoutes.mapView,
-    AppRoutes.playlists,
-    AppRoutes.favorites,
-    AppRoutes.profile,
+  final List<Widget> _pages = [
+    const WelcomeHomeScreenInitialPage(),
+    const MapViewScreen(),
+    const PlaylistsScreen(),
+    const FavoritesScreen(),
+    const ProfileScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Navigator(
-        key: navigatorKey,
-        initialRoute: '/welcome-home-screen',
-        onGenerateRoute: (settings) {
-          switch (settings.name) {
-            case '/welcome-home-screen':
-            case '/':
-              return MaterialPageRoute(
-                builder: (context) => const WelcomeHomeScreenInitialPage(),
-                settings: settings,
-              );
-            default:
-              if (AppRoutes.routes.containsKey(settings.name)) {
-                return MaterialPageRoute(
-                  builder: AppRoutes.routes[settings.name]!,
-                  settings: settings,
-                );
-              }
-              return null;
-          }
-        },
+      body: IndexedStack(
+        index: currentIndex,
+        children: _pages,
       ),
       bottomNavigationBar: CustomBottomBar(
         currentIndex: currentIndex,
         onTap: (index) {
-          if (!AppRoutes.routes.containsKey(routes[index])) {
-            return;
-          }
-          if (currentIndex != index) {
+          if (currentIndex != index && index < _pages.length) {
             setState(() => currentIndex = index);
-            navigatorKey.currentState?.pushReplacementNamed(routes[index]);
           }
         },
       ),
