@@ -65,7 +65,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _bio = '';
   String _aiDescription = '';
   String _travelStyle = '';
-  String _workingType = '';
   String _travelPersonalityType = '';
 
   // ── loading flags ─────────────────────────────────────────────────────────────
@@ -145,7 +144,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _bio = profile['bio'] as String? ?? '';
     _aiDescription = profile['ai_description'] as String? ?? '';
     _travelStyle = profile['travel_style'] as String? ?? '';
-    _workingType = profile['working_type'] as String? ?? '';
     _travelPersonalityType =
         profile['travel_personality_type'] as String? ?? '';
     final av = profile['avatar_url'] as String?;
@@ -521,8 +519,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       initialStyle: _travelStyle.isNotEmpty
                           ? _travelStyle
                           : 'Adventure & Hiking',
-                      initialWorkingType: _workingType,
-                      onWorkingTypeChanged: _saveWorkingType,
                       isCompact: isCompact,
                     ),
                     SizedBox(height: isCompact ? 3.h : 4.h),
@@ -869,22 +865,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         activities: _activities, isCompact: isCompact);
   }
 
-  // ── save working type via Supabase direct ─────────────────────────────────────
-  Future<void> _saveWorkingType(String type) async {
-    setState(() => _workingType = type);
-    final supabase = Supabase.instance.client;
-    final userId = supabase.auth.currentUser?.id;
-    if (userId == null) return;
-    try {
-      await supabase
-          .from('profiles')
-          .update({'working_type': type})
-          .eq('id', userId);
-      ApiService.invalidateProfileCache();
-    } catch (e) {
-      if (kDebugMode) debugPrint('Working type save error: $e');
-    }
-  }
 
   // ── playlists card ────────────────────────────────────────────────────────────
   Widget _buildPlaylistsCard(bool isCompact) {
