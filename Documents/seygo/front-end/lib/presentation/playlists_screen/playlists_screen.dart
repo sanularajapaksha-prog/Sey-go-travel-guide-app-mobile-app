@@ -294,6 +294,27 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
     final imageUrl =
         bannerUrl ?? (previewImages.isNotEmpty ? previewImages.first : null);
 
+    // Build a safe, explicitly typed snapshot — avoids jsonEncode failures
+    // that can occur with raw API maps containing List<dynamic> fields.
+    final safeSnapshot = <String, dynamic>{
+      'id': playlistId,
+      'name': (playlist['name'] as String?) ?? 'Playlist',
+      'description': playlist['description'] as String?,
+      'icon': (playlist['icon'] as String?) ?? 'playlist_play',
+      'banner_url': bannerUrl,
+      'previewImages': previewImages, // already List<String> via whereType
+      'destination_count': (playlist['destination_count'] ?? playlist['destinationCount'] ?? 0) as int,
+      'destinationCount': (playlist['destinationCount'] ?? playlist['destination_count'] ?? 0) as int,
+      'creator_name': playlist['creator_name'] as String?,
+      'visibility': (playlist['visibility'] as String?) ?? 'public',
+      'is_editable': false,
+      'is_deletable': false,
+      'is_featured': (playlist['is_featured'] as bool?) ?? false,
+      'semanticLabels': (playlist['semanticLabels'] as List? ?? [])
+          .whereType<String>()
+          .toList(),
+    };
+
     final item = OfflineCacheItem(
       id: playlistId, // unique per playlist — prevents overwriting other entries
       type: OfflineCacheType.playlist,
@@ -301,7 +322,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
       imageUrl: imageUrl,
       description: playlist['description'] as String?,
       savedAt: DateTime.now(),
-      playlistData: Map<String, dynamic>.from(playlist), // full snapshot
+      playlistData: safeSnapshot,
     );
 
     try {

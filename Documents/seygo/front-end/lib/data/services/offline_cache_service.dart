@@ -13,21 +13,30 @@ class OfflineCacheService {
   // ── load ────────────────────────────────────────────────────────────────────
 
   /// Returns all cached items, newest first.
+  /// Item-tolerant: a single corrupt entry is skipped rather than wiping the
+  /// entire list (previous behaviour: one bad item → catch → return []).
   static Future<List<OfflineCacheItem>> loadAll() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_cacheKey);
+    if (kDebugMode) debugPrint('[OfflineCache] raw key present: ${raw != null}, length: ${raw?.length}');
     if (raw == null || raw.isEmpty) return [];
+    List decoded;
     try {
-      final decoded = jsonDecode(raw) as List;
-      return decoded
-          .whereType<Map>()
-          .map((e) =>
-              OfflineCacheItem.fromJson(Map<String, dynamic>.from(e)))
-          .toList();
+      decoded = jsonDecode(raw) as List;
     } catch (e) {
-      if (kDebugMode) debugPrint('OfflineCacheService.loadAll error: $e');
+      if (kDebugMode) debugPrint('[OfflineCache] loadAll JSON parse error: $e');
       return [];
     }
+    final items = <OfflineCacheItem>[];
+    for (final e in decoded.whereType<Map>()) {
+      try {
+        items.add(OfflineCacheItem.fromJson(Map<String, dynamic>.from(e)));
+      } catch (err) {
+        if (kDebugMode) debugPrint('[OfflineCache] skipping corrupt item: $err');
+      }
+    }
+    if (kDebugMode) debugPrint('[OfflineCache] loaded ${items.length} items (types: ${items.map((i) => i.type.name).join(', ')})');
+    return items;
   }
 
   /// Returns `true` if an item with [id] exists in the cache.
@@ -67,7 +76,17 @@ class OfflineCacheService {
 
   static Future<void> _persist(List<OfflineCacheItem> items) async {
     final prefs = await SharedPreferences.getInstance();
-    final encoded = jsonEncode(items.map((e) => e.toJson()).toList());
+    // Serialize each item individually so one bad item doesn't block the rest.
+    final jsonList = <Map<String, dynamic>>[];
+    for (final item in items) {
+      try {
+        jsonList.add(item.toJson());
+      } catch (e) {
+        if (kDebugMode) debugPrint('[OfflineCache] skipping item ${item.id} (toJson error): $e');
+      }
+    }
+    final encoded = jsonEncode(jsonList);
     await prefs.setString(_cacheKey, encoded);
+    if (kDebugMode) debugPrint('[OfflineCache] persisted ${jsonList.length} items');
   }
 }
