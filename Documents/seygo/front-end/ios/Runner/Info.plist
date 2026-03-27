@@ -45,6 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Required by image_picker — iOS crashes without this when accessing photo library -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SeyGo needs access to your photo library to let you set a custom banner image for your playlists.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>SeyGo needs camera access to let you take a photo for your playlist banner.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

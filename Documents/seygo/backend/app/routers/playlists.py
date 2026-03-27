@@ -36,6 +36,7 @@ class UpdatePlaylistRequest(BaseModel):
     description: str | None = None
     icon: str | None = None
     visibility: str | None = None
+    banner_url: str | None = None
 
 
 class AddDestinationRequest(BaseModel):
@@ -382,13 +383,20 @@ def _normalize_playlist_row(row: dict) -> dict:
     if description:
         semantic_labels.append(description)
 
+    # banner_url takes priority over generated previewImages when present
+    banner_url = row.get('banner_url')
+    preview_images = [banner_url] if banner_url else (
+        row.get('previewImages') or [_playlist_cover_image(name, description)]
+    )
+
     return {
         **row,
         'id': str(row.get('id')),
         'icon': row.get('icon') or ('star' if is_featured else 'playlist_play'),
         'destination_count': int(places_count),
         'destinationCount': int(places_count),
-        'previewImages': row.get('previewImages') or [_playlist_cover_image(name, description)],
+        'banner_url': banner_url,
+        'previewImages': preview_images,
         'semanticLabels': semantic_labels,
         'is_default': False,
         'is_editable': False,

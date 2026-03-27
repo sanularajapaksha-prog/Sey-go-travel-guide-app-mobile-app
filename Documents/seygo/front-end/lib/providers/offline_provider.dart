@@ -19,6 +19,10 @@ class OfflineProvider extends ChangeNotifier {
   List<OfflineCacheItem> get destinations =>
       _items.where((e) => e.type == OfflineCacheType.destination).toList();
 
+  /// All playlists saved for offline access, newest first.
+  List<OfflineCacheItem> get playlists =>
+      _items.where((e) => e.type == OfflineCacheType.playlist).toList();
+
   bool get isLoading => _loading;
 
   bool isCached(String id) => _items.any((e) => e.id == id);

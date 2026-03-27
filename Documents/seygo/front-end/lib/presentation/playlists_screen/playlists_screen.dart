@@ -1,10 +1,16 @@
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:sizer/sizer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_export.dart';
+import '../../data/models/offline_cache_item.dart';
 import '../../data/services/api_service.dart';
+import '../../providers/offline_provider.dart';
 import '../../providers/user_data_provider.dart';
 import '../../widgets/custom_icon_widget.dart';
 import '../playlist_details/playlist_details_screen.dart';
@@ -12,8 +18,11 @@ import './widgets/create_playlist_dialog.dart';
 import './widgets/empty_playlists_widget.dart';
 import './widgets/playlist_card_widget.dart';
 
-/// Playlists Screen - Manages user's saved destination collections
-/// Displays playlists in vertical scrolling card layout with creation and management features
+/// Playlists Screen — shows the user's saved destination collections.
+///
+/// Layout:
+///   1. Downloaded section  — playlists saved for offline access (OfflineProvider)
+///   2. My Playlists section — playlists fetched from the API
 class PlaylistsScreen extends StatefulWidget {
   const PlaylistsScreen({super.key});
 
@@ -27,6 +36,9 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
   List<Map<String, dynamic>> _filteredPlaylists = [];
   bool _isSearching = false;
   bool _initialized = false;
+
+  /// Tracks which playlist ID is currently uploading a banner (shows loading).
+  String? _uploadingBannerForId;
 
   @override
   void initState() {
@@ -47,6 +59,8 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
     _searchController.dispose();
     super.dispose();
   }
+
+  // ── playlist loading ────────────────────────────────────────────────────────
 
   Future<void> _loadPlaylists({bool forceRefresh = false}) async {
     final udp = Provider.of<UserDataProvider>(context, listen: false);
@@ -84,8 +98,8 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
       } else {
         _filteredPlaylists = _playlists.where((playlist) {
           final nameLower = (playlist['name'] as String).toLowerCase();
-          final descLower = (playlist['description'] as String? ?? '')
-              .toLowerCase();
+          final descLower =
+              (playlist['description'] as String? ?? '').toLowerCase();
           final queryLower = query.toLowerCase();
           return nameLower.contains(queryLower) ||
               descLower.contains(queryLower);
@@ -97,6 +111,8 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
   Future<void> _refreshPlaylists() async {
     await _loadPlaylists(forceRefresh: true);
   }
+
+  // ── CRUD ────────────────────────────────────────────────────────────────────
 
   void _createPlaylist() async {
     final result = await showDialog<Map<String, String>>(
@@ -183,7 +199,6 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
     if (!isDeletable) return;
 
     final isDefault = playlist['is_default'] as bool? ?? false;
-
     if (isDefault) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -258,6 +273,175 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
     );
   }
 
+  // ── offline playlist logic ──────────────────────────────────────────────────
+
+  /// Saves [playlist] to the local offline cache using the playlist's own ID
+  /// as the unique key. Calling this again with the same playlist just updates
+  /// the entry — it never creates a duplicate.
+  Future<void> _savePlaylistOffline(Map<String, dynamic> playlist) async {
+    final offlineProvider =
+        Provider.of<OfflineProvider>(context, listen: false);
+    final playlistId = (playlist['id'] ?? '').toString();
+    if (playlistId.isEmpty) return;
+
+    // Pick the best available image for the cache item thumbnail.
+    // Use whereType<String>() instead of cast<String>() — safe even if the
+    // list contains non-String elements (avoids lazy CastError).
+    final bannerUrl = playlist['banner_url'] as String?;
+    final previewImages = (playlist['previewImages'] as List? ?? const [])
+        .whereType<String>()
+        .toList();
+    final imageUrl =
+        bannerUrl ?? (previewImages.isNotEmpty ? previewImages.first : null);
+
+    final item = OfflineCacheItem(
+      id: playlistId, // unique per playlist — prevents overwriting other entries
+      type: OfflineCacheType.playlist,
+      title: (playlist['name'] as String?) ?? 'Playlist',
+      imageUrl: imageUrl,
+      description: playlist['description'] as String?,
+      savedAt: DateTime.now(),
+      playlistData: Map<String, dynamic>.from(playlist), // full snapshot
+    );
+
+    try {
+      await offlineProvider.save(item);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('"${playlist['name']}" saved for offline'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e, st) {
+      if (kDebugMode) debugPrint('[savePlaylistOffline] error: $e\n$st');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to save playlist offline'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Removes the playlist with [playlistId] from the offline cache.
+  Future<void> _removePlaylistOffline(String playlistId) async {
+    final offlineProvider =
+        Provider.of<OfflineProvider>(context, listen: false);
+    try {
+      await offlineProvider.deleteById(playlistId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Removed from offline'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e, st) {
+      if (kDebugMode) debugPrint('[removePlaylistOffline] error: $e\n$st');
+    }
+  }
+
+  // ── banner upload logic ─────────────────────────────────────────────────────
+
+  /// Opens the gallery picker, uploads the chosen image to Supabase Storage,
+  /// saves the public URL to the playlist record via the API, then refreshes
+  /// the playlist list so the card immediately reflects the new banner.
+  Future<void> _uploadBannerForPlaylist(Map<String, dynamic> playlist) async {
+    final playlistId = playlist['id'] as String? ?? '';
+    if (playlistId.isEmpty) return;
+
+    final picker = ImagePicker();
+    XFile? file;
+    try {
+      file = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80, // reduce file size before upload
+        maxWidth: 1200,
+        maxHeight: 800,
+      );
+    } catch (e) {
+      if (kDebugMode) debugPrint('[banner] image picker error: $e');
+    }
+    if (file == null || !mounted) return;
+
+    // Show loading indicator on the card
+    setState(() => _uploadingBannerForId = playlistId);
+
+    try {
+      final Uint8List bytes = await file.readAsBytes();
+
+      final userId =
+          Supabase.instance.client.auth.currentUser?.id ?? 'unknown';
+      final token =
+          Supabase.instance.client.auth.currentSession?.accessToken;
+
+      // Upload to Supabase Storage: playlist-banners/{userId}/{playlistId}/{ts}.jpg
+      final publicUrl = await ApiService.uploadPlaylistBanner(
+        playlistId: playlistId,
+        userId: userId,
+        imageBytes: bytes,
+      );
+
+      if (publicUrl == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to upload banner image'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Persist the banner URL to the playlist DB row
+      final ok = await ApiService.updatePlaylist(
+        playlistId: playlistId,
+        bannerUrl: publicUrl,
+        accessToken: token,
+      );
+
+      if (!mounted) return;
+
+      if (ok) {
+        // Refresh list so the card shows the new banner immediately
+        await _loadPlaylists(forceRefresh: true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Banner updated'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Banner uploaded but failed to save to playlist'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e, st) {
+      if (kDebugMode) debugPrint('[banner] upload error: $e\n$st');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Something went wrong uploading the banner'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingBannerForId = null);
+    }
+  }
+
+  // ── build ───────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -266,6 +450,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
       color: theme.scaffoldBackgroundColor,
       child: Column(
         children: [
+          // ── App bar ──────────────────────────────────────────────────────────
           Container(
             color: theme.appBarTheme.backgroundColor,
             child: SafeArea(
@@ -289,24 +474,23 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
                                       child: CustomIconWidget(
                                         iconName: 'search',
                                         size: 20,
-                                        color:
-                                            theme.colorScheme.onSurfaceVariant,
+                                        color: theme
+                                            .colorScheme.onSurfaceVariant,
                                       ),
                                     ),
                                     suffixIcon: IconButton(
                                       icon: CustomIconWidget(
                                         iconName: 'clear',
                                         size: 20,
-                                        color:
-                                            theme.colorScheme.onSurfaceVariant,
+                                        color: theme
+                                            .colorScheme.onSurfaceVariant,
                                       ),
                                       onPressed: () {
                                         setState(() {
                                           _isSearching = false;
                                           _searchController.clear();
-                                          _filteredPlaylists = List.from(
-                                            _playlists,
-                                          );
+                                          _filteredPlaylists =
+                                              List.from(_playlists);
                                         });
                                       },
                                     ),
@@ -321,7 +505,8 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
                             : Expanded(
                                 child: Text(
                                   'Playlists',
-                                  style: theme.textTheme.headlineSmall?.copyWith(
+                                  style:
+                                      theme.textTheme.headlineSmall?.copyWith(
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -344,49 +529,202 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
               ),
             ),
           ),
+
+          // ── Body ─────────────────────────────────────────────────────────────
           Expanded(
-            child: _filteredPlaylists.isEmpty
-                ? _playlists.isEmpty
-                    ? EmptyPlaylistsWidget(onCreatePlaylist: _createPlaylist)
-                    : Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(8.w),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              CustomIconWidget(
-                                iconName: 'search_off',
-                                size: 64,
-                                color: theme.colorScheme.onSurfaceVariant
-                                    .withValues(alpha: 0.3),
-                              ),
-                              SizedBox(height: 2.h),
-                              Text(
-                                'No playlists found',
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
+            child: Consumer<OfflineProvider>(
+              builder: (context, offlineProvider, _) {
+                final offlinePlaylists = offlineProvider.playlists;
+
+                // Nothing to show at all
+                if (_filteredPlaylists.isEmpty && offlinePlaylists.isEmpty) {
+                  return _playlists.isEmpty
+                      ? EmptyPlaylistsWidget(onCreatePlaylist: _createPlaylist)
+                      : Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(8.w),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                CustomIconWidget(
+                                  iconName: 'search_off',
+                                  size: 64,
+                                  color: theme.colorScheme.onSurfaceVariant
+                                      .withValues(alpha: 0.3),
                                 ),
-                              ),
-                            ],
+                                SizedBox(height: 2.h),
+                                Text(
+                                  'No playlists found',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                }
+
+                return RefreshIndicator(
+                  onRefresh: _refreshPlaylists,
+                  child: CustomScrollView(
+                    slivers: [
+                      // ── Downloaded / Offline section ────────────────────────
+                      if (offlinePlaylists.isNotEmpty) ...[
+                        SliverToBoxAdapter(
+                          child: _SectionHeader(
+                            icon: Icons.download_done_rounded,
+                            label: 'Downloaded',
                           ),
                         ),
-                      )
-                : RefreshIndicator(
-                    onRefresh: _refreshPlaylists,
-                    child: ListView.builder(
-                      padding: EdgeInsets.only(top: 1.h, bottom: 2.h),
-                      itemCount: _filteredPlaylists.length,
-                      itemBuilder: (context, index) {
-                        final playlist = _filteredPlaylists[index];
-                        return PlaylistCardWidget(
-                          playlist: playlist,
-                          onTap: () => _openPlaylistDetail(playlist),
-                          onEdit: () => _editPlaylist(playlist),
-                          onDelete: () => _deletePlaylist(playlist),
-                        );
-                      },
-                    ),
+                        SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final item = offlinePlaylists[index];
+                              // Reconstruct the playlist map from the saved snapshot
+                              final playlistMap = Map<String, dynamic>.from(
+                                item.playlistData ?? {},
+                              );
+                              // Mark as offline copy so the card adjusts its UI
+                              playlistMap['is_editable'] = false;
+                              playlistMap['is_deletable'] = false;
+                              if (playlistMap['name'] == null) {
+                                playlistMap['name'] = item.title;
+                              }
+                              if (playlistMap['icon'] == null) {
+                                playlistMap['icon'] = 'playlist_play';
+                              }
+
+                              return PlaylistCardWidget(
+                                key: ValueKey('offline_${item.id}'),
+                                playlist: playlistMap,
+                                isOfflineCopy: true,
+                                onTap: () => _openPlaylistDetail(playlistMap),
+                                onEdit: () {},
+                                onDelete: () =>
+                                    _removePlaylistOffline(item.id),
+                                onRemoveOffline: () =>
+                                    _removePlaylistOffline(item.id),
+                              );
+                            },
+                            childCount: offlinePlaylists.length,
+                          ),
+                        ),
+                      ],
+
+                      // ── My Playlists section ────────────────────────────────
+                      if (_filteredPlaylists.isNotEmpty) ...[
+                        SliverToBoxAdapter(
+                          child: _SectionHeader(
+                            icon: Icons.queue_music_rounded,
+                            label: offlinePlaylists.isNotEmpty
+                                ? 'My Playlists'
+                                : null, // hide header when there's no offline section above
+                          ),
+                        ),
+                        SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final playlist = _filteredPlaylists[index];
+                              final playlistId =
+                                  (playlist['id'] ?? '').toString();
+                              final isUploading =
+                                  _uploadingBannerForId == playlistId;
+
+                              return Stack(
+                                children: [
+                                  PlaylistCardWidget(
+                                    key: ValueKey('online_$playlistId'),
+                                    playlist: playlist,
+                                    onTap: () => _openPlaylistDetail(playlist),
+                                    onEdit: () => _editPlaylist(playlist),
+                                    onDelete: () => _deletePlaylist(playlist),
+                                    onSaveOffline: () =>
+                                        _savePlaylistOffline(playlist),
+                                    onRemoveOffline: () =>
+                                        _removePlaylistOffline(playlistId),
+                                    onBannerTap: (playlist['is_editable']
+                                                as bool? ??
+                                            true)
+                                        ? () =>
+                                            _uploadBannerForPlaylist(playlist)
+                                        : null,
+                                  ),
+                                  // Uploading overlay shown while the banner is being uploaded
+                                  if (isUploading)
+                                    Positioned.fill(
+                                      child: Container(
+                                        margin: EdgeInsets.symmetric(
+                                          horizontal: 4.w,
+                                          vertical: 1.h,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black
+                                              .withValues(alpha: 0.35),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: const Center(
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2.5,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              );
+                            },
+                            childCount: _filteredPlaylists.length,
+                          ),
+                        ),
+                      ],
+
+                      // Bottom padding
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: 16),
+                      ),
+                    ],
                   ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Section header widget
+// ---------------------------------------------------------------------------
+
+class _SectionHeader extends StatelessWidget {
+  final IconData icon;
+  final String? label;
+
+  const _SectionHeader({required this.icon, this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    // If no label is provided, render an invisible spacer so layout stays tidy
+    if (label == null) return const SizedBox(height: 8);
+
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Text(
+            label!,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
+            ),
           ),
         ],
       ),

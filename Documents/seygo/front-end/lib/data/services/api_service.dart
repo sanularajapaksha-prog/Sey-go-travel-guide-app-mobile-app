@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -1049,6 +1050,7 @@ class ApiService {
     String? description,
     String? icon,
     String? visibility,
+    String? bannerUrl,
     String? accessToken,
   }) async {
     final headers = <String, String>{
@@ -1062,6 +1064,7 @@ class ApiService {
       if (description != null) 'description': description,
       if (icon != null) 'icon': icon,
       if (visibility != null) 'visibility': visibility,
+      if (bannerUrl != null) 'banner_url': bannerUrl,
     };
     if (payload.isEmpty) return false;
     try {
@@ -1071,6 +1074,40 @@ class ApiService {
       return response.statusCode >= 200 && response.statusCode < 300;
     } catch (_) {
       return false;
+    }
+  }
+
+  /// Uploads a playlist banner image to Supabase Storage and returns the public URL.
+  ///
+  /// File is stored at path {userId}/{playlistId}/{timestamp}.jpg inside the
+  /// 'playlist-banners' bucket. Returns null on failure.
+  static Future<String?> uploadPlaylistBanner({
+    required String playlistId,
+    required String userId,
+    required Uint8List imageBytes,
+  }) async {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    // Path is relative to the bucket root — do NOT include the bucket name here
+    final path = '$userId/$playlistId/$timestamp.jpg';
+    try {
+      await Supabase.instance.client.storage
+          .from('playlist-banners')
+          .uploadBinary(
+            path,
+            imageBytes,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: true,
+            ),
+          );
+      final publicUrl = Supabase.instance.client.storage
+          .from('playlist-banners')
+          .getPublicUrl(path);
+      if (kDebugMode) debugPrint('[uploadPlaylistBanner] uploaded → $publicUrl');
+      return publicUrl;
+    } catch (e, st) {
+      if (kDebugMode) debugPrint('[uploadPlaylistBanner] error: $e\n$st');
+      return null;
     }
   }
 

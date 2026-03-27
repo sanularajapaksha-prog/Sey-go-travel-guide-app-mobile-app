@@ -1,11 +1,12 @@
 import 'dart:convert';
 
-enum OfflineCacheType { routeTrip, destination }
+enum OfflineCacheType { routeTrip, destination, playlist }
 
 /// Unified model for everything saved to local offline storage.
 ///
 /// [type] == [OfflineCacheType.routeTrip]  → full planned route from Route Planner.
 /// [type] == [OfflineCacheType.destination] → single destination saved from Detail screen.
+/// [type] == [OfflineCacheType.playlist]   → full playlist saved for offline viewing.
 class OfflineCacheItem {
   final String id;
   final OfflineCacheType type;
@@ -33,6 +34,10 @@ class OfflineCacheItem {
   /// Full destination data map for offline destination viewing.
   final Map<String, dynamic>? placeData;
 
+  /// Full playlist data map for offline playlist viewing.
+  /// Stores the complete playlist Map<String, dynamic> from the API response.
+  final Map<String, dynamic>? playlistData;
+
   final DateTime savedAt;
 
   const OfflineCacheItem({
@@ -56,6 +61,7 @@ class OfflineCacheItem {
     this.emergencyContact,
     this.routeData,
     this.placeData,
+    this.playlistData,
   });
 
   // ── serialisation ──────────────────────────────────────────────────────────
@@ -80,12 +86,16 @@ class OfflineCacheItem {
         'emergencyContact': emergencyContact,
         'routeData': routeData != null ? jsonEncode(routeData) : null,
         'placeData': placeData != null ? jsonEncode(placeData) : null,
+        // playlistData serialized as JSON string to be consistent with other nested maps
+        'playlistData': playlistData != null ? jsonEncode(playlistData) : null,
         'savedAt': savedAt.toIso8601String(),
       };
 
   factory OfflineCacheItem.fromJson(Map<String, dynamic> json) {
     Map<String, dynamic>? routeData;
     Map<String, dynamic>? placeData;
+    Map<String, dynamic>? playlistData;
+
     try {
       final rd = json['routeData'];
       if (rd is String && rd.isNotEmpty) {
@@ -94,12 +104,23 @@ class OfflineCacheItem {
         routeData = Map<String, dynamic>.from(rd);
       }
     } catch (_) {}
+
     try {
       final pd = json['placeData'];
       if (pd is String && pd.isNotEmpty) {
         placeData = Map<String, dynamic>.from(jsonDecode(pd) as Map);
       } else if (pd is Map) {
         placeData = Map<String, dynamic>.from(pd);
+      }
+    } catch (_) {}
+
+    // Deserialize playlistData — supports both JSON string and raw Map
+    try {
+      final pld = json['playlistData'];
+      if (pld is String && pld.isNotEmpty) {
+        playlistData = Map<String, dynamic>.from(jsonDecode(pld) as Map);
+      } else if (pld is Map) {
+        playlistData = Map<String, dynamic>.from(pld);
       }
     } catch (_) {}
 
@@ -126,12 +147,17 @@ class OfflineCacheItem {
       emergencyContact: json['emergencyContact'] as String?,
       routeData: routeData,
       placeData: placeData,
+      playlistData: playlistData,
       savedAt: DateTime.tryParse(json['savedAt'] as String? ?? '') ??
           DateTime.now(),
     );
   }
 
-  OfflineCacheItem copyWith({String? id, OfflineCacheType? type}) =>
+  OfflineCacheItem copyWith({
+    String? id,
+    OfflineCacheType? type,
+    Map<String, dynamic>? playlistData,
+  }) =>
       OfflineCacheItem(
         id: id ?? this.id,
         type: type ?? this.type,
@@ -152,6 +178,7 @@ class OfflineCacheItem {
         emergencyContact: emergencyContact,
         routeData: routeData,
         placeData: placeData,
+        playlistData: playlistData ?? this.playlistData,
         savedAt: savedAt,
       );
 }
