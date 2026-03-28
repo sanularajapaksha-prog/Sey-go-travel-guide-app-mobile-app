@@ -1,6 +1,7 @@
 import logging
 import os
 import re as _re
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
@@ -57,7 +58,7 @@ async def get_my_reviews(user=Depends(get_current_user)):
     """Current user's own reviews (all statuses)."""
     sb = _sb()
     try:
-        cols = 'id,place_id,place_name,rating,review_text,status,likes_count,comments_count,created_at'
+        cols = 'id,place_id,place_name,rating,review_text,status,likes_count,comments_count,created_at,rejection_reason,approved_at,approved_by'
         r = sb.table(REVIEWS_TABLE).select(cols).eq('user_id', str(user.id)).order('created_at', desc=True).execute()
         return r.data or []
     except Exception as exc:
@@ -100,7 +101,7 @@ async def get_pending_reviews(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Admin access required.')
     sb = _sb()
     try:
-        cols = 'id,user_id,place_id,place_name,rating,review_text,status,user_name,created_at'
+        cols = 'id,user_id,place_id,place_name,rating,review_text,status,user_name,created_at,rejection_reason'
         r = (
             sb.table(REVIEWS_TABLE)
             .select(cols)
@@ -115,6 +116,10 @@ async def get_pending_reviews(
         return []
 
 
+class RejectReviewRequest(BaseModel):
+    reason: str | None = None
+
+
 @router.put('/{review_id}/approve')
 async def approve_review(review_id: str, user=Depends(get_current_user)):
     """Approve a pending review. Restricted to admin users only."""
@@ -125,12 +130,19 @@ async def approve_review(review_id: str, user=Depends(get_current_user)):
     r = sb.table(REVIEWS_TABLE).select('id').eq('id', review_id).maybe_single().execute()
     if not r or not r.data:
         raise HTTPException(status_code=404, detail='Review not found.')
-    sb.table(REVIEWS_TABLE).update({'status': 'approved'}).eq('id', review_id).execute()
+    now = datetime.now(timezone.utc).isoformat()
+    approved_by = getattr(user, 'email', '') or str(user.id)
+    sb.table(REVIEWS_TABLE).update({
+        'status': 'approved',
+        'approved_at': now,
+        'approved_by': approved_by,
+        'rejection_reason': None,
+    }).eq('id', review_id).execute()
     return {'approved': True}
 
 
 @router.put('/{review_id}/reject')
-async def reject_review(review_id: str, user=Depends(get_current_user)):
+async def reject_review(review_id: str, body: RejectReviewRequest = RejectReviewRequest(), user=Depends(get_current_user)):
     """Reject a pending review. Restricted to admin users only."""
     sb = _sb()
     meta = getattr(user, 'user_metadata', {}) or {}
@@ -139,8 +151,27 @@ async def reject_review(review_id: str, user=Depends(get_current_user)):
     r = sb.table(REVIEWS_TABLE).select('id').eq('id', review_id).maybe_single().execute()
     if not r or not r.data:
         raise HTTPException(status_code=404, detail='Review not found.')
-    sb.table(REVIEWS_TABLE).update({'status': 'rejected'}).eq('id', review_id).execute()
+    sb.table(REVIEWS_TABLE).update({
+        'status': 'rejected',
+        'rejection_reason': body.reason,
+        'approved_at': None,
+        'approved_by': None,
+    }).eq('id', review_id).execute()
     return {'rejected': True}
+
+
+@router.delete('/{review_id}')
+async def delete_review(review_id: str, user=Depends(get_current_user)):
+    """Hard delete a review. Restricted to admin users only."""
+    sb = _sb()
+    meta = getattr(user, 'user_metadata', {}) or {}
+    if not meta.get('is_admin'):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Admin access required.')
+    r = sb.table(REVIEWS_TABLE).select('id').eq('id', review_id).maybe_single().execute()
+    if not r or not r.data:
+        raise HTTPException(status_code=404, detail='Review not found.')
+    sb.table(REVIEWS_TABLE).delete().eq('id', review_id).execute()
+    return {'deleted': True}
 
 
 @router.put('/{review_id}/like')

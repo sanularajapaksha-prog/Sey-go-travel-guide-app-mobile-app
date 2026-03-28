@@ -648,6 +648,8 @@ class _ReviewsContentState extends State<_ReviewsContent> {
     final comments = (r['comments_count'] ?? 0).toString();
     final status = r['status'] as String? ?? 'approved';
     final isPending = status == 'pending';
+    final isRejected = status == 'rejected';
+    final rejectionReason = r['rejection_reason'] as String?;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -674,6 +676,47 @@ class _ReviewsContentState extends State<_ReviewsContent> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+              ],
+            ),
+          ),
+        if (isRejected)
+          Container(
+            margin: EdgeInsets.only(bottom: 1.h),
+            padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.6.h),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFEBEE),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFEF9A9A)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.cancel_outlined,
+                        size: 14, color: Color(0xFFC62828)),
+                    SizedBox(width: 1.5.w),
+                    Text(
+                      'Not approved by admin',
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        color: const Color(0xFFC62828),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                if (rejectionReason != null && rejectionReason.isNotEmpty) ...[
+                  SizedBox(height: 0.3.h),
+                  Text(
+                    'Reason: $rejectionReason',
+                    style: TextStyle(
+                      fontSize: 10.5.sp,
+                      color: const Color(0xFF8B0000),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
