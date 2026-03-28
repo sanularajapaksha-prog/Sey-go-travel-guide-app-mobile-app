@@ -1169,4 +1169,47 @@ class ApiService {
       return false;
     }
   }
+
+  static Future<List<Map<String, dynamic>>> fetchPendingReviews({String? accessToken}) async {
+    final uri = Uri.parse('$baseUrl/reviews/pending').replace(queryParameters: {'limit': '50'});
+    try {
+      final response = await http.get(uri, headers: {
+        'Content-Type': 'application/json',
+        if (accessToken != null && accessToken.isNotEmpty) 'Authorization': 'Bearer $accessToken',
+      }).timeout(const Duration(seconds: 15));
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final list = jsonDecode(response.body) as List<dynamic>;
+        return list.whereType<Map<String, dynamic>>().toList();
+      }
+    } catch (e, s) {
+      if (kDebugMode) debugPrint('fetchPendingReviews error: $e\n$s');
+    }
+    return [];
+  }
+
+  static Future<bool> approveReview(String reviewId, {String? accessToken}) async {
+    final uri = Uri.parse('$baseUrl/reviews/$reviewId/approve');
+    try {
+      final response = await http.put(uri, headers: {
+        'Content-Type': 'application/json',
+        if (accessToken != null && accessToken.isNotEmpty) 'Authorization': 'Bearer $accessToken',
+      }).timeout(const Duration(seconds: 10));
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> rejectReview(String reviewId, {String? accessToken}) async {
+    final uri = Uri.parse('$baseUrl/reviews/$reviewId/reject');
+    try {
+      final response = await http.put(uri, headers: {
+        'Content-Type': 'application/json',
+        if (accessToken != null && accessToken.isNotEmpty) 'Authorization': 'Bearer $accessToken',
+      }).timeout(const Duration(seconds: 10));
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } catch (_) {
+      return false;
+    }
+  }
 }

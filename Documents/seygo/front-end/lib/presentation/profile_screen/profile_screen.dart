@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/services/api_service.dart';
 import '../../providers/user_data_provider.dart';
+import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
 import 'profile_modals.dart';
 
@@ -892,10 +893,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   //  Side Rail (Saved, Achievement, Reviews quick actions)
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _buildSideRail(bool isCompact) {
+    final userMeta = Supabase.instance.client.auth.currentUser?.userMetadata ?? {};
+    final isAdmin = userMeta['is_admin'] == true;
     final items = <(String, VoidCallback)>[
       ('Saved', () => showSavedRoutesModal(context)),
       ('Achievement', () => showAchievementsModal(context)),
       ('Reviews', () => showMyReviewsModal(context)),
+      if (isAdmin)
+        ('Admin Panel', () {
+          setState(() => _isSideRailVisible = false);
+          Navigator.of(context, rootNavigator: true)
+              .pushNamed(AppRoutes.adminReviews);
+        }),
     ];
     return Container(
       width: isCompact ? 42.w : 34.w,

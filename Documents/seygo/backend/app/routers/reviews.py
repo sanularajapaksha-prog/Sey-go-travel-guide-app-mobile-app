@@ -88,6 +88,33 @@ async def create_review(body: CreateReviewRequest, user=Depends(get_current_user
     return row
 
 
+@router.get('/pending')
+async def get_pending_reviews(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    user=Depends(get_current_user),
+):
+    """Pending reviews for admin moderation."""
+    meta = getattr(user, 'user_metadata', {}) or {}
+    if not meta.get('is_admin'):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Admin access required.')
+    sb = _sb()
+    try:
+        cols = 'id,user_id,place_id,place_name,rating,review_text,status,user_name,created_at'
+        r = (
+            sb.table(REVIEWS_TABLE)
+            .select(cols)
+            .eq('status', 'pending')
+            .order('created_at', desc=True)
+            .range(offset, offset + limit - 1)
+            .execute()
+        )
+        return r.data or []
+    except Exception as exc:
+        logger.warning('pending reviews failed: %s', exc)
+        return []
+
+
 @router.put('/{review_id}/approve')
 async def approve_review(review_id: str, user=Depends(get_current_user)):
     """Approve a pending review. Restricted to admin users only."""
@@ -100,6 +127,20 @@ async def approve_review(review_id: str, user=Depends(get_current_user)):
         raise HTTPException(status_code=404, detail='Review not found.')
     sb.table(REVIEWS_TABLE).update({'status': 'approved'}).eq('id', review_id).execute()
     return {'approved': True}
+
+
+@router.put('/{review_id}/reject')
+async def reject_review(review_id: str, user=Depends(get_current_user)):
+    """Reject a pending review. Restricted to admin users only."""
+    sb = _sb()
+    meta = getattr(user, 'user_metadata', {}) or {}
+    if not meta.get('is_admin'):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Admin access required.')
+    r = sb.table(REVIEWS_TABLE).select('id').eq('id', review_id).maybe_single().execute()
+    if not r or not r.data:
+        raise HTTPException(status_code=404, detail='Review not found.')
+    sb.table(REVIEWS_TABLE).update({'status': 'rejected'}).eq('id', review_id).execute()
+    return {'rejected': True}
 
 
 @router.put('/{review_id}/like')
