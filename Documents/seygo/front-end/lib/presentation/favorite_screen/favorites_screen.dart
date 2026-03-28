@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sizer/sizer.dart';
 
+import '../../data/services/api_service.dart';
 import '../../providers/favorites_provider.dart';
+import '../../providers/offline_provider.dart';
 import '../../routes/app_routes.dart';
 import '../../widgets/custom_image_widget.dart';
 
@@ -410,92 +412,173 @@ class _FavoritesEmptyState extends StatelessWidget {
   }
 }
 
-class _FavoritePlaceCard extends StatelessWidget {
+class _FavoritePlaceCard extends StatefulWidget {
   final FavoritePlace place;
 
   const _FavoritePlaceCard({required this.place});
 
   @override
+  State<_FavoritePlaceCard> createState() => _FavoritePlaceCardState();
+}
+
+class _FavoritePlaceCardState extends State<_FavoritePlaceCard> {
+  bool _isLoading = false;
+
+  Future<void> _openDetail() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
+    Map<String, dynamic>? fullData;
+
+    // 1. Check offline cache — fastest, no network needed.
+    final offlineProvider = context.read<OfflineProvider>();
+    final cached = offlineProvider.destinations.where(
+      (item) => item.id == widget.place.id,
+    );
+    if (cached.isNotEmpty && cached.first.placeData != null) {
+      fullData = cached.first.placeData;
+    }
+
+    // 2. Fetch from API if not in offline cache.
+    if (fullData == null) {
+      try {
+        final results = await ApiService.searchPlacesFromDb(
+          query: widget.place.name,
+          limit: 5,
+        );
+        // Prefer exact ID match; fall back to first result.
+        final idStr = widget.place.id;
+        Map<String, dynamic>? matched;
+        for (final r in results) {
+          if (r is Map && r['id']?.toString() == idStr) {
+            matched = Map<String, dynamic>.from(r);
+            break;
+          }
+        }
+        if (matched == null && results.isNotEmpty && results.first is Map) {
+          matched = Map<String, dynamic>.from(results.first as Map);
+        }
+        fullData = matched;
+      } catch (_) {
+        // Network unavailable — fall through to minimal fallback.
+      }
+    }
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    Navigator.of(context, rootNavigator: true).pushNamed(
+      AppRoutes.destinationDetail,
+      arguments: fullData ??
+          {
+            'id': widget.place.id,
+            'name': widget.place.name,
+            'location': widget.place.location,
+            'googleUrl': widget.place.googleUrl,
+            'imageUrl': widget.place.imageUrl,
+            'semanticLabel': widget.place.semanticLabel,
+          },
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+    return Material(
+      color: theme.colorScheme.surface,
+      borderRadius: BorderRadius.circular(18),
+      shadowColor: theme.colorScheme.shadow,
+      elevation: 3,
+      child: InkWell(
+        onTap: _isLoading ? null : _openDetail,
         borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: theme.colorScheme.shadow,
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(18),
-              bottomLeft: Radius.circular(18),
-            ),
-            child: CustomImageWidget(
-              imageUrl: place.imageUrl ?? place.googleUrl ?? '',
-              width: 28.w,
-              height: 12.h,
-              fit: BoxFit.cover,
-              semanticLabel: place.semanticLabel,
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.6.h),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    place.name,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+        child: Stack(
+          children: [
+            Row(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(18),
+                    bottomLeft: Radius.circular(18),
                   ),
-                  SizedBox(height: 0.6.h),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on_outlined,
-                        size: 16,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      SizedBox(width: 1.w),
-                      Expanded(
-                        child: Text(
-                          place.location,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
+                  child: CustomImageWidget(
+                    imageUrl: widget.place.imageUrl ?? widget.place.googleUrl ?? '',
+                    width: 28.w,
+                    height: 12.h,
+                    fit: BoxFit.cover,
+                    semanticLabel: widget.place.semanticLabel,
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.6.h),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.place.name,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
+                        SizedBox(height: 0.6.h),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_on_outlined,
+                              size: 16,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            SizedBox(width: 1.w),
+                            Expanded(
+                              child: Text(
+                                widget.place.location,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ],
+                ),
+                IconButton(
+                  tooltip: 'Remove',
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  onPressed: () {
+                    context.read<FavoritesProvider>().removeFavorite(widget.place.id);
+                  },
+                ),
+              ],
+            ),
+            if (_isLoading)
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2.5),
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-          IconButton(
-            tooltip: 'Remove',
-            icon: Icon(
-              Icons.delete_outline,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            onPressed: () {
-              context.read<FavoritesProvider>().removeFavorite(place.id);
-            },
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
