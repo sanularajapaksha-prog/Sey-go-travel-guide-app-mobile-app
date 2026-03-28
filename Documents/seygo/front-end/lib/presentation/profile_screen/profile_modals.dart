@@ -511,7 +511,9 @@ class _ReviewsContentState extends State<_ReviewsContent> {
     if (mounted) {
       setState(() {
         _myReviews = results[0];
-        _communityReviews = results[1];
+        _communityReviews = results[1]
+            .where((r) => r['status'] == null || r['status'] == 'approved')
+            .toList();
         _loading = false;
       });
     }
@@ -644,7 +646,38 @@ class _ReviewsContentState extends State<_ReviewsContent> {
     final date = (r['created_at'] as String? ?? '').split('T').first;
     final likes = (r['likes_count'] ?? 0).toString();
     final comments = (r['comments_count'] ?? 0).toString();
-    return Row(
+    final status = r['status'] as String? ?? 'approved';
+    final isPending = status == 'pending';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (isPending)
+          Container(
+            margin: EdgeInsets.only(bottom: 1.h),
+            padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.5.h),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3CD),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFFFD54F)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.hourglass_top_rounded,
+                    size: 14, color: Color(0xFFB7860B)),
+                SizedBox(width: 1.5.w),
+                Text(
+                  'Awaiting admin approval',
+                  style: TextStyle(
+                    fontSize: 11.sp,
+                    color: const Color(0xFF7A5C00),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
@@ -684,6 +717,8 @@ class _ReviewsContentState extends State<_ReviewsContent> {
             ],
           ),
         ),
+      ],
+    ),
       ],
     );
   }
@@ -1088,7 +1123,12 @@ class _WriteReviewDialogState extends State<_WriteReviewDialog> {
                           if (!mounted) return;
                           setState(() => _submitting = false);
                           _closeOverlay(context);
-                          showSnackBar(context, ok ? 'Review submitted for approval!' : 'Failed to submit review.');
+                          showSnackBar(
+                            context,
+                            ok
+                                ? 'Your review has been submitted and is awaiting approval.'
+                                : 'Failed to submit review. Please try again.',
+                          );
                         },
                   style: ElevatedButton.styleFrom(
                     minimumSize: Size(double.infinity, 6.h),
@@ -1102,7 +1142,7 @@ class _WriteReviewDialogState extends State<_WriteReviewDialog> {
                       ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                       : const Icon(Icons.send_outlined),
                   label: Text(
-                    'Publish Review',
+                    'Submit Review',
                     style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w700),
                   ),
                 ),

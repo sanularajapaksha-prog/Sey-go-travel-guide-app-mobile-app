@@ -33,14 +33,17 @@ class _ReviewsWidgetState extends State<ReviewsWidget> {
   }
 
   Future<void> _loadReviews() async {
-    // In a real scenario we might filter by place_id. Assumes fetchCommunityReviews gets all.
-    // And then we filter locally if the API doesn't support generic filtering yet.
     final allReviews = await ApiService.fetchCommunityReviews();
     final placeId = (widget.destinationData["place_id"] ?? widget.destinationData["id"])?.toString() ?? '';
-    
+
     if (mounted) {
       setState(() {
-        _reviews = allReviews.where((r) => r["place_id"]?.toString() == placeId || r["place_name"] == widget.destinationData["name"]).toList();
+        _reviews = allReviews
+            .where((r) =>
+                (r["status"] == null || r["status"] == 'approved') &&
+                (r["place_id"]?.toString() == placeId ||
+                    r["place_name"] == widget.destinationData["name"]))
+            .toList();
         _isLoading = false;
       });
     }
@@ -69,13 +72,14 @@ class _ReviewsWidgetState extends State<ReviewsWidget> {
     if (mounted) {
       setState(() => _isSubmitting = false);
       if (ok) {
-        Fluttertoast.showToast(msg: "Review submitted for admin approval");
+        Fluttertoast.showToast(
+          msg: "Your review has been submitted and is awaiting approval.",
+          toastLength: Toast.LENGTH_LONG,
+        );
         _reviewController.clear();
-        _rating = 5;
-        // Optionally reload reviews here, though it won't show up until approved.
-        _loadReviews();
+        setState(() => _rating = 5);
       } else {
-        Fluttertoast.showToast(msg: "Failed to submit review");
+        Fluttertoast.showToast(msg: "Failed to submit review. Please try again.");
       }
     }
   }
@@ -154,7 +158,7 @@ class _ReviewsWidgetState extends State<ReviewsWidget> {
                   onPressed: _isSubmitting ? null : _submitReview,
                   child: _isSubmitting
                       ? SizedBox(width: 4.w, height: 4.w, child: const CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text('Submit'),
+                      : const Text('Submit for Review'),
                 ),
               ),
             ],
