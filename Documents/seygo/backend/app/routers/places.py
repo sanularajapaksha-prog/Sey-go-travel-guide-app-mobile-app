@@ -390,6 +390,22 @@ async def create_place(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail='Insert succeeded but returned no rows.',
             )
+        # Broadcast notification to all users
+        try:
+            from .notifications import create_broadcast_notification
+            new_place = created_rows[0]
+            place_name = new_place.get('name', 'A new place')
+            location = new_place.get('location') or new_place.get('district') or ''
+            create_broadcast_notification(
+                supabase,
+                type_='new_place',
+                title=f'New spot added: {place_name}',
+                body=location if location else 'Explore the latest addition to SeyGo.',
+                image_url=new_place.get('photo_url') or new_place.get('image_url'),
+                reference_id=str(new_place.get('id', '')),
+            )
+        except Exception:
+            pass
         return created_rows[0]
     except HTTPException:
         raise

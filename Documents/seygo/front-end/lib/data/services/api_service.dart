@@ -1170,6 +1170,137 @@ class ApiService {
     }
   }
 
+  // ── Review interactions ─────────────────────────────────────────────────────
+
+  static Future<int?> likeReview(String reviewId, {String? accessToken}) async {
+    final uri = Uri.parse('$baseUrl/reviews/$reviewId/like');
+    try {
+      final response = await http.put(uri, headers: {
+        'Content-Type': 'application/json',
+        if (accessToken != null && accessToken.isNotEmpty) 'Authorization': 'Bearer $accessToken',
+      }).timeout(const Duration(seconds: 10));
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final body = jsonDecode(response.body);
+        return (body['likes_count'] as num?)?.toInt();
+      }
+    } catch (e, s) {
+      if (kDebugMode) debugPrint('likeReview error: $e\n$s');
+    }
+    return null;
+  }
+
+  static Future<List<Map<String, dynamic>>> fetchReviewComments(String reviewId) async {
+    final uri = Uri.parse('$baseUrl/reviews/$reviewId/comments');
+    try {
+      final response = await http.get(uri, headers: {'Content-Type': 'application/json'})
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final list = jsonDecode(response.body) as List<dynamic>;
+        return list.whereType<Map<String, dynamic>>().toList();
+      }
+    } catch (e, s) {
+      if (kDebugMode) debugPrint('fetchReviewComments error: $e\n$s');
+    }
+    return [];
+  }
+
+  static Future<Map<String, dynamic>?> addReviewComment(
+    String reviewId,
+    String commentText, {
+    String? accessToken,
+  }) async {
+    final uri = Uri.parse('$baseUrl/reviews/$reviewId/comments');
+    try {
+      final response = await http.post(uri,
+        headers: {
+          'Content-Type': 'application/json',
+          if (accessToken != null && accessToken.isNotEmpty) 'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode({'comment_text': commentText}),
+      ).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 201) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+    } catch (e, s) {
+      if (kDebugMode) debugPrint('addReviewComment error: $e\n$s');
+    }
+    return null;
+  }
+
+  // ── Notifications ────────────────────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> fetchNotifications({String? accessToken}) async {
+    final uri = Uri.parse('$baseUrl/notifications/').replace(queryParameters: {'limit': '50'});
+    try {
+      final response = await http.get(uri, headers: {
+        'Content-Type': 'application/json',
+        if (accessToken != null && accessToken.isNotEmpty) 'Authorization': 'Bearer $accessToken',
+      }).timeout(const Duration(seconds: 15));
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final list = jsonDecode(response.body) as List<dynamic>;
+        return list.whereType<Map<String, dynamic>>().toList();
+      }
+    } catch (e, s) {
+      if (kDebugMode) debugPrint('fetchNotifications error: $e\n$s');
+    }
+    return [];
+  }
+
+  static Future<int> fetchUnreadNotificationCount({String? accessToken}) async {
+    final uri = Uri.parse('$baseUrl/notifications/unread-count');
+    try {
+      final response = await http.get(uri, headers: {
+        'Content-Type': 'application/json',
+        if (accessToken != null && accessToken.isNotEmpty) 'Authorization': 'Bearer $accessToken',
+      }).timeout(const Duration(seconds: 10));
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final body = jsonDecode(response.body);
+        return (body['count'] as num?)?.toInt() ?? 0;
+      }
+    } catch (_) {}
+    return 0;
+  }
+
+  static Future<void> markNotificationRead(String id, {String? accessToken}) async {
+    final uri = Uri.parse('$baseUrl/notifications/$id/read');
+    try {
+      await http.put(uri, headers: {
+        'Content-Type': 'application/json',
+        if (accessToken != null && accessToken.isNotEmpty) 'Authorization': 'Bearer $accessToken',
+      }).timeout(const Duration(seconds: 10));
+    } catch (_) {}
+  }
+
+  static Future<void> markAllNotificationsRead({String? accessToken}) async {
+    final uri = Uri.parse('$baseUrl/notifications/read-all');
+    try {
+      await http.put(uri, headers: {
+        'Content-Type': 'application/json',
+        if (accessToken != null && accessToken.isNotEmpty) 'Authorization': 'Bearer $accessToken',
+      }).timeout(const Duration(seconds: 10));
+    } catch (_) {}
+  }
+
+  static Future<void> deleteNotification(String id, {String? accessToken}) async {
+    final uri = Uri.parse('$baseUrl/notifications/$id');
+    try {
+      await http.delete(uri, headers: {
+        'Content-Type': 'application/json',
+        if (accessToken != null && accessToken.isNotEmpty) 'Authorization': 'Bearer $accessToken',
+      }).timeout(const Duration(seconds: 10));
+    } catch (_) {}
+  }
+
+  static Future<void> clearAllNotifications({String? accessToken}) async {
+    final uri = Uri.parse('$baseUrl/notifications/clear-all');
+    try {
+      await http.delete(uri, headers: {
+        'Content-Type': 'application/json',
+        if (accessToken != null && accessToken.isNotEmpty) 'Authorization': 'Bearer $accessToken',
+      }).timeout(const Duration(seconds: 10));
+    } catch (_) {}
+  }
+
   static Future<List<Map<String, dynamic>>> fetchPendingReviews({String? accessToken}) async {
     final uri = Uri.parse('$baseUrl/reviews/pending').replace(queryParameters: {'limit': '50'});
     try {

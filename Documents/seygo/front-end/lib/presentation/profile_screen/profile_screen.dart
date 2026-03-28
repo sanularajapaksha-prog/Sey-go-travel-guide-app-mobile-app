@@ -313,7 +313,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 surfaceTintColor: Colors.white,
                 leading: IconButton(
                   icon: const Icon(Icons.menu, color: _text),
-                  onPressed: () {},
+                  onPressed: () => setState(() => _isSideRailVisible = true),
                 ),
                 centerTitle: true,
                 title: Text(

@@ -202,6 +202,23 @@ async def update_playlist(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='No fields provided.',
         )
+
+    # Check if visibility is changing to public — fetch current value first
+    going_public = False
+    playlist_name = ''
+    if fields.get('visibility') == 'public':
+        current = (
+            supabase.table(PLAYLISTS_TABLE)
+            .select('visibility,name')
+            .eq('id', playlist_id)
+            .maybe_single()
+            .execute()
+        )
+        if current and current.data:
+            if current.data.get('visibility') != 'public':
+                going_public = True
+                playlist_name = current.data.get('name', 'A playlist')
+
     response = (
         supabase.table(PLAYLISTS_TABLE)
         .update(fields)
@@ -209,6 +226,22 @@ async def update_playlist(
         .eq('user_id', str(user.id))
         .execute()
     )
+
+    if going_public:
+        try:
+            from .notifications import create_broadcast_notification
+            meta = getattr(user, 'user_metadata', {}) or {}
+            author_name = meta.get('full_name') or getattr(user, 'email', '') or 'A traveller'
+            create_broadcast_notification(
+                supabase,
+                type_='playlist_public',
+                title=f'New playlist: {playlist_name}',
+                body=f'{author_name} shared a new travel playlist.',
+                reference_id=playlist_id,
+            )
+        except Exception:
+            pass
+
     return {'updated': True, 'data': response.data}
 
 

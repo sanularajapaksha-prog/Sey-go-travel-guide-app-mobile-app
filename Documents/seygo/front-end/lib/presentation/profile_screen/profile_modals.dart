@@ -767,11 +767,93 @@ class _ReviewsContentState extends State<_ReviewsContent> {
   }
 
   Widget _communityReviewCardFromMap(Map<String, dynamic> r) {
+    return _CommunityReviewCard(review: r);
+  }
+}
+
+class _CommunityReviewCard extends StatefulWidget {
+  final Map<String, dynamic> review;
+  const _CommunityReviewCard({required this.review});
+
+  @override
+  State<_CommunityReviewCard> createState() => _CommunityReviewCardState();
+}
+
+class _CommunityReviewCardState extends State<_CommunityReviewCard> {
+  late int _likes;
+  late int _commentCount;
+  bool _liked = false;
+  bool _likingInProgress = false;
+  bool _showComments = false;
+  bool _commentsLoading = false;
+  List<Map<String, dynamic>> _commentList = [];
+  final TextEditingController _commentCtrl = TextEditingController();
+  bool _postingComment = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _likes = (widget.review['likes_count'] as num?)?.toInt() ?? 0;
+    _commentCount = (widget.review['comments_count'] as num?)?.toInt() ?? 0;
+  }
+
+  @override
+  void dispose() {
+    _commentCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggleLike() async {
+    if (_likingInProgress) return;
+    setState(() {
+      _likingInProgress = true;
+      _liked = !_liked;
+      _likes += _liked ? 1 : -1;
+    });
+    final reviewId = widget.review['id']?.toString() ?? '';
+    final token = Supabase.instance.client.auth.currentSession?.accessToken;
+    final newCount = await ApiService.likeReview(reviewId, accessToken: token);
+    if (mounted) setState(() {
+      if (newCount != null) _likes = newCount;
+      _likingInProgress = false;
+    });
+  }
+
+  Future<void> _loadComments() async {
+    if (_commentsLoading) return;
+    setState(() => _commentsLoading = true);
+    final reviewId = widget.review['id']?.toString() ?? '';
+    final items = await ApiService.fetchReviewComments(reviewId);
+    if (mounted) setState(() {
+      _commentList = items;
+      _commentsLoading = false;
+    });
+  }
+
+  Future<void> _postComment() async {
+    final text = _commentCtrl.text.trim();
+    if (text.isEmpty || _postingComment) return;
+    setState(() => _postingComment = true);
+    final reviewId = widget.review['id']?.toString() ?? '';
+    final token = Supabase.instance.client.auth.currentSession?.accessToken;
+    final result = await ApiService.addReviewComment(reviewId, text, accessToken: token);
+    if (mounted) setState(() {
+      _postingComment = false;
+      if (result != null) {
+        _commentCtrl.clear();
+        _commentList.add(result);
+        _commentCount++;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = widget.review;
     final rating = (r['rating'] as num?)?.toInt() ?? 0;
-    final likes = (r['likes_count'] ?? 0).toString();
-    final comments = (r['comments_count'] ?? 0).toString();
     final createdAt = r['created_at'] as String? ?? '';
     final timeAgo = createdAt.isEmpty ? '' : createdAt.split('T').first;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -811,15 +893,110 @@ class _ReviewsContentState extends State<_ReviewsContent> {
           ])),
         ]),
         SizedBox(height: 1.1.h),
+        // Interactive like + comment row
         Row(children: [
-          const Icon(Icons.thumb_up_alt_outlined, color: Color(0xFF717B91)),
-          SizedBox(width: 1.2.w),
-          Text(likes, style: const TextStyle(color: Color(0xFF717B91))),
+          GestureDetector(
+            onTap: _toggleLike,
+            child: Row(children: [
+              Icon(
+                _liked ? Icons.thumb_up_rounded : Icons.thumb_up_alt_outlined,
+                color: _liked ? const Color(0xFF2F7BF2) : const Color(0xFF717B91),
+                size: 4.5.w,
+              ),
+              SizedBox(width: 1.2.w),
+              Text('$_likes', style: TextStyle(
+                color: _liked ? const Color(0xFF2F7BF2) : const Color(0xFF717B91),
+                fontWeight: _liked ? FontWeight.w700 : FontWeight.normal,
+              )),
+            ]),
+          ),
           SizedBox(width: 5.w),
-          const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF717B91)),
-          SizedBox(width: 1.2.w),
-          Text(comments, style: const TextStyle(color: Color(0xFF717B91))),
+          GestureDetector(
+            onTap: () {
+              setState(() => _showComments = !_showComments);
+              if (_showComments && _commentList.isEmpty) _loadComments();
+            },
+            child: Row(children: [
+              Icon(
+                _showComments ? Icons.chat_bubble_rounded : Icons.chat_bubble_outline_rounded,
+                color: _showComments ? const Color(0xFF2F7BF2) : const Color(0xFF717B91),
+                size: 4.5.w,
+              ),
+              SizedBox(width: 1.2.w),
+              Text('$_commentCount', style: TextStyle(
+                color: _showComments ? const Color(0xFF2F7BF2) : const Color(0xFF717B91),
+              )),
+            ]),
+          ),
         ]),
+
+        // Comment section
+        if (_showComments) ...[
+          SizedBox(height: 1.2.h),
+          Container(
+            padding: EdgeInsets.all(3.w),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF6F8FC),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_commentsLoading)
+                  const Center(child: Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator(strokeWidth: 2)))
+                else if (_commentList.isEmpty)
+                  Text('No comments yet.', style: TextStyle(fontSize: 12.sp, color: const Color(0xFF9DA7B8)))
+                else
+                  ...(_commentList.map((c) => Padding(
+                    padding: EdgeInsets.only(bottom: 1.h),
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      CircleAvatar(
+                        radius: 3.w,
+                        backgroundColor: const Color(0xFFD8E6FB),
+                        child: Text(
+                          (c['user_name'] as String?)?.substring(0, 1).toUpperCase() ?? 'U',
+                          style: TextStyle(fontSize: 9.sp, color: const Color(0xFF2F7BF2)),
+                        ),
+                      ),
+                      SizedBox(width: 2.w),
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(c['user_name'] as String? ?? 'User',
+                          style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w700, color: const Color(0xFF1D2538))),
+                        Text(c['comment_text'] as String? ?? '',
+                          style: TextStyle(fontSize: 11.5.sp, color: const Color(0xFF556075))),
+                      ])),
+                    ]),
+                  ))),
+                SizedBox(height: 0.8.h),
+                Row(children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _commentCtrl,
+                      style: TextStyle(fontSize: 12.sp),
+                      decoration: InputDecoration(
+                        hintText: 'Add a comment…',
+                        hintStyle: TextStyle(fontSize: 12.sp, color: const Color(0xFF9DA7B8)),
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: Color(0xFFDCE0E8))),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: Color(0xFFDCE0E8))),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 2.w),
+                  _postingComment
+                    ? SizedBox(width: 7.w, height: 7.w, child: const CircularProgressIndicator(strokeWidth: 2))
+                    : IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        icon: Icon(Icons.send_rounded, size: 5.5.w, color: const Color(0xFF2F7BF2)),
+                        onPressed: _postComment,
+                      ),
+                ]),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
