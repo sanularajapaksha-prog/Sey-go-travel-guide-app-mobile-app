@@ -287,7 +287,10 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
     // Pick the best available image for the cache item thumbnail.
     // Use whereType<String>() instead of cast<String>() — safe even if the
     // list contains non-String elements (avoids lazy CastError).
-    final bannerUrl = playlist['banner_url'] as String?;
+    // Use toString-coercion for banner_url in case the API returns a non-String.
+    final bannerUrl = playlist['banner_url'] is String
+        ? playlist['banner_url'] as String
+        : null;
     final previewImages = (playlist['previewImages'] as List? ?? const [])
         .whereType<String>()
         .toList();
@@ -296,17 +299,21 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
 
     // Build a safe, explicitly typed snapshot — avoids jsonEncode failures
     // that can occur with raw API maps containing List<dynamic> fields.
+    // Use null-safe coercions (toString(), toInt()) instead of direct `as`
+    // casts, which throw TypeError on unexpected runtime types.
+    final rawCount = playlist['destination_count'] ?? playlist['destinationCount'] ?? 0;
+    final destCount = (rawCount is num) ? rawCount.toInt() : int.tryParse(rawCount.toString()) ?? 0;
     final safeSnapshot = <String, dynamic>{
       'id': playlistId,
-      'name': (playlist['name'] as String?) ?? 'Playlist',
-      'description': playlist['description'] as String?,
-      'icon': (playlist['icon'] as String?) ?? 'playlist_play',
+      'name': playlist['name']?.toString() ?? 'Playlist',
+      'description': playlist['description']?.toString(),
+      'icon': playlist['icon']?.toString() ?? 'playlist_play',
       'banner_url': bannerUrl,
       'previewImages': previewImages, // already List<String> via whereType
-      'destination_count': (playlist['destination_count'] ?? playlist['destinationCount'] ?? 0) as int,
-      'destinationCount': (playlist['destinationCount'] ?? playlist['destination_count'] ?? 0) as int,
-      'creator_name': playlist['creator_name'] as String?,
-      'visibility': (playlist['visibility'] as String?) ?? 'public',
+      'destination_count': destCount,
+      'destinationCount': destCount,
+      'creator_name': playlist['creator_name']?.toString(),
+      'visibility': playlist['visibility']?.toString() ?? 'public',
       'is_editable': false,
       'is_deletable': false,
       'is_featured': (playlist['is_featured'] as bool?) ?? false,
@@ -318,9 +325,9 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
     final item = OfflineCacheItem(
       id: playlistId, // unique per playlist — prevents overwriting other entries
       type: OfflineCacheType.playlist,
-      title: (playlist['name'] as String?) ?? 'Playlist',
+      title: playlist['name']?.toString() ?? 'Playlist',
       imageUrl: imageUrl,
-      description: playlist['description'] as String?,
+      description: playlist['description']?.toString(),
       savedAt: DateTime.now(),
       playlistData: safeSnapshot,
     );

@@ -967,38 +967,71 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
   }
 
   Widget _buildVisitPlanningSection(ThemeData theme) {
-    final items = <Widget>[];
     final d = _destinationData;
-    if (_notEmpty(d['visit_duration_minutes']?.toString()) || d['visit_duration_minutes'] != null) {
-      final mins = d['visit_duration_minutes'];
-      if (mins != null) {
-        final h = (mins as num).toInt();
-        final label = h >= 60 ? '${h ~/ 60}h ${h % 60}min' : '${h}min';
-        items.add(_infoTile(Icons.schedule, 'Visit Duration', label, theme));
-      }
+
+    // ── Compact 2-column grid items ──────────────────────────────────────────
+    final gridItems = <Map<String, dynamic>>[];
+
+    if (d['visit_duration_minutes'] != null) {
+      final mins = (d['visit_duration_minutes'] as num).toInt();
+      final dur = mins >= 60
+          ? '${mins ~/ 60}h${mins % 60 > 0 ? ' ${mins % 60}m' : ''}'
+          : '${mins}min';
+      gridItems.add({'icon': Icons.schedule_rounded, 'label': 'Duration', 'value': dur, 'color': const Color(0xFF1565C0)});
     }
     if (_notEmpty(d['crowd_level']))
-      items.add(_infoTile(Icons.people, 'Crowd Level', d['crowd_level']!, theme));
+      gridItems.add({'icon': Icons.groups_rounded, 'label': 'Crowd Level', 'value': d['crowd_level'], 'color': const Color(0xFFE65100)});
     if (_notEmpty(d['best_time_of_day']))
-      items.add(_infoTile(Icons.wb_sunny, 'Best Time of Day', d['best_time_of_day']!, theme));
-    if (_notEmpty(d['best_months']))
-      items.add(_infoTile(Icons.calendar_month, 'Best Months', d['best_months']!, theme));
-    if (_notEmpty(d['avoid_months']))
-      items.add(_infoTile(Icons.event_busy, 'Avoid Months', d['avoid_months']!, theme));
-    if (_notEmpty(d['price_level']))
-      items.add(_infoTile(Icons.attach_money, 'Price Level', d['price_level']!, theme));
+      gridItems.add({'icon': Icons.wb_sunny_rounded, 'label': 'Best Time', 'value': d['best_time_of_day'], 'color': const Color(0xFFF9A825)});
     if (_notEmpty(d['budget_level']))
-      items.add(_infoTile(Icons.account_balance_wallet, 'Budget', d['budget_level']!, theme));
+      gridItems.add({'icon': Icons.account_balance_wallet_rounded, 'label': 'Budget', 'value': d['budget_level'], 'color': const Color(0xFF2E7D32)});
     if (_notEmpty(d['estimated_cost_usd']))
-      items.add(_infoTile(Icons.payments, 'Est. Cost', '\$${d['estimated_cost_usd']}', theme));
+      gridItems.add({'icon': Icons.payments_rounded, 'label': 'Est. Cost', 'value': '\$${d['estimated_cost_usd']}', 'color': const Color(0xFF00695C)});
+    if (d['parking_available'] != null) {
+      final avail = d['parking_available'] == true;
+      gridItems.add({'icon': Icons.local_parking_rounded, 'label': 'Parking',
+          'value': avail ? 'Available' : 'Not Available',
+          'color': avail ? const Color(0xFF2E7D32) : const Color(0xFFC62828)});
+    }
+
+    // ── Full-width items (longer / multi-value text) ─────────────────────────
+    final fullItems = <Map<String, dynamic>>[];
+    if (_notEmpty(d['best_months']))
+      fullItems.add({'icon': Icons.event_available_rounded, 'label': 'Best Months', 'value': d['best_months'], 'color': const Color(0xFF2E7D32)});
+    if (_notEmpty(d['avoid_months']))
+      fullItems.add({'icon': Icons.event_busy_rounded, 'label': 'Avoid Months', 'value': d['avoid_months'], 'color': const Color(0xFFC62828)});
     if (_notEmpty(d['transport_options']))
-      items.add(_infoTile(Icons.directions_bus, 'Transport', d['transport_options']!, theme));
-    if (d['parking_available'] != null)
-      items.add(_infoTile(Icons.local_parking, 'Parking',
-          d['parking_available'] == true ? 'Available' : 'Not Available', theme));
+      fullItems.add({'icon': Icons.directions_bus_rounded, 'label': 'Transport', 'value': d['transport_options'], 'color': const Color(0xFF283593)});
+    if (_notEmpty(d['price_level']))
+      fullItems.add({'icon': Icons.attach_money_rounded, 'label': 'Price Level', 'value': d['price_level'], 'color': const Color(0xFF558B2F)});
+
+    if (gridItems.isEmpty && fullItems.isEmpty) return const SizedBox.shrink();
+
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 4.w),
-      child: Column(children: items),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (gridItems.isNotEmpty)
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 3.w,
+                mainAxisSpacing: 1.8.h,
+                childAspectRatio: 1.65,
+              ),
+              itemCount: gridItems.length,
+              itemBuilder: (_, i) => _planningGridCard(gridItems[i], theme),
+            ),
+          if (gridItems.isNotEmpty && fullItems.isNotEmpty) SizedBox(height: 2.h),
+          ...fullItems.map((item) => Padding(
+            padding: EdgeInsets.only(bottom: 1.5.h),
+            child: _planningFullCard(item, theme),
+          )),
+        ],
+      ),
     );
   }
 
@@ -1040,19 +1073,109 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
     );
   }
 
-  Widget _infoTile(IconData icon, String label, String value, ThemeData theme) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 1.2.h),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(icon, size: 4.5.w, color: theme.colorScheme.secondary),
-        SizedBox(width: 3.w),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w600)),
+  /// Compact card for 2-column grid inside Visit Planning.
+  Widget _planningGridCard(Map<String, dynamic> item, ThemeData theme) {
+    final color = item['color'] as Color;
+    return Container(
+      padding: EdgeInsets.all(3.w),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.6)),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.shadow.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(item['icon'] as IconData, size: 4.w, color: color),
+          ),
+          SizedBox(height: 1.h),
+          Text(
+            item['label'] as String,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.2,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
           SizedBox(height: 0.3.h),
-          Text(value, style: theme.textTheme.bodyMedium),
-        ])),
-      ]),
+          Text(
+            item['value'] as String,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: theme.colorScheme.onSurface,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Full-width accent card for multi-value fields inside Visit Planning.
+  Widget _planningFullCard(Map<String, dynamic> item, ThemeData theme) {
+    final color = item['color'] as Color;
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.8.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.13),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(item['icon'] as IconData, size: 5.w, color: color),
+          ),
+          SizedBox(width: 3.5.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item['label'] as String,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+                SizedBox(height: 0.4.h),
+                Text(
+                  item['value'] as String,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

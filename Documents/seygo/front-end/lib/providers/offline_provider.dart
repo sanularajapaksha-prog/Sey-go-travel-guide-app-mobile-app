@@ -10,6 +10,7 @@ import '../data/services/offline_cache_service.dart';
 class OfflineProvider extends ChangeNotifier {
   List<OfflineCacheItem> _items = [];
   bool _loading = false;
+  bool _initialized = false;
 
   List<OfflineCacheItem> get items => List.unmodifiable(_items);
 
@@ -25,6 +26,11 @@ class OfflineProvider extends ChangeNotifier {
 
   bool get isLoading => _loading;
 
+  /// True after the first [load] completes. An empty [items] list does NOT
+  /// mean the provider is uninitialized — it may simply mean nothing is saved.
+  /// Use this flag instead of `items.isEmpty` to guard lazy load() calls.
+  bool get isInitialized => _initialized;
+
   bool isCached(String id) => _items.any((e) => e.id == id);
 
   // ── load ────────────────────────────────────────────────────────────────────
@@ -34,13 +40,19 @@ class OfflineProvider extends ChangeNotifier {
     notifyListeners();
     _items = await OfflineCacheService.loadAll();
     _loading = false;
+    _initialized = true;
     notifyListeners();
   }
 
   // ── save ────────────────────────────────────────────────────────────────────
 
   Future<void> save(OfflineCacheItem item) async {
-    await OfflineCacheService.save(item);
+    // Snapshot current list so we can roll back if the persist fails.
+    final snapshot = List<OfflineCacheItem>.from(_items);
+
+    // Update in-memory state FIRST — this is the single source of truth.
+    // Avoids the read-modify-write race where a second concurrent save reads
+    // SharedPreferences before the first write commits, silently dropping it.
     final idx = _items.indexWhere((e) => e.id == item.id);
     if (idx >= 0) {
       _items[idx] = item;
@@ -48,14 +60,36 @@ class OfflineProvider extends ChangeNotifier {
       _items.insert(0, item);
     }
     notifyListeners();
+
+    try {
+      // Persist the full current list directly — no SharedPreferences read needed.
+      await OfflineCacheService.persistAll(_items);
+    } catch (e) {
+      // Revert so the UI (cloud icon, Downloaded section) stays consistent
+      // with what is actually persisted on disk.
+      _items
+        ..clear()
+        ..addAll(snapshot);
+      notifyListeners();
+      rethrow;
+    }
   }
 
   // ── delete ──────────────────────────────────────────────────────────────────
 
   Future<void> deleteById(String id) async {
-    await OfflineCacheService.deleteById(id);
+    final snapshot = List<OfflineCacheItem>.from(_items);
     _items.removeWhere((e) => e.id == id);
     notifyListeners();
+    try {
+      await OfflineCacheService.persistAll(_items);
+    } catch (e) {
+      _items
+        ..clear()
+        ..addAll(snapshot);
+      notifyListeners();
+      rethrow;
+    }
   }
 
   Future<void> clearAll() async {

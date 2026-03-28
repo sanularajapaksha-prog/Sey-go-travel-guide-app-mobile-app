@@ -29,10 +29,12 @@ class _OfflineTripsScreenState extends State<OfflineTripsScreen>
     super.initState();
     // 3 tabs: Trips · Places · Playlists
     _tab = TabController(length: 3, vsync: this);
-    // Refresh cache every time this screen opens
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<OfflineProvider>().load();
-    });
+    // NOTE: We intentionally do NOT call load() here.
+    // OfflineProvider._items is the single source of truth — save() and
+    // deleteById() update it immediately (before persisting to SharedPreferences).
+    // Calling load() would race with any in-flight persistAll() and wipe
+    // items that have been saved in-memory but not yet written to disk.
+    // The app-startup load() in main.dart handles initial population from disk.
   }
 
   @override
@@ -370,9 +372,11 @@ class _PlaylistCard extends StatelessWidget {
 
     // Pull destination count from the cached playlistData snapshot
     final playlistData = item.playlistData ?? {};
+    final rawCount = playlistData['destinationCount'] ??
+        playlistData['destination_count'] ??
+        0;
     final destCount =
-        (playlistData['destinationCount'] ?? playlistData['destination_count'] ?? 0)
-            as int;
+        rawCount is num ? rawCount.toInt() : int.tryParse(rawCount.toString()) ?? 0;
 
     return Dismissible(
       key: ValueKey(item.id),

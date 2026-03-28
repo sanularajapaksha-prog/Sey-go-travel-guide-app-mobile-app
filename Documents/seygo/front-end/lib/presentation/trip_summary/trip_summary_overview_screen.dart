@@ -68,11 +68,14 @@ class _TripSummaryOverviewScreenState extends State<TripSummaryOverviewScreen> {
 
   Future<void> _loadOfflineState() async {
     final provider = context.read<OfflineProvider>();
-    // Ensure cache is loaded
-    if (provider.items.isEmpty) await provider.load();
+    // Only load from disk if the provider hasn't been initialized yet.
+    // Do NOT guard on items.isEmpty — an empty list is valid (nothing saved yet)
+    // and calling load() would race with any in-flight persistAll(), wiping
+    // items that were saved in-memory but not yet written to SharedPreferences.
+    if (!provider.isInitialized) await provider.load();
     if (!mounted) return;
     setState(() {
-      _offlineMode = provider.isCached(_tripCacheId);
+      // Always default to OFF so the user must explicitly opt in each session.
       _offlineReady = true;
     });
   }

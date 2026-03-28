@@ -47,7 +47,18 @@ class OfflineCacheService {
 
   // ── save ────────────────────────────────────────────────────────────────────
 
+  /// Persists [items] directly to SharedPreferences.
+  ///
+  /// Call this from [OfflineProvider.save] which maintains the authoritative
+  /// in-memory list — no read-before-write is needed, which eliminates the
+  /// race condition where a concurrent second save overwrites the first item.
+  static Future<void> persistAll(List<OfflineCacheItem> items) async {
+    await _persist(items);
+  }
+
   /// Adds or replaces an item (matched by [OfflineCacheItem.id]).
+  /// Prefer [OfflineProvider.save] over calling this directly — the provider
+  /// uses [persistAll] to avoid the read-modify-write race.
   static Future<void> save(OfflineCacheItem item) async {
     final all = await loadAll();
     final idx = all.indexWhere((e) => e.id == item.id);
@@ -85,8 +96,22 @@ class OfflineCacheService {
         if (kDebugMode) debugPrint('[OfflineCache] skipping item ${item.id} (toJson error): $e');
       }
     }
-    final encoded = jsonEncode(jsonList);
-    await prefs.setString(_cacheKey, encoded);
-    if (kDebugMode) debugPrint('[OfflineCache] persisted ${jsonList.length} items');
+    // Catch encoding errors that would otherwise silently drop the entire write.
+    String encoded;
+    try {
+      encoded = jsonEncode(jsonList);
+    } catch (e) {
+      if (kDebugMode) debugPrint('[OfflineCache] jsonEncode failed — aborting persist: $e');
+      return;
+    }
+    final ok = await prefs.setString(_cacheKey, encoded);
+    if (kDebugMode) {
+      if (ok) {
+        debugPrint('[OfflineCache] persisted ${jsonList.length} items (${encoded.length} bytes)');
+      } else {
+        debugPrint('[OfflineCache] setString returned false — write may have failed!');
+      }
+    }
+    if (!ok) throw Exception('[OfflineCache] SharedPreferences write failed for key $_cacheKey');
   }
 }
