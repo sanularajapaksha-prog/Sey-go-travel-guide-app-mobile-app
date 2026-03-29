@@ -218,14 +218,22 @@ class _SeygoTravelAppState extends State<SeygoTravelApp> {
         );
       }
       // Preload all auth-dependent data and rebuild search index in background.
-      final token = Supabase.instance.client.auth.currentSession?.accessToken;
+      final session = Supabase.instance.client.auth.currentSession;
+      final token = session?.accessToken;
+      final userId = Supabase.instance.client.auth.currentUser?.id ?? '';
       if (token != null) {
         ApiService.rebuildSearchIndex(accessToken: token);
         Provider.of<UserDataProvider>(context, listen: false).preload(token);
       }
+      // Load per-user offline cache and favorites so each account sees only its own data.
+      Provider.of<OfflineProvider>(context, listen: false).switchUser(userId);
+      Provider.of<FavoritesProvider>(context, listen: false).loadForUser(userId);
     } else if (event == AuthChangeEvent.signedOut || event == AuthChangeEvent.userDeleted) {
       // Clear stale user data so it isn't shown on the next login.
       Provider.of<UserDataProvider>(context, listen: false).invalidate();
+      // Clear offline and favorites from memory so previous user's data is hidden.
+      Provider.of<OfflineProvider>(context, listen: false).clearMemory();
+      Provider.of<FavoritesProvider>(context, listen: false).clearMemory();
       if (currentRoute != AppRoutes.loginPage) {
         appNavigatorKey.currentState?.pushNamedAndRemoveUntil(
           AppRoutes.loginPage,

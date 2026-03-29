@@ -40,50 +40,62 @@ class FavoritePlace {
 }
 
 class FavoritesProvider extends ChangeNotifier {
-  static const _prefsKey = 'favorite_places';
-
+  String _userId = '';
   final List<FavoritePlace> _favorites = [];
 
-  UnmodifiableListView<FavoritePlace> get favorites => UnmodifiableListView(_favorites);
+  static String _key(String userId) =>
+      userId.isNotEmpty ? 'favorite_places_$userId' : 'favorite_places_guest';
+
+  UnmodifiableListView<FavoritePlace> get favorites =>
+      UnmodifiableListView(_favorites);
 
   int get count => _favorites.length;
 
-  /// Call once at startup to restore persisted favorites.
-  /// BUG FIX: Handle data corruption actively by erasing the faulty key 
-  /// instead of ignoring it, which prevents recurrent loss of state.
-  Future<void> loadFromPrefs() async {
+  /// Load favorites for [userId]. Call this after login.
+  Future<void> loadForUser(String userId) async {
+    _userId = userId;
+    _favorites.clear();
     try {
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_prefsKey);
-      if (raw == null || raw.trim().isEmpty) return;
-
+      final raw = prefs.getString(_key(_userId));
+      if (raw == null || raw.trim().isEmpty) {
+        notifyListeners();
+        return;
+      }
       final dynamic decoded = jsonDecode(raw);
       if (decoded is List) {
-        final list = decoded.cast<Map<String, dynamic>>();
-        _favorites
-          ..clear()
-          ..addAll(list.map(FavoritePlace.fromJson));
-        notifyListeners();
+        _favorites.addAll(
+            decoded.cast<Map<String, dynamic>>().map(FavoritePlace.fromJson));
       } else {
-        // Data format unexpected, clear immediately
-        await prefs.remove(_prefsKey);
-        if (kDebugMode) debugPrint('Favs format corrupted. Wiped.');
+        await prefs.remove(_key(_userId));
       }
     } catch (e, stack) {
-      // Severe string parsing corruption, clean slate
-      if (kDebugMode) debugPrint('Favorites decoding failed: $e, $stack');
+      if (kDebugMode) debugPrint('Favorites decoding failed for user $_userId: $e\n$stack');
       try {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.remove(_prefsKey);
+        await prefs.remove(_key(_userId));
       } catch (_) {}
     }
+    notifyListeners();
+  }
+
+  /// Legacy: load from the old keyless slot (used at app startup before login).
+  Future<void> loadFromPrefs() async {
+    await loadForUser('');
+  }
+
+  /// Clears in-memory favorites without touching disk. Call on logout.
+  void clearMemory() {
+    _userId = '';
+    _favorites.clear();
+    notifyListeners();
   }
 
   Future<void> _persist() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(
-        _prefsKey,
+        _key(_userId),
         jsonEncode(_favorites.map((f) => f.toJson()).toList()),
       );
     } catch (e) {
@@ -91,14 +103,12 @@ class FavoritesProvider extends ChangeNotifier {
     }
   }
 
-  bool isFavorite(String id) {
-    return _favorites.any((place) => place.id == id);
-  }
+  bool isFavorite(String id) => _favorites.any((place) => place.id == id);
 
   void toggleFavorite(FavoritePlace place) {
-    final existingIndex = _favorites.indexWhere((favorite) => favorite.id == place.id);
-    if (existingIndex >= 0) {
-      _favorites.removeAt(existingIndex);
+    final idx = _favorites.indexWhere((f) => f.id == place.id);
+    if (idx >= 0) {
+      _favorites.removeAt(idx);
     } else {
       _favorites.add(place);
     }

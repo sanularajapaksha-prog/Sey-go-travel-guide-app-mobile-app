@@ -32,6 +32,7 @@ class _WelcomeHomeScreenInitialPageState
   List<Map<String, dynamic>> _playlists = [];
   bool _playlistsLoading = true;
   bool _hasOfflineTrips = false;
+  int _unreadNotifications = 0;
 
   List<Map<String, dynamic>> _featuredDestinations = [
     {
@@ -175,6 +176,14 @@ class _WelcomeHomeScreenInitialPageState
   void initState() {
     super.initState();
     _checkOfflineTrips();
+    _loadUnreadCount();
+  }
+
+  Future<void> _loadUnreadCount() async {
+    final token = Supabase.instance.client.auth.currentSession?.accessToken;
+    if (token == null) return;
+    final count = await ApiService.fetchUnreadNotificationCount(accessToken: token);
+    if (mounted) setState(() => _unreadNotifications = count);
   }
 
   @override
@@ -323,23 +332,54 @@ class _WelcomeHomeScreenInitialPageState
                           _scaffoldKey.currentState?.openDrawer(),
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.notifications_none, size: 26),
-                    tooltip: 'Notifications',
-                    onPressed: () {
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        builder: (_) => DraggableScrollableSheet(
-                          initialChildSize: 0.65,
-                          minChildSize: 0.4,
-                          maxChildSize: 0.95,
-                          builder: (_, scrollController) =>
-                              NotificationsPanel(),
+                  Stack(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.notifications_none, size: 26),
+                        tooltip: 'Notifications',
+                        onPressed: () async {
+                          await showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (_) => DraggableScrollableSheet(
+                              initialChildSize: 0.65,
+                              minChildSize: 0.4,
+                              maxChildSize: 0.95,
+                              builder: (_, scrollController) =>
+                                  NotificationsPanel(),
+                            ),
+                          );
+                          // Refresh badge after panel is closed
+                          _loadUnreadCount();
+                        },
+                      ),
+                      if (_unreadNotifications > 0)
+                        Positioned(
+                          right: 6,
+                          top: 6,
+                          child: Container(
+                            width: 16,
+                            height: 16,
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                _unreadNotifications > 9
+                                    ? '9+'
+                                    : '$_unreadNotifications',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
-                      );
-                    },
+                    ],
                   ),
                 ],
               ),

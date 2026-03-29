@@ -5,12 +5,13 @@ import '../data/services/offline_cache_service.dart';
 
 /// Reactive state for the offline cache.
 ///
-/// Wrap your widget tree with `ChangeNotifierProvider(create: (_) => OfflineProvider()..load())`
-/// and call `Provider.of<OfflineProvider>(context)` to read state.
+/// Each user's data is stored under a separate SharedPreferences key.
+/// Call [switchUser] after login and [clearMemory] after logout.
 class OfflineProvider extends ChangeNotifier {
   List<OfflineCacheItem> _items = [];
   bool _loading = false;
   bool _initialized = false;
+  String _userId = '';
 
   List<OfflineCacheItem> get items => List.unmodifiable(_items);
 
@@ -20,39 +21,53 @@ class OfflineProvider extends ChangeNotifier {
   List<OfflineCacheItem> get destinations =>
       _items.where((e) => e.type == OfflineCacheType.destination).toList();
 
-  /// All playlists saved for offline access, newest first.
   List<OfflineCacheItem> get playlists =>
       _items.where((e) => e.type == OfflineCacheType.playlist).toList();
 
   bool get isLoading => _loading;
 
-  /// True after the first [load] completes. An empty [items] list does NOT
-  /// mean the provider is uninitialized — it may simply mean nothing is saved.
-  /// Use this flag instead of `items.isEmpty` to guard lazy load() calls.
+  /// True after the first [load] / [switchUser] completes.
   bool get isInitialized => _initialized;
 
   bool isCached(String id) => _items.any((e) => e.id == id);
 
   // ── load ────────────────────────────────────────────────────────────────────
 
-  Future<void> load() async {
+  /// Load cache for [userId]. Called at app startup for anonymous/guest state.
+  Future<void> load({String userId = ''}) async {
+    _userId = userId;
     _loading = true;
     notifyListeners();
-    _items = await OfflineCacheService.loadAll();
+    _items = await OfflineCacheService.loadAll(userId: _userId);
     _loading = false;
     _initialized = true;
+    notifyListeners();
+  }
+
+  /// Switch to a different user's offline data. Clears memory first so the
+  /// previous user's data is never shown, then loads the new user's cache.
+  Future<void> switchUser(String userId) async {
+    if (_userId == userId && _initialized) return; // already loaded for this user
+    _userId = userId;
+    _items = [];
+    _initialized = false;
+    notifyListeners();
+    await load(userId: _userId);
+  }
+
+  /// Clears in-memory data only (does NOT touch disk). Call on logout so the
+  /// next user does not see stale items before their own data is loaded.
+  void clearMemory() {
+    _userId = '';
+    _items = [];
+    _initialized = false;
     notifyListeners();
   }
 
   // ── save ────────────────────────────────────────────────────────────────────
 
   Future<void> save(OfflineCacheItem item) async {
-    // Snapshot current list so we can roll back if the persist fails.
     final snapshot = List<OfflineCacheItem>.from(_items);
-
-    // Update in-memory state FIRST — this is the single source of truth.
-    // Avoids the read-modify-write race where a second concurrent save reads
-    // SharedPreferences before the first write commits, silently dropping it.
     final idx = _items.indexWhere((e) => e.id == item.id);
     if (idx >= 0) {
       _items[idx] = item;
@@ -62,11 +77,8 @@ class OfflineProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Persist the full current list directly — no SharedPreferences read needed.
-      await OfflineCacheService.persistAll(_items);
+      await OfflineCacheService.persistAll(_items, userId: _userId);
     } catch (e) {
-      // Revert so the UI (cloud icon, Downloaded section) stays consistent
-      // with what is actually persisted on disk.
       _items
         ..clear()
         ..addAll(snapshot);
@@ -82,7 +94,7 @@ class OfflineProvider extends ChangeNotifier {
     _items.removeWhere((e) => e.id == id);
     notifyListeners();
     try {
-      await OfflineCacheService.persistAll(_items);
+      await OfflineCacheService.persistAll(_items, userId: _userId);
     } catch (e) {
       _items
         ..clear()
@@ -93,7 +105,7 @@ class OfflineProvider extends ChangeNotifier {
   }
 
   Future<void> clearAll() async {
-    await OfflineCacheService.clearAll();
+    await OfflineCacheService.clearAll(userId: _userId);
     _items.clear();
     notifyListeners();
   }
