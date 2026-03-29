@@ -1,7 +1,7 @@
 import logging
 import os
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from supabase import create_client
 
@@ -117,3 +117,17 @@ async def update_profile(
         )
 
     return {'updated': True}
+
+
+@router.delete('/me', status_code=status.HTTP_204_NO_CONTENT)
+async def delete_account(user=Depends(get_current_user)):
+    """Permanently delete the authenticated user's account."""
+    supabase = _sb()
+    try:
+        supabase.auth.admin.delete_user(str(user.id))
+    except Exception as exc:
+        logger.error('delete_account failed for user=%s: %s', user.id, exc, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail='Account deletion failed. Please try again.',
+        )

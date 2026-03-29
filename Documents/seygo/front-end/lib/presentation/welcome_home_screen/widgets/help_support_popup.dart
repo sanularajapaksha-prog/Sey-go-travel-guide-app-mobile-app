@@ -169,9 +169,13 @@ class HelpSupportPopup extends StatelessWidget {
             context,
             icon: Icons.security_outlined,
             title: "Privacy Policy",
-            onTap: () {
+            onTap: () async {
               Navigator.pop(context);
-              Navigator.pushNamed(context, AppRoutes.privacyPolicy);
+              final uri = Uri.parse(
+                  'https://sanularajapaksha-prog.github.io/seygo-privacy/');
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
             },
           ),
         ],

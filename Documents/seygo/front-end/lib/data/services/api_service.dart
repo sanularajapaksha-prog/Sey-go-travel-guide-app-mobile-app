@@ -1344,4 +1344,21 @@ class ApiService {
       return false;
     }
   }
+
+  static Future<bool> deleteAccount({String? accessToken}) async {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      if (accessToken != null && accessToken.isNotEmpty)
+        'Authorization': 'Bearer $accessToken',
+    };
+    final uri = Uri.parse('$baseUrl/users/me');
+    try {
+      final response = await http
+          .delete(uri, headers: headers)
+          .timeout(const Duration(seconds: 15));
+      return response.statusCode == 204;
+    } catch (_) {
+      return false;
+    }
+  }
 }

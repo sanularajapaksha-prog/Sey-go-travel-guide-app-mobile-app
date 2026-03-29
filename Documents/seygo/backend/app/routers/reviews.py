@@ -277,7 +277,6 @@ async def add_review_comment(
             'user_name': user_name,
             'comment_text': body.comment_text.strip(),
         })
-        .select()
         .execute()
     ).data
     if not row:

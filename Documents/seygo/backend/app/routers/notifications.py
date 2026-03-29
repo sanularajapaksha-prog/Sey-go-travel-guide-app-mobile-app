@@ -34,7 +34,7 @@ def create_notification(
             'image_url': image_url,
             'reference_id': reference_id,
             'is_read': False,
-        }).select().execute()
+        }).execute()
     except Exception as exc:
         logger.warning('create_notification failed (non-fatal): %s', exc)
 
@@ -57,7 +57,7 @@ def create_broadcast_notification(
             'image_url': image_url,
             'reference_id': reference_id,
             'is_read': False,
-        }).select().execute()
+        }).execute()
     except Exception as exc:
         logger.warning('create_broadcast_notification failed (non-fatal): %s', exc)
 

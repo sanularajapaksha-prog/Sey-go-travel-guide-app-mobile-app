@@ -440,7 +440,7 @@ void showDeleteAccountDialog(BuildContext context) {
     builder: (context) => AlertDialog(
       title: const Text('Delete Account'),
       content: const Text(
-        'This action cannot be undone. All data will be permanently deleted.',
+        'This action cannot be undone. Your account and all associated data will be permanently deleted.',
       ),
       actions: [
         TextButton(
@@ -448,9 +448,39 @@ void showDeleteAccountDialog(BuildContext context) {
           child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: () {
+          onPressed: () async {
+            // Capture messenger before closing dialog to avoid using
+            // an unmounted context after the async gap.
+            final messenger = ScaffoldMessenger.of(context);
             Navigator.of(context).pop();
-            showSnackBar(context, 'Account deletion requires verification');
+
+            final token =
+                Supabase.instance.client.auth.currentSession?.accessToken;
+            if (token == null) {
+              messenger.showSnackBar(const SnackBar(
+                content: Text('Session expired. Please log in again.'),
+              ));
+              return;
+            }
+
+            messenger.showSnackBar(const SnackBar(
+              content: Text('Deleting your account…'),
+              duration: Duration(seconds: 10),
+            ));
+
+            final ok = await ApiService.deleteAccount(accessToken: token);
+
+            messenger.clearSnackBars();
+            if (ok) {
+              // Sign out locally; the auth listener in main.dart will
+              // navigate to the login page on the signedOut event.
+              await Supabase.instance.client.auth.signOut();
+            } else {
+              messenger.showSnackBar(const SnackBar(
+                content: Text(
+                    'Account deletion failed. Please try again or contact support@seygo.lk.'),
+              ));
+            }
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Theme.of(context).colorScheme.error,
