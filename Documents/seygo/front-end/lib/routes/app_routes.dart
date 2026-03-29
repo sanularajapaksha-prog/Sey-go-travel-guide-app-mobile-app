@@ -24,7 +24,7 @@ import '../presentation/playlist_details/playlist_details_screen.dart';
 import '../presentation/admin/admin_reviews_screen.dart';
 
 class AppRoutes {
-  static const String initial = introLogo;
+  static const String initial = splash;
 
   static const String introLogo = '/intro-logo';
   static const String introWelcome = '/intro-welcome';

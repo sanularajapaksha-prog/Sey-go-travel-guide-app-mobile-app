@@ -1143,7 +1143,7 @@ class ApiService {
     return [];
   }
 
-  static Future<bool> submitReview({
+  static Future<({bool ok, String? error})> submitReview({
     required String placeName,
     required int rating,
     String? placeId,
@@ -1164,9 +1164,10 @@ class ApiService {
           if (reviewText != null) 'review_text': reviewText,
         }),
       ).timeout(const Duration(seconds: 15));
-      return response.statusCode == 201;
-    } catch (_) {
-      return false;
+      if (response.statusCode == 201) return (ok: true, error: null);
+      return (ok: false, error: 'HTTP ${response.statusCode}: ${response.body}');
+    } catch (e) {
+      return (ok: false, error: 'Exception: $e');
     }
   }
 

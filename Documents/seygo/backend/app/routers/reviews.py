@@ -83,8 +83,13 @@ async def create_review(body: CreateReviewRequest, user=Depends(get_current_user
         'likes_count': 0,
         'comments_count': 0,
     }
-    row = _safe_insert(sb, REVIEWS_TABLE, payload)
+    try:
+        row = _safe_insert(sb, REVIEWS_TABLE, payload)
+    except Exception as exc:
+        logger.error('create_review insert failed: %s', exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=f'Insert error: {exc}')
     if not row:
+        logger.error('create_review: insert returned no data for user=%s place=%s', user.id, body.place_id)
         raise HTTPException(status_code=400, detail='Failed to create review.')
     return row
 

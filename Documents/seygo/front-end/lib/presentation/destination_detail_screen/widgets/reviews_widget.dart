@@ -61,7 +61,7 @@ class _ReviewsWidgetState extends State<ReviewsWidget> {
     final placeId = (widget.destinationData["place_id"] ?? widget.destinationData["id"])?.toString() ?? '';
     final token = Supabase.instance.client.auth.currentSession?.accessToken;
 
-    final ok = await ApiService.submitReview(
+    final result = await ApiService.submitReview(
       placeName: widget.destinationData["name"] ?? 'Unknown Place',
       rating: _rating,
       placeId: placeId,
@@ -71,7 +71,7 @@ class _ReviewsWidgetState extends State<ReviewsWidget> {
 
     if (mounted) {
       setState(() => _isSubmitting = false);
-      if (ok) {
+      if (result.ok) {
         Fluttertoast.showToast(
           msg: "Your review has been submitted and is awaiting approval.",
           toastLength: Toast.LENGTH_LONG,
@@ -79,7 +79,10 @@ class _ReviewsWidgetState extends State<ReviewsWidget> {
         _reviewController.clear();
         setState(() => _rating = 5);
       } else {
-        Fluttertoast.showToast(msg: "Failed to submit review. Please try again.");
+        Fluttertoast.showToast(
+          msg: "Failed: ${result.error}",
+          toastLength: Toast.LENGTH_LONG,
+        );
       }
     }
   }

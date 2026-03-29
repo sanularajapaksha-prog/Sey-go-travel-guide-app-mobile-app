@@ -1334,7 +1334,7 @@ class _WriteReviewDialogState extends State<_WriteReviewDialog> {
                       : () async {
                           setState(() => _submitting = true);
                           final token = Supabase.instance.client.auth.currentSession?.accessToken;
-                          final ok = await ApiService.submitReview(
+                          final result = await ApiService.submitReview(
                             placeName: _placeController.text.trim(),
                             rating: rating,
                             reviewText: widget.controller.text.trim().isEmpty ? null : widget.controller.text.trim(),
@@ -1345,9 +1345,9 @@ class _WriteReviewDialogState extends State<_WriteReviewDialog> {
                           _closeOverlay(context);
                           showSnackBar(
                             context,
-                            ok
+                            result.ok
                                 ? 'Your review has been submitted and is awaiting approval.'
-                                : 'Failed to submit review. Please try again.',
+                                : 'Failed: ${result.error}',
                           );
                         },
                   style: ElevatedButton.styleFrom(

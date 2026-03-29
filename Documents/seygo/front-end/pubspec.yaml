@@ -39,6 +39,14 @@ dev_dependencies:
   flutter_test: # CRITICAL: Required for Flutter project testing - DO NOT REMOVE
     sdk: flutter # CRITICAL: Required for Flutter project testing - DO NOT REMOVE
   flutter_lints: ^6.0.0 # CRITICAL: Required for code quality - DO NOT REMOVE
+  flutter_launcher_icons: ^0.14.1
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/images/seygo_icon.png"
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "assets/images/seygo_icon.png"
 
 flutter:
   uses-material-design: true # CRITICAL: Required for Material icon font - DO NOT REMOVE

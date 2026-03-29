@@ -295,7 +295,9 @@ class _SeygoTravelAppState extends State<SeygoTravelApp> {
 
               // App routing tables
               routes: AppRoutes.routes,
-              initialRoute: AppRoutes.initial,
+              initialRoute: Supabase.instance.client.auth.currentSession != null
+                  ? AppRoutes.welcomeHome
+                  : AppRoutes.introWelcome,
             );
           },
         );
