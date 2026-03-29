@@ -145,20 +145,22 @@ async def approve_review(review_id: str, user=Depends(get_current_user)):
         'rejection_reason': None,
     }).eq('id', review_id).execute()
 
-    # Notify the review author
-    if review_row and review_row.data:
-        from .notifications import create_notification
-        author_id = review_row.data.get('user_id', '')
-        place_name = review_row.data.get('place_name', 'a place')
-        if author_id:
-            create_notification(
-                sb,
-                user_id=author_id,
-                type_='review_approved',
-                title='Your review was approved!',
-                body=f'Your review of {place_name} is now visible to the community.',
-                reference_id=review_id,
-            )
+    try:
+        if review_row and review_row.data:
+            from .notifications import create_notification
+            author_id = review_row.data.get('user_id', '')
+            place_name = review_row.data.get('place_name', 'a place')
+            if author_id:
+                create_notification(
+                    sb,
+                    user_id=author_id,
+                    type_='review_approved',
+                    title='Your review was approved!',
+                    body=f'Your review of {place_name} is now visible to the community.',
+                    reference_id=review_id,
+                )
+    except Exception as exc:
+        logger.warning('approve_review: notification failed (non-critical): %s', exc)
     return {'approved': True}
 
 
@@ -208,21 +210,23 @@ async def like_review(review_id: str, user=Depends(get_current_user)):
     new_count = int(r.data.get('likes_count') or 0) + 1
     sb.table(REVIEWS_TABLE).update({'likes_count': new_count}).eq('id', review_id).execute()
 
-    # Notify review author (skip self-likes)
-    review_author_id = r.data.get('user_id', '')
-    if review_author_id and review_author_id != str(user.id):
-        from .notifications import create_notification
-        meta = getattr(user, 'user_metadata', {}) or {}
-        liker_name = meta.get('full_name') or getattr(user, 'email', '') or 'Someone'
-        place_name = r.data.get('place_name', 'a place')
-        create_notification(
-            sb,
-            user_id=review_author_id,
-            type_='like',
-            title=f'{liker_name} liked your review',
-            body=f'Your review of {place_name} received a like.',
-            reference_id=review_id,
-        )
+    try:
+        review_author_id = r.data.get('user_id', '')
+        if review_author_id and review_author_id != str(user.id):
+            from .notifications import create_notification
+            meta = getattr(user, 'user_metadata', {}) or {}
+            liker_name = meta.get('full_name') or getattr(user, 'email', '') or 'Someone'
+            place_name = r.data.get('place_name', 'a place')
+            create_notification(
+                sb,
+                user_id=review_author_id,
+                type_='like',
+                title=f'{liker_name} liked your review',
+                body=f'Your review of {place_name} received a like.',
+                reference_id=review_id,
+            )
+    except Exception as exc:
+        logger.warning('like_review: notification failed (non-critical): %s', exc)
     return {'likes_count': new_count}
 
 
