@@ -22,7 +22,7 @@ def _safe_insert(sb, table: str, payload: dict) -> dict | None:
     """Insert dropping unknown columns one by one on PGRST204."""
     for _ in range(10):
         try:
-            r = sb.table(table).insert(payload).select().execute()
+            r = sb.table(table).insert(payload).execute()
             return (r.data or [None])[0]
         except Exception as exc:
             m = _re.search(r"find the '(\w+)' column", str(exc))
