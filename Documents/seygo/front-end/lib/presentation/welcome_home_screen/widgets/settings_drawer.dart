@@ -7,7 +7,6 @@ import '../../../data/services/api_service.dart';
 import './appearance_popup.dart';
 import './general_settings_popup.dart';
 import './help_support_popup.dart';
-import './privacy_popup.dart';
 import './profile_settings_popup.dart';
 
 class SettingsDrawer extends StatefulWidget {
@@ -129,16 +128,6 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                                       barrierLabel: t.t('general_settings'),
                                       child: GeneralSettingsPopup(),
                                     );
-                                  },
-                                ),
-                                _buildMenuItem(
-                                  colors,
-                                  icon: Icons.security_outlined,
-                                  title: t.t('privacy'),
-                                  subtitle: t.t('permissions_security'),
-                                  onTap: () {
-                                    Navigator.pop(context);
-                                    PrivacyPopup.show(context);
                                   },
                                 ),
                                 _buildMenuItem(

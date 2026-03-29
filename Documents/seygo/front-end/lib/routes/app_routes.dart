@@ -22,6 +22,9 @@ import '../presentation/user_preferences_screen/user_preferences_screen.dart';
 import '../presentation/offline_trips/offline_trips_screen.dart';
 import '../presentation/playlist_details/playlist_details_screen.dart';
 import '../presentation/admin/admin_reviews_screen.dart';
+import '../presentation/legal/community_guidelines_screen.dart';
+import '../presentation/legal/terms_of_service_screen.dart';
+import '../presentation/legal/privacy_policy_screen.dart';
 
 class AppRoutes {
   static const String initial = splash;
@@ -51,6 +54,9 @@ class AppRoutes {
   static const String offlineTrips = '/offline-trips-screen';
   static const String playlistDetails = '/playlist-details-screen';
   static const String adminReviews = '/admin-reviews-screen';
+  static const String communityGuidelines = '/community-guidelines';
+  static const String termsOfService = '/terms-of-service';
+  static const String privacyPolicy = '/privacy-policy';
 
   static final Map<String, WidgetBuilder> routes = {
     introLogo: (context) => const LogoIntroPage(),
@@ -74,6 +80,9 @@ class AppRoutes {
     userPreferences: (context) => const UserPreferencesScreen(),
     offlineTrips: (context) => const OfflineTripsScreen(),
     adminReviews: (context) => const AdminReviewsScreen(),
+    communityGuidelines: (context) => const CommunityGuidelinesScreen(),
+    termsOfService: (context) => const TermsOfServiceScreen(),
+    privacyPolicy: (context) => const PrivacyPolicyScreen(),
     playlistDetails: (context) {
       final args = ModalRoute.of(context)?.settings.arguments;
       final playlistId = (args is Map ? args['playlistId'] : args?.toString()) ?? '';

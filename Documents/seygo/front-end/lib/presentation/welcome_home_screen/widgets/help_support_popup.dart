@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 import 'package:url_launcher/url_launcher.dart'; // for email/WhatsApp/phone taps
 
+import '../../../routes/app_routes.dart';
+
 class HelpSupportPopup extends StatelessWidget {
   const HelpSupportPopup({super.key});
 
@@ -149,60 +151,27 @@ class HelpSupportPopup extends StatelessWidget {
             context,
             icon: Icons.group_outlined,
             title: "Community Guidelines",
-            onTap: () async {
-              final uri = Uri.parse('https://seygo.lk/community-guidelines');
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              } else {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Coming soon'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              }
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, AppRoutes.communityGuidelines);
             },
           ),
           _buildTile(
             context,
             icon: Icons.description_outlined,
             title: "Terms of Service",
-            onTap: () async {
-              final uri = Uri.parse('https://seygo.lk/terms');
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              } else {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Coming soon'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              }
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, AppRoutes.termsOfService);
             },
           ),
           _buildTile(
             context,
             icon: Icons.security_outlined,
             title: "Privacy Policy",
-            onTap: () async {
-              final uri = Uri.parse('https://seygo.lk/privacy');
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              } else {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Coming soon'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              }
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, AppRoutes.privacyPolicy);
             },
           ),
         ],
