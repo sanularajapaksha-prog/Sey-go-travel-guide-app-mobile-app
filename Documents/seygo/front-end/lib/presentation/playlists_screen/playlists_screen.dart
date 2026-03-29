@@ -34,6 +34,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<Map<String, dynamic>> _playlists = [];
   List<Map<String, dynamic>> _filteredPlaylists = [];
+  List<Map<String, dynamic>> _communityPlaylists = [];
   bool _isSearching = false;
   bool _initialized = false;
 
@@ -63,26 +64,35 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
   // ── playlist loading ────────────────────────────────────────────────────────
 
   Future<void> _loadPlaylists({bool forceRefresh = false}) async {
-    final udp = Provider.of<UserDataProvider>(context, listen: false);
-    if (!forceRefresh && udp.myPlaylistsLoaded) {
-      if (mounted) {
-        setState(() {
-          _playlists = udp.myPlaylists;
-          _filteredPlaylists = udp.myPlaylists;
-        });
-      }
-      return;
-    }
     final token = Supabase.instance.client.auth.currentSession?.accessToken;
-    final data = await ApiService.fetchMyPlaylists(accessToken: token);
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id ?? '';
+
+    // Load my playlists and community playlists in parallel
+    final results = await Future.wait([
+      ApiService.fetchMyPlaylists(accessToken: token),
+      ApiService.fetchPlaylists(accessToken: token),
+    ]);
+
+    final myData = results[0];
+    final allPublic = results[1];
+
+    // Community = public playlists NOT owned by the current user
+    final myIds = myData.map((p) => p['id']?.toString() ?? '').toSet();
+    final community = allPublic
+        .where((p) =>
+            !myIds.contains(p['id']?.toString() ?? '') &&
+            p['user_id']?.toString() != currentUserId)
+        .toList();
+
     if (mounted) {
       setState(() {
-        _playlists = data;
+        _playlists = myData;
+        _communityPlaylists = community;
         final q = _searchController.text;
         _filteredPlaylists = q.isEmpty
             ? List.from(_playlists)
             : _playlists.where((p) {
-                final name = (p['name'] as String).toLowerCase();
+                final name = (p['name'] as String? ?? '').toLowerCase();
                 final desc = (p['description'] as String? ?? '').toLowerCase();
                 return name.contains(q.toLowerCase()) ||
                     desc.contains(q.toLowerCase());
@@ -126,6 +136,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
         name: result['name']!,
         description: result['description'],
         icon: result['icon'] ?? 'playlist_play',
+        visibility: result['visibility'] ?? 'private',
         accessToken: token,
       );
 
@@ -159,6 +170,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
       builder: (context) => CreatePlaylistDialog(
         initialName: playlist['name'] as String,
         initialDescription: playlist['description'] as String?,
+        initialVisibility: playlist['visibility'] as String? ?? 'private',
         isEdit: true,
       ),
     );
@@ -170,6 +182,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
         name: result['name'],
         description: result['description'],
         icon: result['icon'],
+        visibility: result['visibility'],
         accessToken: token,
       );
 
@@ -565,7 +578,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
                 final offlinePlaylists = offlineProvider.playlists;
 
                 // Nothing to show at all
-                if (_filteredPlaylists.isEmpty && offlinePlaylists.isEmpty) {
+                if (_filteredPlaylists.isEmpty && offlinePlaylists.isEmpty && _communityPlaylists.isEmpty) {
                   return _playlists.isEmpty
                       ? EmptyPlaylistsWidget(onCreatePlaylist: _createPlaylist)
                       : Center(
@@ -704,6 +717,31 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
                               );
                             },
                             childCount: _filteredPlaylists.length,
+                          ),
+                        ),
+                      ],
+
+                      // ── Community Playlists section ─────────────────────────
+                      if (_communityPlaylists.isNotEmpty) ...[
+                        SliverToBoxAdapter(
+                          child: _SectionHeader(
+                            icon: Icons.people_alt_rounded,
+                            label: 'Community Playlists',
+                          ),
+                        ),
+                        SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final playlist = _communityPlaylists[index];
+                              return PlaylistCardWidget(
+                                key: ValueKey('community_${playlist['id']}'),
+                                playlist: playlist,
+                                onTap: () => _openPlaylistDetail(playlist),
+                                onEdit: () {},
+                                onDelete: () {},
+                              );
+                            },
+                            childCount: _communityPlaylists.length,
                           ),
                         ),
                       ],

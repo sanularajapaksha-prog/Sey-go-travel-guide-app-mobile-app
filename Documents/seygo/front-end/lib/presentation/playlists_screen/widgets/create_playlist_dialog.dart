@@ -8,12 +8,14 @@ import '../../../widgets/custom_icon_widget.dart';
 class CreatePlaylistDialog extends StatefulWidget {
   final String? initialName;
   final String? initialDescription;
+  final String? initialVisibility;
   final bool isEdit;
 
   const CreatePlaylistDialog({
     super.key,
     this.initialName,
     this.initialDescription,
+    this.initialVisibility,
     this.isEdit = false,
   });
 
@@ -25,6 +27,7 @@ class _CreatePlaylistDialogState extends State<CreatePlaylistDialog> {
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
   String _selectedIcon = 'playlist_play';
+  late String _visibility;
 
   final List<Map<String, String>> _iconOptions = [
     {'icon': 'playlist_play', 'label': 'Default'},
@@ -41,9 +44,8 @@ class _CreatePlaylistDialogState extends State<CreatePlaylistDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initialName);
-    _descriptionController = TextEditingController(
-      text: widget.initialDescription,
-    );
+    _descriptionController = TextEditingController(text: widget.initialDescription);
+    _visibility = widget.initialVisibility ?? 'private';
   }
 
   @override
@@ -56,11 +58,12 @@ class _CreatePlaylistDialogState extends State<CreatePlaylistDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isPublic = _visibility == 'public';
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
       child: Container(
-        constraints: BoxConstraints(maxHeight: 70.h),
+        constraints: BoxConstraints(maxHeight: 80.h),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -99,6 +102,7 @@ class _CreatePlaylistDialogState extends State<CreatePlaylistDialog> {
                         hintText: 'Enter playlist name',
                       ),
                       autofocus: !widget.isEdit,
+                      onChanged: (_) => setState(() {}),
                     ),
                     SizedBox(height: 2.h),
                     TextField(
@@ -109,7 +113,47 @@ class _CreatePlaylistDialogState extends State<CreatePlaylistDialog> {
                       ),
                       maxLines: 3,
                     ),
-                    SizedBox(height: 3.h),
+                    SizedBox(height: 2.h),
+
+                    // ── Visibility toggle ───────────────────────────────────
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: theme.dividerColor),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          _visibilityBtn(
+                            theme: theme,
+                            label: 'Private',
+                            icon: Icons.lock_outline_rounded,
+                            selected: !isPublic,
+                            onTap: () => setState(() => _visibility = 'private'),
+                          ),
+                          Container(width: 1, height: 48, color: theme.dividerColor),
+                          _visibilityBtn(
+                            theme: theme,
+                            label: 'Public',
+                            icon: Icons.public_rounded,
+                            selected: isPublic,
+                            onTap: () => setState(() => _visibility = 'public'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.only(top: 0.8.h, left: 1.w),
+                      child: Text(
+                        isPublic
+                            ? 'Everyone can see this playlist'
+                            : 'Only you can see this playlist',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: 2.h),
                     Text('Choose Icon', style: theme.textTheme.titleSmall),
                     SizedBox(height: 1.h),
                     Wrap(
@@ -126,9 +170,8 @@ class _CreatePlaylistDialogState extends State<CreatePlaylistDialog> {
                             padding: EdgeInsets.symmetric(vertical: 1.h),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? theme.colorScheme.primary.withValues(
-                                alpha: 0.1,
-                              )
+                                  ? theme.colorScheme.primary
+                                      .withValues(alpha: 0.1)
                                   : theme.colorScheme.surface,
                               borderRadius: BorderRadius.circular(8.0),
                               border: Border.all(
@@ -182,18 +225,67 @@ class _CreatePlaylistDialogState extends State<CreatePlaylistDialog> {
                     onPressed: _nameController.text.trim().isEmpty
                         ? null
                         : () {
-                      Navigator.pop(context, {
-                        'name': _nameController.text.trim(),
-                        'description': _descriptionController.text.trim(),
-                        'icon': _selectedIcon,
-                      });
-                    },
+                            Navigator.pop(context, {
+                              'name': _nameController.text.trim(),
+                              'description':
+                                  _descriptionController.text.trim(),
+                              'icon': _selectedIcon,
+                              'visibility': _visibility,
+                            });
+                          },
                     child: Text(widget.isEdit ? 'Save' : 'Create'),
                   ),
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _visibilityBtn({
+    required ThemeData theme,
+    required String label,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: 48,
+          decoration: BoxDecoration(
+            color: selected
+                ? theme.colorScheme.primary.withValues(alpha: 0.1)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: selected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
+              SizedBox(width: 1.w),
+              Text(
+                label,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight:
+                      selected ? FontWeight.w700 : FontWeight.w500,
+                  color: selected
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

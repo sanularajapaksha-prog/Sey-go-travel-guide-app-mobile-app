@@ -28,7 +28,7 @@ class CreatePlaylistRequest(BaseModel):
     description: str | None = None
     icon: str = 'playlist_play'
     is_default: bool = False
-    visibility: str = 'public'
+    visibility: str = 'private'
 
 
 class UpdatePlaylistRequest(BaseModel):
