@@ -78,13 +78,16 @@ class _PlaylistCardWidgetState extends State<PlaylistCardWidget> {
     final showCamera =
         canManage && !widget.isOfflineCopy && widget.onBannerTap != null;
 
-    // Banner height in screen-relative units
-    final bannerH = MediaQuery.of(context).size.height * _bannerHeightFactor;
+    // Use sizer's 20.h directly — same source as _buildBanner — so the
+    // camera button always lands at the true bottom of the rendered banner,
+    // regardless of how MediaQuery vs LayoutBuilder heights differ on device.
+    final bannerH = 20.h;
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
       // Top-level Stack: card below, camera button above — completely outside InkWell
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
           // ── Main card (InkWell handles the card tap) ──────────────────────
           Material(
@@ -153,22 +156,24 @@ class _PlaylistCardWidgetState extends State<PlaylistCardWidget> {
           // Placed here so it receives taps first — no gesture arena conflict.
           if (showCamera)
             Positioned(
-              // Align to bottom-right corner of the banner area
-              top: bannerH - 38, // banner height minus icon button size (~38px)
-              right: 8,
+              // Anchor to banner bottom-right; button is 40×40px total.
+              top: bannerH - 20,
+              right: 10,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: widget.onBannerTap,
                 child: Container(
-                  padding: const EdgeInsets.all(6),
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.55),
+                    color: Colors.black.withValues(alpha: 0.65),
                     shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
                   ),
                   child: const Icon(
                     Icons.camera_alt_rounded,
                     color: Colors.white,
-                    size: 18,
+                    size: 22,
                   ),
                 ),
               ),
