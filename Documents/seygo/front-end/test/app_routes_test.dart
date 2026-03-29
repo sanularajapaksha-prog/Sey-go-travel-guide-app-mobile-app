@@ -5,8 +5,8 @@ import 'package:seygo_travel_app/routes/app_routes.dart';
 void main() {
   // ── Route constant values ─────────────────────────────────────────────────
   group('AppRoutes — route constant values', () {
-    test('initial equals introLogo', () {
-      expect(AppRoutes.initial, AppRoutes.introLogo);
+    test('initial equals splash', () {
+      expect(AppRoutes.initial, AppRoutes.splash);
     });
 
     test('introLogo starts with /', () {

@@ -227,10 +227,11 @@ def rebuild_index(user=Depends(get_current_user)):
     """
     Force a full semantic index rebuild from Supabase.
     Takes ~2 minutes for 4900+ places. Call after bulk imports.
-    Requires admin privileges (user_metadata.is_admin = true).
+    Requires admin privileges (app_metadata.is_admin = true).
     """
-    meta = getattr(user, 'user_metadata', {}) or {}
-    if not meta.get('is_admin'):
+    # app_metadata is server-only and cannot be edited by the user themselves.
+    app_meta = getattr(user, 'app_metadata', {}) or {}
+    if not app_meta.get('is_admin'):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Admin access required.',

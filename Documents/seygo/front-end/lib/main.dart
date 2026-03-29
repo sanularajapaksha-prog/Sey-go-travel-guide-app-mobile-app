@@ -295,9 +295,17 @@ class _SeygoTravelAppState extends State<SeygoTravelApp> {
 
               // App routing tables
               routes: AppRoutes.routes,
-              initialRoute: Supabase.instance.client.auth.currentSession != null
-                  ? AppRoutes.welcomeHome
-                  : AppRoutes.introWelcome,
+              initialRoute: (() {
+                // Guard: Supabase.instance throws StateError if initialization
+                // failed or timed out. Default to intro flow in that case.
+                try {
+                  return Supabase.instance.client.auth.currentSession != null
+                      ? AppRoutes.welcomeHome
+                      : AppRoutes.introWelcome;
+                } catch (_) {
+                  return AppRoutes.introWelcome;
+                }
+              })(),
             );
           },
         );

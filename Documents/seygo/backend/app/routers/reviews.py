@@ -18,6 +18,17 @@ def _sb():
     return _cc(os.environ['SUPABASE_URL'], os.environ['SUPABASE_SERVICE_ROLE_KEY'])
 
 
+def _is_admin(user) -> bool:
+    """
+    Check admin status via app_metadata ONLY.
+    app_metadata can only be set by the service-role key (server-side).
+    user_metadata is user-editable and must NOT be trusted for auth decisions.
+    To grant admin: Supabase Dashboard → Auth → Users → Edit app_metadata → {"is_admin": true}
+    """
+    app_meta = getattr(user, 'app_metadata', {}) or {}
+    return bool(app_meta.get('is_admin'))
+
+
 def _safe_insert(sb, table: str, payload: dict) -> dict | None:
     """Insert dropping unknown columns one by one on PGRST204."""
     for _ in range(10):
@@ -101,8 +112,7 @@ async def get_pending_reviews(
     user=Depends(get_current_user),
 ):
     """Pending reviews for admin moderation."""
-    meta = getattr(user, 'user_metadata', {}) or {}
-    if not meta.get('is_admin'):
+    if not _is_admin(user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Admin access required.')
     sb = _sb()
     try:
@@ -129,8 +139,7 @@ class RejectReviewRequest(BaseModel):
 async def approve_review(review_id: str, user=Depends(get_current_user)):
     """Approve a pending review. Restricted to admin users only."""
     sb = _sb()
-    meta = getattr(user, 'user_metadata', {}) or {}
-    if not meta.get('is_admin'):
+    if not _is_admin(user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Admin access required.')
     r = sb.table(REVIEWS_TABLE).select('id').eq('id', review_id).maybe_single().execute()
     if not r or not r.data:
@@ -168,8 +177,7 @@ async def approve_review(review_id: str, user=Depends(get_current_user)):
 async def reject_review(review_id: str, body: RejectReviewRequest = RejectReviewRequest(), user=Depends(get_current_user)):
     """Reject a pending review. Restricted to admin users only."""
     sb = _sb()
-    meta = getattr(user, 'user_metadata', {}) or {}
-    if not meta.get('is_admin'):
+    if not _is_admin(user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Admin access required.')
     r = sb.table(REVIEWS_TABLE).select('id').eq('id', review_id).maybe_single().execute()
     if not r or not r.data:
@@ -187,8 +195,7 @@ async def reject_review(review_id: str, body: RejectReviewRequest = RejectReview
 async def delete_review(review_id: str, user=Depends(get_current_user)):
     """Hard delete a review. Restricted to admin users only."""
     sb = _sb()
-    meta = getattr(user, 'user_metadata', {}) or {}
-    if not meta.get('is_admin'):
+    if not _is_admin(user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Admin access required.')
     r = sb.table(REVIEWS_TABLE).select('id').eq('id', review_id).maybe_single().execute()
     if not r or not r.data:
