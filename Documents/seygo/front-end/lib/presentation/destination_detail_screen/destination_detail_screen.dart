@@ -937,13 +937,16 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
 
   Widget _buildBadgesSection(ThemeData theme) {
     final badges = <Widget>[];
-    if (_isTrue(_destinationData['hidden_gem']))
+    if (_isTrue(_destinationData['hidden_gem'])) {
       badges.add(_badge('Hidden Gem', Icons.diamond, const Color(0xFF9C27B0), theme));
-    if (_isTrue(_destinationData['instagram_worthy']))
+    }
+    if (_isTrue(_destinationData['instagram_worthy'])) {
       badges.add(_badge('Instagram Worthy', Icons.camera_alt, const Color(0xFFE91E63), theme));
+    }
     final score = _destinationData['bucket_list_score'];
-    if (score != null)
+    if (score != null) {
       badges.add(_badge('Bucket List $score/100', Icons.star, const Color(0xFFFF9800), theme));
+    }
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 4.w),
       child: Wrap(spacing: 2.w, runSpacing: 1.h, children: badges),
@@ -1006,7 +1009,6 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
       fullItems.add({'icon': Icons.attach_money_rounded, 'label': 'Price Level', 'value': d['price_level'], 'color': const Color(0xFF558B2F)});
 
     if (gridItems.isEmpty && fullItems.isEmpty) return const SizedBox.shrink();
-
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 4.w),
       child: Column(
@@ -1038,18 +1040,24 @@ class _DestinationDetailScreenState extends State<DestinationDetailScreen> {
   Widget _buildTipsSection(ThemeData theme) {
     final items = <Widget>[];
     final d = _destinationData;
-    if (_notEmpty(d['ai_description']))
+    if (_notEmpty(d['ai_description'])) {
       items.add(_tipCard(Icons.auto_awesome, 'AI Summary', d['ai_description']!, const Color(0xFF2196F3), theme));
-    if (_notEmpty(d['best_for']))
+    }
+    if (_notEmpty(d['best_for'])) {
       items.add(_tipCard(Icons.thumb_up, 'Best For', d['best_for']!, const Color(0xFF4CAF50), theme));
-    if (_notEmpty(d['avoid_if']))
+    }
+    if (_notEmpty(d['avoid_if'])) {
       items.add(_tipCard(Icons.info_outline, 'Avoid If', d['avoid_if']!, const Color(0xFFFF9800), theme));
-    if (_notEmpty(d['safety_tips']))
+    }
+    if (_notEmpty(d['safety_tips'])) {
       items.add(_tipCard(Icons.health_and_safety, 'Safety Tips', d['safety_tips']!, const Color(0xFFE53935), theme));
-    if (_notEmpty(d['photo_tip']))
+    }
+    if (_notEmpty(d['photo_tip'])) {
       items.add(_tipCard(Icons.photo_camera, 'Photo Tip', d['photo_tip']!, const Color(0xFF9C27B0), theme));
-    if (_notEmpty(d['fun_fact']))
+    }
+    if (_notEmpty(d['fun_fact'])) {
       items.add(_tipCard(Icons.lightbulb, 'Fun Fact', d['fun_fact']!, const Color(0xFFFF9800), theme));
+    }
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 4.w),
       child: Column(children: items),
